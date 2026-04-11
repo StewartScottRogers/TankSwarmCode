@@ -1,0 +1,26 @@
+using TankSwarmCode.SwarmTank.Interfaces.Enums;
+
+namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+
+/// <summary>
+/// A message broadcast by one swarm member to all allies in the same swarm.
+/// </summary>
+public record SwarmMessage
+{
+    /// <summary>Name of the sending tank.</summary>
+    public string SenderName { get; init; } = string.Empty;
+
+    public SwarmMessageType Type { get; init; }
+
+    /// <summary>Optional: name of the enemy being referenced.</summary>
+    public string? TargetName { get; init; }
+
+    /// <summary>Optional: arena position relevant to this message.</summary>
+    public Vector2D? Position { get; init; }
+
+    /// <summary>Optional: arbitrary string payload (e.g. serialised JSON).</summary>
+    public string? CustomData { get; init; }
+
+    /// <summary>Tick number when this message was created.</summary>
+    public long Timestamp { get; init; }
+}
