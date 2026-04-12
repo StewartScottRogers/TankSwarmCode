@@ -17,6 +17,14 @@ public partial class ArenaUserControl : UserControl
     private readonly System.Windows.Forms.Timer _gameTimer = new();
     private string _statusMessage = "Ready – call Start() to begin.";
 
+    // Wall-clock interpolation — smooths pulse animation between discrete ticks
+    private DateTime _lastTickTime = DateTime.UtcNow;
+    private float _tickIntervalMs = 1000f / 3f; // kept in sync with _gameTimer.Interval
+
+    // Pulse-gate — holds the simulation until the current round-trip animation completes
+    private bool _waitingForPulse;
+    private DateTime _pulseCompletionTime;
+
     // Rendering constants
     private const int TankBodySize = 18;
     private const int GunLength = 22;
@@ -25,12 +33,12 @@ public partial class ArenaUserControl : UserControl
     private const int EnergyBarHeight = 4;
 
     // Radar sweep trail — frames of heading history kept per tank
-    private const int RadarTrailLength = 45;
+    private const int RadarTrailLength = 12;
 
     // Radar ping halo — sonar-pulse sizing; lifetime drives the expand+fade animation
-    private const int RadarHaloBaseRadius = 26;   // px at full energy (at spawn time)
-    private const int RadarHaloMinRadius = 12;    // px at near-dead energy (at spawn time)
-    private const int ScanHaloLifetime = 28;      // ticks ≈ 1.4 s at 20 TPS
+    private const int RadarHaloBaseRadius = 18;   // px at full energy (at spawn time)
+    private const int RadarHaloMinRadius = 8;     // px at near-dead energy (at spawn time)
+    private const int ScanHaloLifetime = 10;      // ticks — 5 out + 5 back; ~1.7 s per phase at 3 TPS
 
     // Per-swarm colours (index = SwarmId % palette length)
     private static readonly Color[] SwarmColours =
@@ -58,13 +66,17 @@ public partial class ArenaUserControl : UserControl
     /// </summary>
     private readonly record struct ScanEvent(
         long TickFired,
+        DateTime TickFiredWallTime,  // wall-clock birth time for smooth interpolation
         string SpotterName,
+        Vector2D SpotterPosition,
         Vector2D Position,
         int EnemySwarmId,
         string EnemyName,
         Color SpotterColor,
         float EnergyFraction,
-        Vector2D Velocity);
+        Vector2D Velocity,
+        float SweepSpanDeg,      // absolute angular width swept this tick
+        float RadarHeadingDeg);  // radar heading at moment of contact (centre of swept arc)
 
     public ArenaUserControl()
     {
@@ -119,6 +131,7 @@ public partial class ArenaUserControl : UserControl
     {
         _gameTimer.Stop();
         _engine?.Stop();
+        _waitingForPulse = false;
         _statusMessage = "Paused";
         Invalidate();
     }
@@ -131,6 +144,7 @@ public partial class ArenaUserControl : UserControl
         _engine = null;
         _radarTrails.Clear();
         _scanEvents.Clear();
+        _waitingForPulse = false;
         _statusMessage = "Ready – call Start() to begin.";
         Invalidate();
     }
@@ -159,9 +173,37 @@ public partial class ArenaUserControl : UserControl
 
     private void GameTimer_Tick(object? sender, EventArgs e)
     {
+        DateTime now = DateTime.UtcNow;
+        _tickIntervalMs = _gameTimer.Interval;
+
+        // If we are waiting for a radar pulse round-trip to complete, just repaint
+        // so the animation keeps running — do not advance the simulation.
+        if (_waitingForPulse)
+        {
+            if (now < _pulseCompletionTime)
+            {
+                Invalidate();
+                return;
+            }
+
+            _waitingForPulse = false;
+        }
+
+        _lastTickTime = now;
         _engine?.Tick();
-        // HarvestScanEvents(); // temporarily disabled with halo
-        Invalidate(); // triggers OnPaint
+        int countBefore = _scanEvents.Count;
+        HarvestScanEvents();
+
+        // If this tick produced any new radar contacts, gate the next tick until
+        // the full outbound + echo animation has played out.
+        if (_scanEvents.Count > countBefore)
+        {
+            float lifetimeMs = ScanHaloLifetime * _tickIntervalMs;
+            _pulseCompletionTime = _lastTickTime.AddMilliseconds(lifetimeMs);
+            _waitingForPulse = true;
+        }
+
+        Invalidate();
     }
 
     /// <summary>
@@ -210,15 +252,24 @@ public partial class ArenaUserControl : UserControl
                     float energyFraction = (float)Math.Clamp(
                         contact.Energy / ArenaConstants.TankStartEnergy, 0.1, 1.0);
 
+                    double sweepDelta = tank.State.RadarHeading - tank.State.PrevRadarHeading;
+                    while (sweepDelta >  180) sweepDelta -= 360;
+                    while (sweepDelta < -180) sweepDelta += 360;
+                    float sweepSpan = (float)Math.Max(Math.Abs(sweepDelta), 1.0);
+
                     _scanEvents.Add(new ScanEvent(
-                        TickFired:      tick,
-                        SpotterName:    tank.Name,
-                        Position:       contact.Position,
-                        EnemySwarmId:   contact.EnemySwarmId,
-                        EnemyName:      contact.Name,
-                        SpotterColor:   spotterColor,
-                        EnergyFraction: energyFraction,
-                        Velocity:       contact.VelocityVector));
+                        TickFired:          tick,
+                        TickFiredWallTime:  _lastTickTime,
+                        SpotterName:        tank.Name,
+                        SpotterPosition: tank.State.Position,
+                        Position:        contact.Position,
+                        EnemySwarmId:    contact.EnemySwarmId,
+                        EnemyName:       contact.Name,
+                        SpotterColor:    spotterColor,
+                        EnergyFraction:  energyFraction,
+                        Velocity:        contact.VelocityVector,
+                        SweepSpanDeg:    sweepSpan,
+                        RadarHeadingDeg: (float)tank.State.RadarHeading));
                 }
             }
         }
@@ -240,8 +291,8 @@ public partial class ArenaUserControl : UserControl
             return;
         }
 
-        // Layer 1 – Radar halos: temporarily disabled
-        // DrawAllRadarHalos(g);
+        // Layer 1 – Radar reflections: beam from spotter to detected tank
+        DrawAllRadarHalos(g);
 
         foreach (BulletState bullet in _engine.Bullets)
             DrawBullet(g, bullet);
@@ -458,101 +509,147 @@ public partial class ArenaUserControl : UserControl
     }
 
     /// <summary>
-    /// Manages and renders the radar ping halos.
-    /// <para>
-    /// Each tick, every tank's <see cref="ISwarmTank.RadarMap"/> is scanned for contacts
-    /// whose <c>Timestamp == currentTick</c> AND whose <c>SpottedBy</c> matches that
-    /// tank's own name — meaning the radar beam physically hit the enemy this tick
-    /// (shared contacts via RadarShare are excluded).  One <see cref="ScanEvent"/> is
-    /// added per such hit.  Events from different swarms appear simultaneously
-    /// (parallel); within each swarm tanks are iterated in name order (sequential).
-    /// </para>
-    /// <para>
-    /// Stale events (older than <see cref="ScanHaloLifetime"/> ticks) are pruned, then
-    /// every live event is rendered as an expanding+fading sonar-pulse ring.
-    /// </para>
+    /// Renders all live radar-reflection events.
+    /// Each event shows a beam line from the scanning tank to the detected enemy,
+    /// a reflection burst at the enemy position, and a small pulse dot at the spotter.
+    /// Events are pruned after <see cref="ScanHaloLifetime"/> ticks.
     /// </summary>
     private void DrawAllRadarHalos(Graphics g)
     {
         if (_engine is null) return;
 
-        long tick = _engine.TickNumber;
+        float lifetimeMs = ScanHaloLifetime * _tickIntervalMs;
+        DateTime now = DateTime.UtcNow;
 
-        // Prune events that have outlived their animation lifetime.
-        _scanEvents.RemoveAll(e => tick - e.TickFired > ScanHaloLifetime);
+        _scanEvents.RemoveAll(e => (float)(now - e.TickFiredWallTime).TotalMilliseconds > lifetimeMs);
 
-        // Draw every live sonar-pulse halo.
-        foreach (ScanEvent ev in _scanEvents)
-            DrawRadarHalo(g, ev, tick);
+        // For each unique (spotter, enemy) pair only render the most recently fired event —
+        // this ensures exactly one wavefront arc is visible per beam at any moment.
+        var latestPerPair = _scanEvents
+            .GroupBy(ev => (ev.SpotterName, ev.EnemyName))
+            .Select(grp => grp.MaxBy(ev => ev.TickFired));
+
+        foreach (ScanEvent ev in latestPerPair)
+            DrawRadarReflection(g, ev, now);
     }
 
-    // ── Radar halo helpers ────────────────────────────────────────────────────
+    // ── Radar reflection helpers ──────────────────────────────────────────────
 
     /// <summary>
-    /// Renders one sonar-pulse halo for a <see cref="ScanEvent"/>.
+    /// Renders a radar scan event as two strictly sequential expanding arc wavefronts.
+    /// Only one wave is ever visible at a time:
     /// <list type="bullet">
-    ///   <item>The ring <b>expands outward</b> and <b>fades to transparent</b> over
-    ///         <see cref="ScanHaloLifetime"/> ticks — like a real radar/sonar ping.</item>
-    ///   <item>Outer ring colour = enemy swarm (identifies WHO was detected).</item>
-    ///   <item>Inner ring colour = spotter's swarm tint (identifies WHO detected it).</item>
-    ///   <item>Static crosshair at the exact scan position (does not expand).</item>
-    ///   <item>Velocity arrow frozen at the moment of contact.</item>
-    ///   <item>Enemy name label fades alongside the ring.</item>
+    ///   <item>Phase 1 (first half of lifetime) — solid arc in spotter colour travels from the
+    ///         spotter outward along the radar heading, fading to nothing as it reaches the enemy.</item>
+    ///   <item>Dead gap — at the phase boundary both waves are fully transparent.</item>
+    ///   <item>Phase 2 (second half of lifetime) — dashed arc in enemy colour travels from the
+    ///         enemy back toward the spotter, fading to nothing as it arrives.</item>
     /// </list>
     /// </summary>
-    private void DrawRadarHalo(Graphics g, ScanEvent ev, long currentTick)
+    private void DrawRadarReflection(Graphics g, ScanEvent ev, DateTime now)
     {
-        float cx = (float)ev.Position.X;
-        float cy = (float)ev.Position.Y;
+        float lifetimeMs  = ScanHaloLifetime * _tickIntervalMs;
+        float elapsedMs   = (float)(now - ev.TickFiredWallTime).TotalMilliseconds;
+        float ageFraction = Math.Clamp(elapsedMs / lifetimeMs, 0f, 1f);
 
-        // ageFraction: 0.0 = just fired (bright, small), 1.0 = about to vanish (transparent, large)
-        float ageFraction = (currentTick - ev.TickFired) / (float)ScanHaloLifetime;
-        float fade = 1f - ageFraction;
+        float sx = (float)ev.SpotterPosition.X;
+        float sy = (float)ev.SpotterPosition.Y;
+        float ex = (float)ev.Position.X;
+        float ey = (float)ev.Position.Y;
 
-        // Ring radius expands from baseRadius → ~2.4× baseRadius as fade → 0.
-        float baseR = RadarHaloMinRadius
-            + (RadarHaloBaseRadius - RadarHaloMinRadius) * ev.EnergyFraction;
-        float radius = baseR * (1f + ageFraction * 1.4f);
+        float dist = MathF.Sqrt((ex - sx) * (ex - sx) + (ey - sy) * (ey - sy));
+        if (dist < 2f) return;
 
-        Color enemyColor = SwarmColours[Math.Abs(ev.EnemySwarmId) % SwarmColours.Length];
+        Color spotterColor = ev.SpotterColor;
 
-        // ── Expanding glow fill ───────────────────────────────────────────────
-        using SolidBrush glowBrush = new(Color.FromArgb((int)(35 * fade), enemyColor));
-        g.FillEllipse(glowBrush, cx - radius, cy - radius, radius * 2, radius * 2);
+        // Outbound arc: centred on the radar heading at contact time (arena 0°=N → GDI+ subtract 90°).
+        float outboundMid = ev.RadarHeadingDeg - 90f;
+        float arcSpan     = ev.SweepSpanDeg;
 
-        // ── Outer ring: enemy swarm colour ────────────────────────────────────
-        // Pen thickness thins as ring grows, reinforcing the "pulse" look.
-        float penW = Math.Max(0.5f, 2.5f * fade);
-        using Pen outerPen = new(Color.FromArgb((int)(230 * fade), enemyColor), penW);
-        g.DrawEllipse(outerPen, cx - radius, cy - radius, radius * 2, radius * 2);
-
-        // ── Inner ring: spotter swarm colour ─────────────────────────────────
-        // Expands more slowly so it stays inside the outer ring.
-        float innerR = baseR * (1f + ageFraction * 0.5f) * 0.55f;
-        using Pen spotterPen = new(Color.FromArgb((int)(180 * fade), ev.SpotterColor), 1.5f * fade);
-        g.DrawEllipse(spotterPen, cx - innerR, cy - innerR, innerR * 2, innerR * 2);
-
-        // ── Static crosshair — anchors the exact scan position ───────────────
-        float cross = baseR * 0.4f;
-        using Pen crossPen = new(Color.FromArgb((int)(160 * fade), enemyColor), 1f);
-        g.DrawLine(crossPen, cx - cross, cy, cx + cross, cy);
-        g.DrawLine(crossPen, cx, cy - cross, cx, cy + cross);
-
-        // ── Velocity arrow frozen at scan moment ──────────────────────────────
-        double vlen = Math.Sqrt(ev.Velocity.X * ev.Velocity.X + ev.Velocity.Y * ev.Velocity.Y);
-        if (vlen > 0.5)
+        // ── Phase 1: outbound wave (ageFraction 0 → <0.5) ────────────────────
+        // t goes 0→1 across the first half-lifetime.
+        // Fade: full brightness at t=0, completely gone at t=1 so the phase boundary is clean.
+        // A smooth-step curve keeps it visible during transit and drops sharply at arrival.
+        if (ageFraction < 0.5f)
         {
-            float arrowLen = (float)Math.Min(vlen * 4.0, baseR * 1.6);
-            float vx = (float)(ev.Velocity.X / vlen) * arrowLen;
-            float vy = (float)(ev.Velocity.Y / vlen) * arrowLen;
-            using Pen arrowPen = new(Color.FromArgb((int)(200 * fade), Color.White), 1.5f);
-            g.DrawLine(arrowPen, cx, cy, cx + vx, cy + vy);
+            float t      = ageFraction * 2f;                          // 0→1
+            float radius = dist * t;                                  // 0 → dist
+            float fade   = 1f - t * t * t;                           // cubic: slow drop then steep at end
+            if (radius > 1f && fade > 0.01f)
+            {
+                float penW = Math.Max(1f, 2.5f * (1f - t * 0.6f));
+                using Pen arcPen = new(Color.FromArgb((int)(230 * fade), spotterColor), penW);
+                g.DrawArc(arcPen,
+                    sx - radius, sy - radius, radius * 2, radius * 2,
+                    outboundMid - arcSpan / 2f, arcSpan);
+
+                // Two edge lines from the spotter back to each end of the arc.
+                float edgeAlpha = (int)(160 * fade);
+                using Pen trailPen = new(Color.FromArgb((int)edgeAlpha, spotterColor), 0.8f);
+                foreach (float edgeAngleDeg in new[] { outboundMid - arcSpan / 2f, outboundMid + arcSpan / 2f })
+                {
+                    float edgeRad = edgeAngleDeg * MathF.PI / 180f;
+                    float edgeX   = sx + MathF.Cos(edgeRad) * radius;
+                    float edgeY   = sy + MathF.Sin(edgeRad) * radius;
+                    g.DrawLine(trailPen, sx, sy, edgeX, edgeY);
+                }
+            }
         }
 
-        // ── Enemy name label ──────────────────────────────────────────────────
-        using Font contactFont = new(Font.FontFamily, 6f);
-        using SolidBrush labelBrush = new(Color.FromArgb((int)(200 * fade), Color.White));
-        g.DrawString(ev.EnemyName, contactFont, labelBrush, cx + baseR + 3f, cy - 4f);
+        // ── Phase 2: echo wave (ageFraction 0.5 → 1.0) ───────────────────────
+        // The echo originates at the sensed enemy's position and travels back to the spotter.
+        // Arc centre interpolates from (ex,ey) toward (sx,sy) as t goes 0→1.
+        // Arc span is deliberately narrow — a reflected ping, not a broad sweep.
+        if (ageFraction >= 0.5f)
+        {
+            float t    = (ageFraction - 0.5f) * 2f;               // 0→1
+            float fade = 1f - t * t * t;                           // cubic: bright start, clean end
+
+            // Arc centre travels from enemy → spotter.
+            float cx = ex + (sx - ex) * t;
+            float cy = ey + (sy - ey) * t;
+
+            // Radius keeps the wavefront at the moving centre (half the remaining distance).
+            float remaining = dist * (1f - t);
+            float radius    = remaining * 0.18f;                   // thin leading edge, not a full half-circle
+
+            // Bearing from the current centre back toward the spotter (arc faces the direction of travel).
+            float bearingToSpotter = MathF.Atan2(sy - cy, sx - cx) * 180f / MathF.PI;
+
+            // Narrow fixed span — a tight reflected ping.
+            const float echoSpan = 18f;
+
+            if (radius > 1f && fade > 0.01f)
+            {
+                float penW = Math.Max(0.8f, 2f * (1f - t * 0.5f));
+                using Pen arcPen = new(Color.FromArgb((int)(220 * fade), spotterColor), penW);
+                arcPen.DashStyle = DashStyle.Dash;
+                arcPen.DashPattern = [4f, 3f];
+                g.DrawArc(arcPen,
+                    cx - radius, cy - radius, radius * 2, radius * 2,
+                    bearingToSpotter - echoSpan / 2f, echoSpan);
+
+                // Single trailing line along the echo centre-axis toward the spotter.
+                float edgeAlpha = (int)(130 * fade);
+                using Pen trailPen = new(Color.FromArgb((int)edgeAlpha, spotterColor), 0.7f);
+                trailPen.DashStyle = DashStyle.Dash;
+                trailPen.DashPattern = [4f, 3f];
+                float echoMidRad = bearingToSpotter * MathF.PI / 180f;
+                float echoTipX   = cx + MathF.Cos(echoMidRad) * radius;
+                float echoTipY   = cy + MathF.Sin(echoMidRad) * radius;
+                g.DrawLine(trailPen, cx, cy, echoTipX, echoTipY);
+
+                // Enemy name label: visible at the start of the echo, fades out quickly.
+                if (t < 0.3f)
+                {
+                    float labelFade = (1f - t / 0.3f) * fade;
+                    float baseR = RadarHaloMinRadius + (RadarHaloBaseRadius - RadarHaloMinRadius) * ev.EnergyFraction;
+                    using Font contactFont = new(Font.FontFamily, 6f);
+                    using SolidBrush labelBrush = new(Color.FromArgb((int)(200 * labelFade), Color.White));
+                    g.DrawString(ev.EnemyName, contactFont, labelBrush, ex + baseR + 3f, ey - 4f);
+                }
+            }
+        }
     }
 
     /// <summary>Lightens a colour by adding <paramref name="amount"/> to each RGB channel.</summary>
@@ -649,11 +746,11 @@ public partial class ArenaUserControl : UserControl
             ty += RowH;
         }
 
-        LegendRow(Color.FromArgb(200, Color.OrangeRed),  "Outer ring — enemy swarm", outline: true);
-        LegendRow(Color.FromArgb(200, Color.DodgerBlue),  "Inner ring — spotter swarm", outline: true);
-        LegendRow(Color.FromArgb(200, Color.White),       "Sweep flash — active scan arc");
-        LegendRow(Color.FromArgb(200, Color.White),       "Arrow — last-known velocity");
+        LegendRow(Color.FromArgb(200, Color.DodgerBlue),  "Arcs — outbound wave (spotter colour)");
+        LegendRow(Color.FromArgb(200, Color.OrangeRed),   "Dashed arcs — echo wave (enemy colour)", outline: true);
         LegendRow(Color.FromArgb(120, Color.LightGray),   "Fade — contact freshness");
+        LegendRow(Color.FromArgb(200, Color.White),       "Label — detected tank name");
+        LegendRow(Color.FromArgb(120, Color.LightGray),   "Arc width — detection range");
     }
 
     // ── Resize ────────────────────────────────────────────────────────────────

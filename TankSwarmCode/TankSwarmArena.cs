@@ -8,7 +8,7 @@ public partial class TankSwarmArena : Form
     public TankSwarmArena()
     {
         InitializeComponent();
-        arenaUserControl1.TicksPerSecond = 20;
+        arenaUserControl1.TicksPerSecond = 3;
     }
 
     protected override void OnLoad(EventArgs e)
