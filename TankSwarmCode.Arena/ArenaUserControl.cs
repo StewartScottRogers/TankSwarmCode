@@ -24,6 +24,14 @@ public partial class ArenaUserControl : UserControl
     private const int EnergyBarWidth = 36;
     private const int EnergyBarHeight = 4;
 
+    // Radar sweep trail — frames of heading history kept per tank
+    private const int RadarTrailLength = 45;
+
+    // Radar ping halo — sonar-pulse sizing; lifetime drives the expand+fade animation
+    private const int RadarHaloBaseRadius = 26;   // px at full energy (at spawn time)
+    private const int RadarHaloMinRadius = 12;    // px at near-dead energy (at spawn time)
+    private const int ScanHaloLifetime = 28;      // ticks ≈ 1.4 s at 20 TPS
+
     // Per-swarm colours (index = SwarmId % palette length)
     private static readonly Color[] SwarmColours =
     [
@@ -36,6 +44,27 @@ public partial class ArenaUserControl : UserControl
         Color.Coral,
         Color.Chartreuse
     ];
+
+    // Per-tank radar heading history used to paint phosphor-decay sweep trails
+    private readonly Dictionary<string, LinkedList<double>> _radarTrails =
+        new(StringComparer.Ordinal);
+
+    // One entry per physical radar hit; each lives for ScanHaloLifetime ticks then is removed.
+    private readonly List<ScanEvent> _scanEvents = [];
+
+    /// <summary>
+    /// Immutable snapshot of a single radar-beam hit, captured the tick the radar
+    /// physically swept over the enemy. Drives the expanding sonar-pulse halo animation.
+    /// </summary>
+    private readonly record struct ScanEvent(
+        long TickFired,
+        string SpotterName,
+        Vector2D Position,
+        int EnemySwarmId,
+        string EnemyName,
+        Color SpotterColor,
+        float EnergyFraction,
+        Vector2D Velocity);
 
     public ArenaUserControl()
     {
@@ -100,6 +129,8 @@ public partial class ArenaUserControl : UserControl
         _gameTimer.Stop();
         _engine?.Reset();
         _engine = null;
+        _radarTrails.Clear();
+        _scanEvents.Clear();
         _statusMessage = "Ready – call Start() to begin.";
         Invalidate();
     }
@@ -129,7 +160,68 @@ public partial class ArenaUserControl : UserControl
     private void GameTimer_Tick(object? sender, EventArgs e)
     {
         _engine?.Tick();
+        // HarvestScanEvents(); // temporarily disabled with halo
         Invalidate(); // triggers OnPaint
+    }
+
+    /// <summary>
+    /// Called once per engine tick (from <see cref="GameTimer_Tick"/>) to harvest physical
+    /// radar hits into <see cref="_scanEvents"/>.  Running here — not inside OnPaint — ensures
+    /// each contact fires at most one <see cref="ScanEvent"/> per tick regardless of how many
+    /// repaints occur.  A deduplication guard prevents stacking when the same pair is still
+    /// live from a previous tick.
+    /// </summary>
+    private void HarvestScanEvents()
+    {
+        if (_engine is null) return;
+
+        long tick = _engine.TickNumber;
+
+        var bySwarm = _engine.Tanks
+            .GroupBy(t => t.SwarmId)
+            .OrderBy(grp => grp.Key);
+
+        foreach (var swarmGroup in bySwarm)
+        {
+            Color baseColor = SwarmColours[Math.Abs(swarmGroup.Key) % SwarmColours.Length];
+            ISwarmTank[] swarmTanks = [.. swarmGroup.OrderBy(t => t.Name)];
+
+            for (int i = 0; i < swarmTanks.Length; i++)
+            {
+                ISwarmTank tank = swarmTanks[i];
+                if (!tank.State.IsAlive) continue;
+
+                Color spotterColor = LightenColor(baseColor, i * 22);
+
+                foreach (RadarContact contact in tank.RadarMap.Values)
+                {
+                    // Only fire when this tank's OWN radar physically swept the enemy this tick.
+                    if (contact.Timestamp != tick) continue;
+                    if (!string.Equals(contact.SpottedBy, tank.Name,
+                            StringComparison.Ordinal)) continue;
+
+                    // Dedup: skip if we already recorded this (spotter, enemy) pair this tick.
+                    if (_scanEvents.Any(ev =>
+                            ev.TickFired == tick &&
+                            string.Equals(ev.SpotterName, tank.Name, StringComparison.Ordinal) &&
+                            string.Equals(ev.EnemyName, contact.Name, StringComparison.Ordinal)))
+                        continue;
+
+                    float energyFraction = (float)Math.Clamp(
+                        contact.Energy / ArenaConstants.TankStartEnergy, 0.1, 1.0);
+
+                    _scanEvents.Add(new ScanEvent(
+                        TickFired:      tick,
+                        SpotterName:    tank.Name,
+                        Position:       contact.Position,
+                        EnemySwarmId:   contact.EnemySwarmId,
+                        EnemyName:      contact.Name,
+                        SpotterColor:   spotterColor,
+                        EnergyFraction: energyFraction,
+                        Velocity:       contact.VelocityVector));
+                }
+            }
+        }
     }
 
     // ── Rendering ─────────────────────────────────────────────────────────────
@@ -147,6 +239,9 @@ public partial class ArenaUserControl : UserControl
             DrawCentredText(g, _statusMessage, Font, Brushes.Gray);
             return;
         }
+
+        // Layer 1 – Radar halos: temporarily disabled
+        // DrawAllRadarHalos(g);
 
         foreach (BulletState bullet in _engine.Bullets)
             DrawBullet(g, bullet);
@@ -200,18 +295,8 @@ public partial class ArenaUserControl : UserControl
         using Pen gunPen = new(Color.LightGray, 3);
         g.DrawLine(gunPen, 0, 0, gunDx, gunDy);
 
-        // --- Radar arc ---
-        float radarRad = (float)(tank.RadarHeading * Math.PI / 180.0);
-        float rdx = (float)Math.Sin(radarRad) * RadarLength;
-        float rdy = -(float)Math.Cos(radarRad) * RadarLength;
-        using Pen radarPen = new(Color.FromArgb(120, Color.Cyan), 1);
-        g.DrawLine(radarPen, 0, 0, rdx, rdy);
-        // Fan showing 20° radar sweep
-        using SolidBrush radarBrush = new(Color.FromArgb(25, Color.Cyan));
-        float sweepStart = (float)tank.RadarHeading - 10f;
-        g.FillPie(radarBrush, -RadarLength, -RadarLength,
-                  RadarLength * 2, RadarLength * 2,
-                  sweepStart - 90, 20);
+        // --- Radar sweep trail ---
+        DrawRadarSweepTrail(g, tank, tankColor);
 
         g.Restore(saved);
 
@@ -228,6 +313,91 @@ public partial class ArenaUserControl : UserControl
         SizeF textSize = g.MeasureString(tank.Name, nameFont);
         g.DrawString(tank.Name, nameFont, Brushes.LightGray,
                      x - textSize.Width / 2, barY - textSize.Height - 1);
+    }
+
+    /// <summary>
+    /// Draws a phosphor-decay radar sweep trail plus the exact scan-arc flash for this tick.
+    /// <list type="bullet">
+    ///   <item>Decay trail — fading <see cref="RadarTrailLength"/>-frame history in the tank's swarm colour.</item>
+    ///   <item>Scan-arc flash — the precise arc swept from <see cref="TankState.PrevRadarHeading"/> to
+    ///         <see cref="TankState.RadarHeading"/> this tick, drawn bright white over the trail.</item>
+    ///   <item>Leading-edge beam — a crisp line at the current heading.</item>
+    /// </list>
+    /// Called from within the saved graphics transform (tank centre at origin, no rotation).
+    /// </summary>
+    private void DrawRadarSweepTrail(Graphics g, TankState tank, Color swarmColor)
+    {
+        // Maintain a per-tank circular buffer of radar headings in the renderer.
+        if (!_radarTrails.TryGetValue(tank.Name, out LinkedList<double>? trail))
+        {
+            trail = new LinkedList<double>();
+            _radarTrails[tank.Name] = trail;
+        }
+
+        trail.AddLast(tank.RadarHeading);
+        while (trail.Count > RadarTrailLength)
+            trail.RemoveFirst();
+
+        // ── Phosphor-decay trail ──────────────────────────────────────────────
+        // Oldest frame = near-invisible, newest = 100-alpha glow.
+        // GDI+ FillPie: 0° = east (3 o'clock), clockwise.
+        // Arena heading: 0° = north, clockwise → GDI+ start = heading − 90 − half-arc-width.
+        double[] history = [.. trail];
+        int count = history.Length;
+
+        for (int i = 0; i < count; i++)
+        {
+            float ageFraction = (float)(i + 1) / count; // 0 = oldest, 1 = newest
+            int alpha = (int)(100 * ageFraction);
+            if (alpha < 5) continue;
+
+            float gdiStart = (float)history[i] - 90f - 10f;
+            using SolidBrush fadeBrush = new(Color.FromArgb(alpha, swarmColor));
+            g.FillPie(fadeBrush,
+                -RadarLength, -RadarLength,
+                RadarLength * 2, RadarLength * 2,
+                gdiStart, 20f);
+        }
+
+        // ── Exact scan-arc flash (this tick's true sweep zone) ────────────────
+        // Compute the angular span the radar physically crossed this tick.
+        double prev = tank.PrevRadarHeading;
+        double curr = tank.RadarHeading;
+        double delta = curr - prev;
+        // Normalise delta to (−180, +180] for shortest-path calculation.
+        while (delta > 180) delta -= 360;
+        while (delta < -180) delta += 360;
+
+        if (Math.Abs(delta) > 0.1)
+        {
+            // GDI+ start angle is the leading edge of the sweep (direction of travel).
+            float flashStart = delta >= 0
+                ? (float)prev - 90f          // sweeping clockwise: arc starts at prev
+                : (float)curr - 90f;         // sweeping counter-clockwise: arc starts at curr
+            float flashSpan = (float)Math.Abs(delta);
+
+            // Outer bright layer: white-tinted swarm colour at full opacity.
+            using SolidBrush flashBrush = new(Color.FromArgb(170, LightenColor(swarmColor, 120)));
+            g.FillPie(flashBrush,
+                -RadarLength, -RadarLength,
+                RadarLength * 2, RadarLength * 2,
+                flashStart, flashSpan);
+
+            // Inner core: pure white highlight to mark the active scan zone.
+            int innerR = (int)(RadarLength * 0.55f);
+            using SolidBrush coreBrush = new(Color.FromArgb(80, Color.White));
+            g.FillPie(coreBrush,
+                -innerR, -innerR,
+                innerR * 2, innerR * 2,
+                flashStart, flashSpan);
+        }
+
+        // ── Leading-edge beam line at current heading ─────────────────────────
+        float radarRad = (float)(tank.RadarHeading * Math.PI / 180.0);
+        float rdx = (float)Math.Sin(radarRad) * RadarLength;
+        float rdy = -(float)Math.Cos(radarRad) * RadarLength;
+        using Pen radarPen = new(Color.FromArgb(220, swarmColor), 1.5f);
+        g.DrawLine(radarPen, 0, 0, rdx, rdy);
     }
 
     private static void DrawBullet(Graphics g, BulletState bullet)
@@ -274,6 +444,9 @@ public partial class ArenaUserControl : UserControl
             g.DrawString(label, Font, sb, scoreX, scoreY);
             scoreY += Font.Height + 2;
         }
+
+        // Radar legend (bottom-left)
+        DrawRadarLegend(g);
     }
 
     private void DrawCentredText(Graphics g, string text, Font font, Brush brush)
@@ -282,6 +455,205 @@ public partial class ArenaUserControl : UserControl
         float cx = (ClientSize.Width - size.Width) / 2f;
         float cy = (ClientSize.Height - size.Height) / 2f;
         g.DrawString(text, font, brush, cx, cy);
+    }
+
+    /// <summary>
+    /// Manages and renders the radar ping halos.
+    /// <para>
+    /// Each tick, every tank's <see cref="ISwarmTank.RadarMap"/> is scanned for contacts
+    /// whose <c>Timestamp == currentTick</c> AND whose <c>SpottedBy</c> matches that
+    /// tank's own name — meaning the radar beam physically hit the enemy this tick
+    /// (shared contacts via RadarShare are excluded).  One <see cref="ScanEvent"/> is
+    /// added per such hit.  Events from different swarms appear simultaneously
+    /// (parallel); within each swarm tanks are iterated in name order (sequential).
+    /// </para>
+    /// <para>
+    /// Stale events (older than <see cref="ScanHaloLifetime"/> ticks) are pruned, then
+    /// every live event is rendered as an expanding+fading sonar-pulse ring.
+    /// </para>
+    /// </summary>
+    private void DrawAllRadarHalos(Graphics g)
+    {
+        if (_engine is null) return;
+
+        long tick = _engine.TickNumber;
+
+        // Prune events that have outlived their animation lifetime.
+        _scanEvents.RemoveAll(e => tick - e.TickFired > ScanHaloLifetime);
+
+        // Draw every live sonar-pulse halo.
+        foreach (ScanEvent ev in _scanEvents)
+            DrawRadarHalo(g, ev, tick);
+    }
+
+    // ── Radar halo helpers ────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Renders one sonar-pulse halo for a <see cref="ScanEvent"/>.
+    /// <list type="bullet">
+    ///   <item>The ring <b>expands outward</b> and <b>fades to transparent</b> over
+    ///         <see cref="ScanHaloLifetime"/> ticks — like a real radar/sonar ping.</item>
+    ///   <item>Outer ring colour = enemy swarm (identifies WHO was detected).</item>
+    ///   <item>Inner ring colour = spotter's swarm tint (identifies WHO detected it).</item>
+    ///   <item>Static crosshair at the exact scan position (does not expand).</item>
+    ///   <item>Velocity arrow frozen at the moment of contact.</item>
+    ///   <item>Enemy name label fades alongside the ring.</item>
+    /// </list>
+    /// </summary>
+    private void DrawRadarHalo(Graphics g, ScanEvent ev, long currentTick)
+    {
+        float cx = (float)ev.Position.X;
+        float cy = (float)ev.Position.Y;
+
+        // ageFraction: 0.0 = just fired (bright, small), 1.0 = about to vanish (transparent, large)
+        float ageFraction = (currentTick - ev.TickFired) / (float)ScanHaloLifetime;
+        float fade = 1f - ageFraction;
+
+        // Ring radius expands from baseRadius → ~2.4× baseRadius as fade → 0.
+        float baseR = RadarHaloMinRadius
+            + (RadarHaloBaseRadius - RadarHaloMinRadius) * ev.EnergyFraction;
+        float radius = baseR * (1f + ageFraction * 1.4f);
+
+        Color enemyColor = SwarmColours[Math.Abs(ev.EnemySwarmId) % SwarmColours.Length];
+
+        // ── Expanding glow fill ───────────────────────────────────────────────
+        using SolidBrush glowBrush = new(Color.FromArgb((int)(35 * fade), enemyColor));
+        g.FillEllipse(glowBrush, cx - radius, cy - radius, radius * 2, radius * 2);
+
+        // ── Outer ring: enemy swarm colour ────────────────────────────────────
+        // Pen thickness thins as ring grows, reinforcing the "pulse" look.
+        float penW = Math.Max(0.5f, 2.5f * fade);
+        using Pen outerPen = new(Color.FromArgb((int)(230 * fade), enemyColor), penW);
+        g.DrawEllipse(outerPen, cx - radius, cy - radius, radius * 2, radius * 2);
+
+        // ── Inner ring: spotter swarm colour ─────────────────────────────────
+        // Expands more slowly so it stays inside the outer ring.
+        float innerR = baseR * (1f + ageFraction * 0.5f) * 0.55f;
+        using Pen spotterPen = new(Color.FromArgb((int)(180 * fade), ev.SpotterColor), 1.5f * fade);
+        g.DrawEllipse(spotterPen, cx - innerR, cy - innerR, innerR * 2, innerR * 2);
+
+        // ── Static crosshair — anchors the exact scan position ───────────────
+        float cross = baseR * 0.4f;
+        using Pen crossPen = new(Color.FromArgb((int)(160 * fade), enemyColor), 1f);
+        g.DrawLine(crossPen, cx - cross, cy, cx + cross, cy);
+        g.DrawLine(crossPen, cx, cy - cross, cx, cy + cross);
+
+        // ── Velocity arrow frozen at scan moment ──────────────────────────────
+        double vlen = Math.Sqrt(ev.Velocity.X * ev.Velocity.X + ev.Velocity.Y * ev.Velocity.Y);
+        if (vlen > 0.5)
+        {
+            float arrowLen = (float)Math.Min(vlen * 4.0, baseR * 1.6);
+            float vx = (float)(ev.Velocity.X / vlen) * arrowLen;
+            float vy = (float)(ev.Velocity.Y / vlen) * arrowLen;
+            using Pen arrowPen = new(Color.FromArgb((int)(200 * fade), Color.White), 1.5f);
+            g.DrawLine(arrowPen, cx, cy, cx + vx, cy + vy);
+        }
+
+        // ── Enemy name label ──────────────────────────────────────────────────
+        using Font contactFont = new(Font.FontFamily, 6f);
+        using SolidBrush labelBrush = new(Color.FromArgb((int)(200 * fade), Color.White));
+        g.DrawString(ev.EnemyName, contactFont, labelBrush, cx + baseR + 3f, cy - 4f);
+    }
+
+    /// <summary>Lightens a colour by adding <paramref name="amount"/> to each RGB channel.</summary>
+    private static Color LightenColor(Color c, int amount) =>
+        Color.FromArgb(
+            c.A,
+            Math.Min(255, c.R + amount),
+            Math.Min(255, c.G + amount),
+            Math.Min(255, c.B + amount));
+
+    /// <summary>
+    /// Draws a compact legend in the bottom-left corner explaining the radar colour coding:
+    /// <list type="bullet">
+    ///   <item>One row per active swarm — swarm colour + label.</item>
+    ///   <item>Static rows for outer ring, inner ring, velocity arrow, and fade key.</item>
+    /// </list>
+    /// </summary>
+    private void DrawRadarLegend(Graphics g)
+    {
+        if (_engine is null) return;
+
+        const int PadX = 8;
+        const int PadY = 6;
+        const int SwatchSize = 10;
+        const int RowH = 15;
+        const int ColW = 170;
+
+        // Collect active swarms for the dynamic rows.
+        var swarms = _engine.Tanks
+            .GroupBy(t => t.SwarmId)
+            .OrderBy(grp => grp.Key)
+            .ToList();
+
+        int dynamicRows = swarms.Count;
+        int staticRows = 5; // outer ring, inner ring, scan flash, velocity arrow, fade
+        int totalRows = dynamicRows + 1 + staticRows; // +1 separator row
+
+        int panelW = ColW + PadX * 2;
+        int panelH = totalRows * RowH + PadY * 2;
+        int panelX = PadX;
+        int panelY = ClientSize.Height - panelH - PadY;
+
+        // Semi-transparent panel background.
+        using SolidBrush panelBrush = new(Color.FromArgb(140, Color.Black));
+        g.FillRectangle(panelBrush, panelX, panelY, panelW, panelH);
+        using Pen panelPen = new(Color.FromArgb(80, Color.Gray), 1f);
+        g.DrawRectangle(panelPen, panelX, panelY, panelW, panelH);
+
+        using Font legendFont = new(Font.FontFamily, 6.5f);
+        using Font headerFont = new(Font.FontFamily, 6.5f, FontStyle.Bold);
+
+        float tx = panelX + PadX;
+        float ty = panelY + PadY;
+
+        // ── Swarm colour rows ─────────────────────────────────────────────────
+        foreach (var grp in swarms)
+        {
+            Color sc = SwarmColours[Math.Abs(grp.Key) % SwarmColours.Length];
+            int alive = grp.Count(t => t.State.IsAlive);
+            string label = grp.Key == 0
+                ? $"Solo  ({alive} alive)"
+                : $"Swarm {grp.Key}  ({alive} alive)";
+
+            using SolidBrush swatchBrush = new(sc);
+            g.FillRectangle(swatchBrush, tx, ty + 1, SwatchSize, SwatchSize);
+            using Pen swatchPen = new(Color.FromArgb(160, Color.White), 1f);
+            g.DrawRectangle(swatchPen, tx, ty + 1, SwatchSize, SwatchSize);
+
+            using SolidBrush textBrush = new(sc);
+            g.DrawString(label, headerFont, textBrush, tx + SwatchSize + 4, ty);
+            ty += RowH;
+        }
+
+        // Separator line.
+        using Pen sepPen = new(Color.FromArgb(60, Color.Gray), 1f);
+        g.DrawLine(sepPen, tx, ty + 4, tx + ColW, ty + 4);
+        ty += RowH;
+
+        // ── Static legend rows ────────────────────────────────────────────────
+        void LegendRow(Color swatch, string text, bool outline = false)
+        {
+            using SolidBrush sb = new(swatch);
+            if (outline)
+            {
+                using Pen ep = new(swatch, 1.5f);
+                g.DrawEllipse(ep, tx, ty + 2, SwatchSize, SwatchSize - 2);
+            }
+            else
+            {
+                g.FillEllipse(sb, tx, ty + 2, SwatchSize, SwatchSize - 2);
+            }
+            using SolidBrush tb = new(Color.FromArgb(200, Color.LightGray));
+            g.DrawString(text, legendFont, tb, tx + SwatchSize + 4, ty);
+            ty += RowH;
+        }
+
+        LegendRow(Color.FromArgb(200, Color.OrangeRed),  "Outer ring — enemy swarm", outline: true);
+        LegendRow(Color.FromArgb(200, Color.DodgerBlue),  "Inner ring — spotter swarm", outline: true);
+        LegendRow(Color.FromArgb(200, Color.White),       "Sweep flash — active scan arc");
+        LegendRow(Color.FromArgb(200, Color.White),       "Arrow — last-known velocity");
+        LegendRow(Color.FromArgb(120, Color.LightGray),   "Fade — contact freshness");
     }
 
     // ── Resize ────────────────────────────────────────────────────────────────

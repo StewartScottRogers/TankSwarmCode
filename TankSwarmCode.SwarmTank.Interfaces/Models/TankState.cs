@@ -29,6 +29,13 @@ public record TankState
     /// <summary>Absolute radar heading in degrees.</summary>
     public double RadarHeading { get; init; }
 
+    /// <summary>
+    /// Radar heading at the start of this tick, before any turn was applied.
+    /// Together with <see cref="RadarHeading"/> this defines the exact arc that was physically
+    /// swept this tick and is used by the renderer to draw the true scan-flash zone.
+    /// </summary>
+    public double PrevRadarHeading { get; init; }
+
     /// <summary>Current velocity in pixels/tick. Positive = forward, negative = reverse.</summary>
     public double Velocity { get; init; }
 

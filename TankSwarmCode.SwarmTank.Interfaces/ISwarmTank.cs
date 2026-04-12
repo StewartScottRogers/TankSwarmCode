@@ -33,6 +33,13 @@ public interface ISwarmTank
     /// <summary>Read-only view of the arena, injected by the engine before the first tick.</summary>
     IArenaContext Arena { get; }
 
+    /// <summary>
+    /// Read-only map of all known enemy radar contacts accumulated by this tank.
+    /// Merged automatically from direct scans and <see cref="SwarmMessageType.RadarShare"/>
+    /// messages received from allies. Keyed by enemy tank name.
+    /// </summary>
+    IReadOnlyDictionary<string, RadarContact> RadarMap { get; }
+
     // ── Action API (call inside OnTick) ─────────────────────────────────────
 
     /// <summary>Sets desired forward movement in pixels for this tick.</summary>

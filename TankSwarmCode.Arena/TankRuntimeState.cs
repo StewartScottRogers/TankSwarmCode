@@ -37,6 +37,7 @@ internal sealed class TankRuntimeState
         Heading = Heading,
         GunHeading = GunHeading,
         RadarHeading = RadarHeading,
+        PrevRadarHeading = PrevRadarHeading,
         Velocity = Velocity,
         Energy = Energy,
         IsAlive = IsAlive
