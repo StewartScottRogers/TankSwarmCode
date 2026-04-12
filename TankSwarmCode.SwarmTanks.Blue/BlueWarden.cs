@@ -70,6 +70,9 @@ public sealed class BlueWarden : SwarmTankBase
 
     public override void OnScannedTank(ScannedTankEventArgs e)
     {
+        // base records the contact in RadarMap and auto-broadcasts RadarShare to Blue allies.
+        base.OnScannedTank(e);
+
         if (e.Result.SwarmId == SwarmId)
             return;
 

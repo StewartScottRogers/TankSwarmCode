@@ -21,6 +21,13 @@ public record SwarmMessage
     /// <summary>Optional: arbitrary string payload (e.g. serialised JSON).</summary>
     public string? CustomData { get; init; }
 
+    /// <summary>
+    /// Optional: enemy radar contact carried by a
+    /// <see cref="Enums.SwarmMessageType.RadarShare"/> message.
+    /// The base class populates this automatically; never contains allied positions.
+    /// </summary>
+    public RadarContact? RadarContact { get; init; }
+
     /// <summary>Tick number when this message was created.</summary>
     public long Timestamp { get; init; }
 }

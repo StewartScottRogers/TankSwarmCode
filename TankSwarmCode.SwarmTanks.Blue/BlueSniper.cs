@@ -9,6 +9,7 @@ namespace TankSwarmCode.SwarmTanks.Blue;
 /// Camps in an arena corner, fires at maximum power 3.0 with tight gun alignment,
 /// and evades incoming bullets using dot-product inbound detection.
 /// Relocates to the diagonally opposite corner if an enemy closes within 80 px.
+/// Leverages the swarm's shared <c>RadarMap</c> for target acquisition.
 /// </summary>
 public sealed class BlueSniper : SwarmTankBase
 {
@@ -27,12 +28,6 @@ public sealed class BlueSniper : SwarmTankBase
     private Vector2D _cornerB;
     private bool _useCornerA = true;   // toggles on relocation
     private bool _relocating;
-
-    // Target state
-    private Vector2D _targetPos;
-    private Vector2D _targetVelocityVec;
-    private string? _targetName;
-    private long _lastTargetTick;
     private const int StaleAfterTicks = 25;
 
     public BlueSniper(string name, bool topLeft)
@@ -82,12 +77,19 @@ public sealed class BlueSniper : SwarmTankBase
             SetAhead(0);
         }
 
-        bool hasTarget = _targetName is not null
-            && (Arena.TickNumber - _lastTargetTick) <= StaleAfterTicks;
+        // RadarMap is kept fresh from both own scans and ally RadarShare messages.
+        RadarContact? target = GetFreshestEnemy(StaleAfterTicks);
 
-        if (hasTarget)
+        if (target is not null)
         {
-            AimAndFire();
+            // Relocate if target is dangerously close
+            if (State.Position.DistanceTo(target.Position) < TooCloseRange)
+            {
+                _useCornerA = !_useCornerA;
+                _relocating = true;
+            }
+
+            AimAndFire(target);
         }
         else
         {
@@ -98,41 +100,8 @@ public sealed class BlueSniper : SwarmTankBase
 
     public override void OnScannedTank(ScannedTankEventArgs e)
     {
-        if (e.Result.SwarmId == SwarmId)
-            return;
-
-        _targetName = e.Result.Name;
-        _targetPos = e.Result.Position;
-
-        double rad = e.Result.Heading * Math.PI / 180.0;
-        _targetVelocityVec = new Vector2D(
-            e.Result.Velocity * Math.Sin(rad),
-            -e.Result.Velocity * Math.Cos(rad));
-        _lastTargetTick = Arena.TickNumber;
-
-        // Relocate if target is dangerously close
-        if (e.Result.Distance < TooCloseRange)
-        {
-            _useCornerA = !_useCornerA;
-            _relocating = true;
-        }
-    }
-
-    public override void OnSwarmMessage(SwarmMessageEventArgs e)
-    {
-        if (e.Message.Type != SwarmMessageType.EnemySpotted)
-            return;
-
-        bool stale = _targetName is null
-            || (Arena.TickNumber - _lastTargetTick) > StaleAfterTicks;
-
-        if (stale && e.Message.Position.HasValue)
-        {
-            _targetName = e.Message.TargetName;
-            _targetPos = e.Message.Position.Value;
-            _targetVelocityVec = default;
-            _lastTargetTick = e.Message.Timestamp;
-        }
+        // base records the contact in RadarMap and auto-broadcasts RadarShare to Blue allies.
+        base.OnScannedTank(e);
     }
 
     public override void OnHitWall(HitWallEventArgs e)
@@ -179,15 +148,15 @@ public sealed class BlueSniper : SwarmTankBase
         return false;
     }
 
-    private void AimAndFire()
+    private void AimAndFire(RadarContact target)
     {
         double bulletSpeed = 20.0 - 3.0 * FirePower;
-        double distToTarget = State.Position.DistanceTo(_targetPos);
+        double distToTarget = State.Position.DistanceTo(target.Position);
         double travelTicks = distToTarget / bulletSpeed;
 
         Vector2D predictedPos = new(
-            _targetPos.X + _targetVelocityVec.X * travelTicks,
-            _targetPos.Y + _targetVelocityVec.Y * travelTicks);
+            target.Position.X + target.VelocityVector.X * travelTicks,
+            target.Position.Y + target.VelocityVector.Y * travelTicks);
 
         double gunBearing = State.Position.BearingTo(predictedPos);
         double gunTurn = RelativeBearing(State.GunHeading, gunBearing);

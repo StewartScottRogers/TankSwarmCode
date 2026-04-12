@@ -10,6 +10,7 @@ namespace TankSwarmCode.SwarmTanks.Red;
 /// creating a flanking pincer with its sibling Red flanker.
 /// RedWolf uses +90° (right flank), RedFox uses -90° (left flank).
 /// Fires 2.0 power when gun is aligned and within 300 px.
+/// Leverages the swarm's shared <c>RadarMap</c> for target acquisition.
 /// </summary>
 public sealed class RedFlank : SwarmTankBase
 {
@@ -22,12 +23,6 @@ public sealed class RedFlank : SwarmTankBase
     private const double FirePower = 2.0;
     private const double EngageRange = 300.0;
     private const double OrbitRange = 180.0;  // desired orbit distance from target
-
-    // Target state
-    private Vector2D _targetPos;
-    private Vector2D _targetVelocityVec;
-    private string? _targetName;
-    private long _lastTargetTick;
     private const int StaleAfterTicks = 25;
 
     public RedFlank(string name, double orbitDegrees)
@@ -40,12 +35,12 @@ public sealed class RedFlank : SwarmTankBase
 
     public override void OnTick(TickEventArgs e)
     {
-        bool hasTarget = _targetName is not null
-            && (Arena.TickNumber - _lastTargetTick) <= StaleAfterTicks;
+        // RadarMap is kept fresh from both own scans and ally RadarShare messages.
+        RadarContact? target = GetFreshestEnemy(StaleAfterTicks);
 
-        if (hasTarget)
+        if (target is not null)
         {
-            FlankAndFire();
+            FlankAndFire(target);
         }
         else
         {
@@ -58,36 +53,8 @@ public sealed class RedFlank : SwarmTankBase
 
     public override void OnScannedTank(ScannedTankEventArgs e)
     {
-        if (e.Result.SwarmId == SwarmId)
-            return;
-
-        _targetName = e.Result.Name;
-        _targetPos = e.Result.Position;
-
-        double rad = e.Result.Heading * Math.PI / 180.0;
-        _targetVelocityVec = new Vector2D(
-            e.Result.Velocity * Math.Sin(rad),
-            -e.Result.Velocity * Math.Cos(rad));
-
-        _lastTargetTick = Arena.TickNumber;
-    }
-
-    public override void OnSwarmMessage(SwarmMessageEventArgs e)
-    {
-        // Accept intel from scout when stale
-        if (e.Message.Type != SwarmMessageType.EnemySpotted)
-            return;
-
-        bool ourTargetStale = _targetName is null
-            || (Arena.TickNumber - _lastTargetTick) > StaleAfterTicks;
-
-        if (ourTargetStale && e.Message.Position.HasValue)
-        {
-            _targetName = e.Message.TargetName;
-            _targetPos = e.Message.Position.Value;
-            _targetVelocityVec = default;
-            _lastTargetTick = e.Message.Timestamp;
-        }
+        // base records the contact in RadarMap and auto-broadcasts RadarShare to Red allies.
+        base.OnScannedTank(e);
     }
 
     public override void OnHitWall(HitWallEventArgs e)
@@ -104,16 +71,16 @@ public sealed class RedFlank : SwarmTankBase
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private void FlankAndFire()
+    private void FlankAndFire(RadarContact target)
     {
         // Direction from us to target
-        double directBearing = State.Position.BearingTo(_targetPos);
+        double directBearing = State.Position.BearingTo(target.Position);
 
         // Approach point is OrbitRange px from target at the flank offset angle
         double approachAngleRad = (directBearing + _orbitDegrees) * Math.PI / 180.0;
         Vector2D approachPoint = new(
-            _targetPos.X + OrbitRange * Math.Sin(approachAngleRad),
-            _targetPos.Y - OrbitRange * Math.Cos(approachAngleRad));
+            target.Position.X + OrbitRange * Math.Sin(approachAngleRad),
+            target.Position.Y - OrbitRange * Math.Cos(approachAngleRad));
 
         double approachBearing = State.Position.BearingTo(approachPoint);
         double distToApproach = State.Position.DistanceTo(approachPoint);
@@ -128,14 +95,14 @@ public sealed class RedFlank : SwarmTankBase
         if (distToApproach > 20)
             SetAhead(distToApproach);
 
-        // Linear-predict gun aim
+        // Linear-predict gun aim using VelocityVector from the contact
         double bulletSpeed = 20.0 - 3.0 * FirePower;
-        double distToTarget = State.Position.DistanceTo(_targetPos);
+        double distToTarget = State.Position.DistanceTo(target.Position);
         double travelTicks = distToTarget / bulletSpeed;
 
         Vector2D predictedPos = new(
-            _targetPos.X + _targetVelocityVec.X * travelTicks,
-            _targetPos.Y + _targetVelocityVec.Y * travelTicks);
+            target.Position.X + target.VelocityVector.X * travelTicks,
+            target.Position.Y + target.VelocityVector.Y * travelTicks);
 
         double gunBearing = State.Position.BearingTo(predictedPos);
         double gunTurn = RelativeBearing(State.GunHeading, gunBearing);

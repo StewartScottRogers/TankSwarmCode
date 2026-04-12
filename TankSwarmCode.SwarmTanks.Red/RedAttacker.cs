@@ -7,7 +7,8 @@ namespace TankSwarmCode.SwarmTanks.Red;
 
 /// <summary>
 /// Closes on enemies using linear prediction firing at power 2.5.
-/// Listens for EnemySpotted swarm messages to pick up targets found by the Scout.
+/// Leverages the swarm's shared <c>RadarMap</c> to pick up targets found by allies
+/// without any additional message-handling code.
 /// Broadcasts RequestBackup and retreats when energy drops below 25.
 /// </summary>
 public sealed class RedAttacker : SwarmTankBase
@@ -17,14 +18,6 @@ public sealed class RedAttacker : SwarmTankBase
 
     private const int MySwarmId = 1;
     private const double FirePower = 2.5;
-
-    // Target tracking
-    private Vector2D _targetPos;
-    private Vector2D _targetVelocityVec;
-    private double _targetHeading;
-    private double _targetVelocity;
-    private string? _targetName;
-    private long _lastTargetTick;
     private const int StaleAfterTicks = 20;
 
     // Retreat state
@@ -64,12 +57,12 @@ public sealed class RedAttacker : SwarmTankBase
             return;
         }
 
-        bool hasTarget = _targetName is not null
-            && (Arena.TickNumber - _lastTargetTick) <= StaleAfterTicks;
+        // RadarMap is kept fresh from both own scans and ally RadarShare messages.
+        RadarContact? target = GetFreshestEnemy(StaleAfterTicks);
 
-        if (hasTarget)
+        if (target is not null)
         {
-            PursueAndFire();
+            PursueAndFire(target);
         }
         else
         {
@@ -81,29 +74,8 @@ public sealed class RedAttacker : SwarmTankBase
 
     public override void OnScannedTank(ScannedTankEventArgs e)
     {
-        if (e.Result.SwarmId == SwarmId)
-            return;
-
-        UpdateTarget(e.Result.Name, e.Result.Position,
-            e.Result.Heading, e.Result.Velocity, e.Result.Bearing, e.Result.Distance);
-    }
-
-    public override void OnSwarmMessage(SwarmMessageEventArgs e)
-    {
-        // Accept scout intelligence when our own target is stale
-        if (e.Message.Type != SwarmMessageType.EnemySpotted)
-            return;
-
-        bool ourTargetStale = _targetName is null
-            || (Arena.TickNumber - _lastTargetTick) > StaleAfterTicks;
-
-        if (ourTargetStale && e.Message.Position.HasValue)
-        {
-            _targetName = e.Message.TargetName;
-            _targetPos = e.Message.Position.Value;
-            _targetVelocityVec = default;
-            _lastTargetTick = e.Message.Timestamp;
-        }
+        // base records the contact in RadarMap and auto-broadcasts RadarShare to Red allies.
+        base.OnScannedTank(e);
     }
 
     public override void OnHitWall(HitWallEventArgs e)
@@ -120,29 +92,16 @@ public sealed class RedAttacker : SwarmTankBase
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
-    private void UpdateTarget(string targetName, Vector2D pos, double heading,
-        double velocity, double bearing, double distance)
-    {
-        _targetName = targetName;
-
-        double rad = heading * Math.PI / 180.0;
-        _targetVelocityVec = new Vector2D(velocity * Math.Sin(rad), -velocity * Math.Cos(rad));
-        _targetPos = pos;
-        _targetHeading = heading;
-        _targetVelocity = velocity;
-        _lastTargetTick = Arena.TickNumber;
-    }
-
-    private void PursueAndFire()
+    private void PursueAndFire(RadarContact target)
     {
         // Linear prediction: estimate where target will be when bullet arrives
         double bulletSpeed = 20.0 - 3.0 * FirePower;
-        double distance = State.Position.DistanceTo(_targetPos);
+        double distance = State.Position.DistanceTo(target.Position);
         double travelTicks = distance / bulletSpeed;
 
         Vector2D predictedPos = new(
-            _targetPos.X + _targetVelocityVec.X * travelTicks,
-            _targetPos.Y + _targetVelocityVec.Y * travelTicks);
+            target.Position.X + target.VelocityVector.X * travelTicks,
+            target.Position.Y + target.VelocityVector.Y * travelTicks);
 
         double absBearing = State.Position.BearingTo(predictedPos);
         double gunTurn = RelativeBearing(State.GunHeading, absBearing);

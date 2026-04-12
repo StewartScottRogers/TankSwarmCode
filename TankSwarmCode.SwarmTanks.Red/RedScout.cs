@@ -18,11 +18,6 @@ public sealed class RedScout : SwarmTankBase
     private double _moveDir = 1.0;   // +1 or -1
     private const int OscillateEvery = 35;
 
-    // Last known enemy — kept fresh by radar; stale after this many ticks
-    private ScanResult? _lastScan;
-    private long _lastScanTick;
-    private const int StaleAfter = 15;
-
     public RedScout()
     {
         SwarmId = 1;
@@ -48,12 +43,12 @@ public sealed class RedScout : SwarmTankBase
 
     public override void OnScannedTank(ScannedTankEventArgs e)
     {
+        // base records the contact in RadarMap and auto-broadcasts RadarShare to Red allies.
+        base.OnScannedTank(e);
+
         // Only react to enemies (different swarm)
         if (e.Result.SwarmId == SwarmId)
             return;
-
-        _lastScan = e.Result;
-        _lastScanTick = Arena.TickNumber;
 
         // Light harassing shot — scout's job is intel, not killing
         TurnGunToward(e.Result.Bearing);

@@ -38,14 +38,14 @@
             arenaUserControl1.Dock = DockStyle.Fill;
             arenaUserControl1.Location = new Point(0, 0);
             arenaUserControl1.Name = "arenaUserControl1";
-            arenaUserControl1.Size = new Size(512, 323);
+            arenaUserControl1.Size = new Size(1079, 709);
             arenaUserControl1.TabIndex = 0;
             // 
             // TankSwarmArena
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(512, 323);
+            ClientSize = new Size(1079, 709);
             Controls.Add(arenaUserControl1);
             MinimizeBox = false;
             Name = "TankSwarmArena";

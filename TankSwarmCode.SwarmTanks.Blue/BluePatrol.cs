@@ -8,7 +8,7 @@ namespace TankSwarmCode.SwarmTanks.Blue;
 /// <summary>
 /// Patrols a set of waypoints in its half of the arena (left or right).
 /// Engages on contact with adaptive power and retreats to centre when low on energy.
-/// Uses swarm messages to converge on Warden-spotted targets.
+/// Leverages the swarm's shared <c>RadarMap</c> to converge on any ally-spotted targets.
 /// </summary>
 public sealed class BluePatrol : SwarmTankBase
 {
@@ -26,10 +26,6 @@ public sealed class BluePatrol : SwarmTankBase
     private Vector2D[] _waypoints = [];
     private int _waypointIndex;
     private bool _retreating;
-
-    // Target from swarm message or direct scan
-    private Vector2D? _lastEnemyPos;
-    private long _lastEnemyTick;
     private const int StaleAfterTicks = 30;
 
     public BluePatrol(string name, int patrolSide)
@@ -84,12 +80,12 @@ public sealed class BluePatrol : SwarmTankBase
             return;
         }
 
-        bool hasEnemyIntel = _lastEnemyPos.HasValue
-            && (Arena.TickNumber - _lastEnemyTick) <= StaleAfterTicks;
+        // RadarMap is kept fresh from both own scans and ally RadarShare messages.
+        RadarContact? target = GetFreshestEnemy(StaleAfterTicks);
 
-        if (hasEnemyIntel)
+        if (target is not null)
         {
-            MoveToward(_lastEnemyPos!.Value, 150);
+            MoveToward(target.Position, 150);
         }
         else
         {
@@ -102,11 +98,11 @@ public sealed class BluePatrol : SwarmTankBase
 
     public override void OnScannedTank(ScannedTankEventArgs e)
     {
+        // base records the contact in RadarMap and auto-broadcasts RadarShare to Blue allies.
+        base.OnScannedTank(e);
+
         if (e.Result.SwarmId == SwarmId)
             return;
-
-        _lastEnemyPos = e.Result.Position;
-        _lastEnemyTick = Arena.TickNumber;
 
         double power = e.Result.Distance < 200 ? 2.5 : 1.5;
         double gunTurn = RelativeBearing(State.GunHeading, State.Heading + e.Result.Bearing);
@@ -116,21 +112,6 @@ public sealed class BluePatrol : SwarmTankBase
 
         if (Math.Abs(gunTurn) < 12)
             SetFire(power);
-    }
-
-    public override void OnSwarmMessage(SwarmMessageEventArgs e)
-    {
-        if (e.Message.Type != SwarmMessageType.EnemySpotted)
-            return;
-
-        bool stale = !_lastEnemyPos.HasValue
-            || (Arena.TickNumber - _lastEnemyTick) > StaleAfterTicks;
-
-        if (stale && e.Message.Position.HasValue)
-        {
-            _lastEnemyPos = e.Message.Position;
-            _lastEnemyTick = e.Message.Timestamp;
-        }
     }
 
     public override void OnHitWall(HitWallEventArgs e)

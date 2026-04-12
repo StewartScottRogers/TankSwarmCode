@@ -22,5 +22,15 @@ public enum SwarmMessageType
     RoleChange,
 
     /// <summary>Application-defined message; interpret <c>CustomData</c> freely.</summary>
-    Custom
+    Custom,
+
+    /// <summary>
+    /// Automatic radar sighting broadcast. The message's
+    /// <see cref="TankSwarmCode.SwarmTank.Interfaces.Models.SwarmMessage.RadarContact"/>
+    /// carries the full contact snapshot.
+    /// Emitted by the base class whenever the radar sweeps over an enemy;
+    /// received contacts are merged into the recipient's <c>RadarMap</c>
+    /// without any user code required.
+    /// </summary>
+    RadarShare
 }
