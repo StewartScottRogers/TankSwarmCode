@@ -347,6 +347,9 @@ public partial class ArenaUserControl : UserControl
         float y = (float)tank.Position.Y;
         Color tankColor = SwarmColours[Math.Abs(tank.SwarmId) % SwarmColours.Length];
 
+        // Drawn first so the glow ring sits behind the hull
+        DrawScanHalo(g, tank, x, y);
+
         GraphicsState saved = g.Save();
         g.TranslateTransform(x, y);
 
@@ -532,6 +535,63 @@ public partial class ArenaUserControl : UserControl
         float cx = (ClientSize.Width - size.Width) / 2f;
         float cy = (ClientSize.Height - size.Height) / 2f;
         g.DrawString(text, font, brush, cx, cy);
+    }
+
+    /// <summary>
+    /// Draws a contact-flash halo around a tank timed to the exact frame the animated
+    /// outbound radar arc reaches the tank's position.
+    /// <para>
+    /// <see cref="DrawRadarReflection"/> drives the outbound arc with
+    /// <c>radius = dist * (ageFraction * 2)</c>, so the wavefront is physically at the
+    /// target when <c>ageFraction == 0.5</c>.  The halo ramps up sharply during the
+    /// final approach (last <c>preWin</c> of phase-1) and decays quadratically after
+    /// contact, making the underlying scan event directly readable on screen.
+    /// </para>
+    /// </summary>
+    private void DrawScanHalo(Graphics g, TankState tank, float cx, float cy)
+    {
+        if (_scanEvents.Count == 0) return;
+
+        ScanEvent? best = _scanEvents
+            .Where(ev => string.Equals(ev.EnemyName, tank.Name, StringComparison.Ordinal))
+            .Cast<ScanEvent?>()
+            .MaxBy(ev => ev!.Value.TickFired);
+
+        if (best is null) return;
+
+        ScanEvent hit     = best.Value;
+        float lifetimeMs  = ScanHaloLifetime * _tickIntervalMs;
+        float elapsedMs   = (float)(DateTime.UtcNow - hit.TickFiredWallTime).TotalMilliseconds;
+        float ageFraction = Math.Clamp(elapsedMs / lifetimeMs, 0f, 1f);
+
+        // Outbound wave arrives at target when ageFraction == 0.5.
+        // Halo ramps up in the final approach and decays after contact.
+        const float arrival = 0.5f;
+        const float preWin  = 0.06f;   // ramp-up window before wave arrival  (~200 ms at 3 TPS)
+        const float postWin = 0.22f;   // decay window after contact           (~730 ms at 3 TPS)
+
+        float fade;
+        if (ageFraction < arrival - preWin || ageFraction > arrival + postWin)
+            return;
+        else if (ageFraction <= arrival)
+            fade = (ageFraction - (arrival - preWin)) / preWin;  // linear 0→1 as wave closes in
+        else
+        {
+            float t = (ageFraction - arrival) / postWin;         // 0→1 post-contact
+            fade = 1f - t * t;                                   // quadratic decay
+        }
+
+        fade = Math.Clamp(fade, 0f, 1f);
+        if (fade < 0.02f) return;
+
+        const float innerR = TankBodySize / 2f + 3f;  // just outside the hull edge
+        const float outerR = innerR + 8f;             // soft corona beyond the ring
+
+        using SolidBrush glowBrush = new(Color.FromArgb((int)(70 * fade), hit.SpotterColor));
+        g.FillEllipse(glowBrush, cx - outerR, cy - outerR, outerR * 2, outerR * 2);
+
+        using Pen ringPen = new(Color.FromArgb((int)(220 * fade), LightenColor(hit.SpotterColor, 90)), 2f);
+        g.DrawEllipse(ringPen, cx - innerR, cy - innerR, innerR * 2, innerR * 2);
     }
 
     /// <summary>

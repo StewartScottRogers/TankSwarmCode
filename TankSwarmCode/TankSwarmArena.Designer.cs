@@ -61,7 +61,15 @@
 
             arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
 
+            // ── Toolbar controls ──────────────────────────────────────────────
+            _toolStrip = new ToolStrip();
+            _btnStartWar = new ToolStripButton();
+            _btnStopWar = new ToolStripButton();
+            _separatorToolbar1 = new ToolStripSeparator();
+            _btnSingleStep = new ToolStripButton();
+
             _mainMenuStrip.SuspendLayout();
+            _toolStrip.SuspendLayout();
             SuspendLayout();
 
             // ── _mainMenuStrip ────────────────────────────────────────────────
@@ -178,18 +186,48 @@
             _menuItemResetArena.Text = "&Reset Arena";
             _menuItemResetArena.Click += MenuItemResetArena_Click;
 
+            // ── _toolStrip ────────────────────────────────────────────────────
+            _toolStrip.Items.AddRange(new ToolStripItem[]
+            {
+                _btnStartWar,
+                _btnStopWar,
+                _separatorToolbar1,
+                _btnSingleStep
+            });
+            _toolStrip.Location = new Point(0, 24);
+            _toolStrip.Name = "_toolStrip";
+            _toolStrip.Size = new Size(1079, 25);
+            _toolStrip.TabIndex = 2;
+            _toolStrip.Text = "toolStrip";
+
+            _btnStartWar.Name = "_btnStartWar";
+            _btnStartWar.Text = "\u25B6  Start War";
+            _btnStartWar.ToolTipText = "Start simulation (F5)";
+            _btnStartWar.Click += MenuItemStart_Click;
+
+            _btnStopWar.Name = "_btnStopWar";
+            _btnStopWar.Text = "\u23F9  Stop";
+            _btnStopWar.ToolTipText = "Stop simulation (F6)";
+            _btnStopWar.Enabled = false;
+            _btnStopWar.Click += MenuItemStop_Click;
+
+            _btnSingleStep.Name = "_btnSingleStep";
+            _btnSingleStep.Text = "\u2192\u258F  Step";
+            _btnSingleStep.ToolTipText = "Advance one tick (F10)";
+            _btnSingleStep.Click += MenuItemSingleStep_Click;
+
             // ── arenaUserControl1 ─────────────────────────────────────────────
             arenaUserControl1.Dock = DockStyle.Fill;
-            arenaUserControl1.Location = new Point(0, 24);
+            arenaUserControl1.Location = new Point(0, 49);
             arenaUserControl1.Name = "arenaUserControl1";
-            arenaUserControl1.Size = new Size(1079, 685);
+            arenaUserControl1.Size = new Size(1079, 660);
             arenaUserControl1.TabIndex = 0;
 
             // ── TankSwarmArena ────────────────────────────────────────────────
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1079, 709);
             Controls.Add(arenaUserControl1);
+            Controls.Add(_toolStrip);
             Controls.Add(_mainMenuStrip);
             MainMenuStrip = _mainMenuStrip;
             MinimizeBox = false;
@@ -198,6 +236,9 @@
             SizeGripStyle = SizeGripStyle.Show;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Tank Swarm Arena";
+            ClientSize = new Size(1079, 734);
+            _toolStrip.ResumeLayout(false);
+            _toolStrip.PerformLayout();
             _mainMenuStrip.ResumeLayout(false);
             _mainMenuStrip.PerformLayout();
             ResumeLayout(false);
@@ -237,5 +278,12 @@
         private ToolStripMenuItem _menuItemSingleStep;
         private ToolStripSeparator _separatorWar2;
         private ToolStripMenuItem _menuItemResetArena;
+
+        // Toolbar
+        private ToolStrip _toolStrip;
+        private ToolStripButton _btnStartWar;
+        private ToolStripButton _btnStopWar;
+        private ToolStripSeparator _separatorToolbar1;
+        private ToolStripButton _btnSingleStep;
     }
 }

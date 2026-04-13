@@ -157,6 +157,11 @@ public partial class TankSwarmArena : Form
         _menuItemSingleStep.Enabled = !running;
         // Reset is always available
         _menuItemResetArena.Enabled = true;
+
+        // ── Toolbar mirrors War menu ──────────────────────────────────────────
+        _btnStartWar.Enabled   = !running;
+        _btnStopWar.Enabled    = running;
+        _btnSingleStep.Enabled = !running;
     }
 }
 
