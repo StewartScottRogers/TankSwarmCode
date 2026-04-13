@@ -64,6 +64,12 @@
             _menuItemSpeedNormal = new ToolStripMenuItem();
             _menuItemSpeedFast = new ToolStripMenuItem();
             _menuItemSpeedVeryFast = new ToolStripMenuItem();
+            _separatorWar4 = new ToolStripSeparator();
+
+            // ── Player vs Player sub-menu items ───────────────────────────────
+            _menuItemPlayerVsPlayer = new ToolStripMenuItem();
+            _menuItemPvP1v1 = new ToolStripMenuItem();
+            _menuItemPvP2v2 = new ToolStripMenuItem();
 
             arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
 
@@ -173,7 +179,11 @@
                 _separatorWar1,
                 _menuItemSingleStep,
                 _separatorWar2,
-                _menuItemResetArena
+                _menuItemResetArena,
+                _separatorWar3,
+                _menuItemSpeed,
+                _separatorWar4,
+                _menuItemPlayerVsPlayer
             });
             _menuItemWar.Name = "_menuItemWar";
             _menuItemWar.Text = "&War";
@@ -198,7 +208,53 @@
             _menuItemResetArena.Text = "&Reset Arena";
             _menuItemResetArena.Click += MenuItemResetArena_Click;
 
-            // ── _toolStrip ────────────────────────────────────────────────────
+            // ── Player vs Player sub-menu ─────────────────────────────────────
+            // 3 vs 3 … 12 vs 12 are added dynamically in BuildNvNSubMenu()
+            _menuItemPlayerVsPlayer.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                _menuItemPvP1v1,
+                _menuItemPvP2v2
+            });
+            _menuItemPlayerVsPlayer.Name = "_menuItemPlayerVsPlayer";
+            _menuItemPlayerVsPlayer.Text = "&Player vs Player";
+
+            _menuItemPvP1v1.Name = "_menuItemPvP1v1";
+            _menuItemPvP1v1.Text = "&1 vs 1";
+            _menuItemPvP1v1.Click += MenuItemPvP1v1_Click;
+
+            _menuItemPvP2v2.Name = "_menuItemPvP2v2";
+            _menuItemPvP2v2.Text = "&2 vs 2";
+            _menuItemPvP2v2.Click += MenuItemPvP2v2_Click;
+
+            // ── Speed sub-menu ────────────────────────────────────────────────
+            _menuItemSpeed.DropDownItems.AddRange(new ToolStripItem[]
+            {
+                _menuItemSpeedSlow,
+                _menuItemSpeedNormal,
+                _menuItemSpeedFast,
+                _menuItemSpeedVeryFast
+            });
+            _menuItemSpeed.Name = "_menuItemSpeed";
+            _menuItemSpeed.Text = "S&peed";
+
+            _menuItemSpeedSlow.Name = "_menuItemSpeedSlow";
+            _menuItemSpeedSlow.Text = "&Slow (3 TPS)";
+            _menuItemSpeedSlow.Click += MenuItemSpeed_Click;
+
+            _menuItemSpeedNormal.Checked = true;
+            _menuItemSpeedNormal.Name = "_menuItemSpeedNormal";
+            _menuItemSpeedNormal.Text = "&Normal (10 TPS)";
+            _menuItemSpeedNormal.Click += MenuItemSpeed_Click;
+
+            _menuItemSpeedFast.Name = "_menuItemSpeedFast";
+            _menuItemSpeedFast.Text = "&Fast (20 TPS)";
+            _menuItemSpeedFast.Click += MenuItemSpeed_Click;
+
+            _menuItemSpeedVeryFast.Name = "_menuItemSpeedVeryFast";
+            _menuItemSpeedVeryFast.Text = "&Very Fast (30 TPS)";
+            _menuItemSpeedVeryFast.Click += MenuItemSpeed_Click;
+
+            // ── _toolStrip
             _toolStrip.Items.AddRange(new ToolStripItem[]
             {
                 _btnStartWar,
@@ -318,11 +374,17 @@
         private ToolStripSeparator _separatorWar2;
         private ToolStripMenuItem _menuItemResetArena;
         private ToolStripSeparator _separatorWar3;
+        private ToolStripSeparator _separatorWar4;
         private ToolStripMenuItem _menuItemSpeed;
         private ToolStripMenuItem _menuItemSpeedSlow;
         private ToolStripMenuItem _menuItemSpeedNormal;
         private ToolStripMenuItem _menuItemSpeedFast;
         private ToolStripMenuItem _menuItemSpeedVeryFast;
+
+        // Player vs Player sub-menu
+        private ToolStripMenuItem _menuItemPlayerVsPlayer;
+        private ToolStripMenuItem _menuItemPvP1v1;
+        private ToolStripMenuItem _menuItemPvP2v2;
 
         // Toolbar
         private ToolStrip _toolStrip;
