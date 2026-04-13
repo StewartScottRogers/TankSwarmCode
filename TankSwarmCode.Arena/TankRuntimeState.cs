@@ -25,6 +25,9 @@ internal sealed class TankRuntimeState
     internal double Energy { get; set; }
     internal bool IsAlive { get; set; }
 
+    /// <summary>Tick on which this tank was destroyed; 0 while alive.</summary>
+    internal long DestroyedAtTick { get; set; }
+
     /// <summary>Pushes mutable fields into the immutable <see cref="TankState"/> and calls <see cref="ISwarmTank.UpdateState"/>.</summary>
     internal void SyncToTank() => Tank.UpdateState(ToTankState());
 
@@ -40,6 +43,7 @@ internal sealed class TankRuntimeState
         PrevRadarHeading = PrevRadarHeading,
         Velocity = Velocity,
         Energy = Energy,
-        IsAlive = IsAlive
+        IsAlive = IsAlive,
+        DestroyedAtTick = DestroyedAtTick
     };
 }

@@ -321,6 +321,7 @@ public sealed class ArenaEngine : IArena
 
     private void CheckTankTankCollisions()
     {
+        // ── Live-vs-live collisions ───────────────────────────────────────────
         for (int i = 0; i < RuntimeTanks.Count; i++)
         {
             if (!RuntimeTanks[i].IsAlive) continue;
@@ -333,8 +334,9 @@ public sealed class ArenaEngine : IArena
                 double dx = a.X - b.X;
                 double dy = a.Y - b.Y;
                 double dist = Math.Sqrt(dx * dx + dy * dy);
+                double minDist = ArenaConstants.TankHalfSize * 2;
 
-                if (dist > ArenaConstants.TankHalfSize * 2) continue;
+                if (dist > minDist) continue;
 
                 a.Energy -= ArenaConstants.TankCollisionDamage;
                 b.Energy -= ArenaConstants.TankCollisionDamage;
@@ -349,6 +351,60 @@ public sealed class ArenaEngine : IArena
 
                 CheckDeath(a);
                 CheckDeath(b);
+
+                // Push the two tanks apart so they do not occupy the same arena space.
+                // If they are exactly co-located choose an arbitrary separation axis.
+                double sepDist = dist < 0.001 ? minDist : dist;
+                double nx = dx / sepDist;
+                double ny = dy / sepDist;
+                double overlap = minDist - dist;
+                double push = overlap / 2.0 + 0.5; // half each plus a tiny margin
+
+                if (a.IsAlive)
+                {
+                    a.X = Math.Clamp(a.X + nx * push, ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
+                    a.Y = Math.Clamp(a.Y + ny * push, ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
+                }
+
+                if (b.IsAlive)
+                {
+                    b.X = Math.Clamp(b.X - nx * push, ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
+                    b.Y = Math.Clamp(b.Y - ny * push, ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
+                }
+            }
+        }
+
+        // ── Live-vs-hulk collisions ───────────────────────────────────────────
+        // Destroyed tanks leave an impassable burning hulk. Living tanks are pushed
+        // away from hulks; hulks themselves never move.
+        for (int i = 0; i < RuntimeTanks.Count; i++)
+        {
+            if (!RuntimeTanks[i].IsAlive) continue;
+
+            TankRuntimeState live = RuntimeTanks[i];
+
+            for (int j = 0; j < RuntimeTanks.Count; j++)
+            {
+                if (RuntimeTanks[j].IsAlive) continue; // skip living tanks
+
+                TankRuntimeState hulk = RuntimeTanks[j];
+                double dx = live.X - hulk.X;
+                double dy = live.Y - hulk.Y;
+                double dist = Math.Sqrt(dx * dx + dy * dy);
+                double minDist = ArenaConstants.TankHalfSize * 2;
+
+                if (dist > minDist) continue;
+
+                live.Velocity = 0;
+
+                // Push the living tank entirely out of the hulk — hulk does not move.
+                double sepDist = dist < 0.001 ? minDist : dist;
+                double nx = dx / sepDist;
+                double ny = dy / sepDist;
+                double overlap = minDist - dist;
+
+                live.X = Math.Clamp(live.X + nx * (overlap + 0.5), ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
+                live.Y = Math.Clamp(live.Y + ny * (overlap + 0.5), ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
             }
         }
     }
@@ -403,6 +459,7 @@ public sealed class ArenaEngine : IArena
         if (rts.Energy > 0 || !rts.IsAlive) return;
         rts.Energy = 0;
         rts.IsAlive = false;
+        rts.DestroyedAtTick = TickNumber;
         SafeCall(() => rts.Tank.OnDeath());
     }
 
@@ -433,10 +490,33 @@ public sealed class ArenaEngine : IArena
     private void SpawnTanks()
     {
         double margin = ArenaConstants.TankHalfSize * 4;
+        double minSep = ArenaConstants.TankHalfSize * 2 + 4; // minimum centre-to-centre gap
+
         foreach (TankRuntimeState rts in RuntimeTanks)
         {
-            rts.X = _rng.NextDouble() * (Width - margin * 2) + margin;
-            rts.Y = _rng.NextDouble() * (Height - margin * 2) + margin;
+            // Retry up to 200 times to find a non-overlapping spawn position.
+            for (int attempt = 0; attempt < 200; attempt++)
+            {
+                double candidateX = _rng.NextDouble() * (Width - margin * 2) + margin;
+                double candidateY = _rng.NextDouble() * (Height - margin * 2) + margin;
+
+                bool tooClose = RuntimeTanks
+                    .Where(other => other != rts && other.Energy > 0)
+                    .Any(other =>
+                    {
+                        double dx = candidateX - other.X;
+                        double dy = candidateY - other.Y;
+                        return Math.Sqrt(dx * dx + dy * dy) < minSep;
+                    });
+
+                if (!tooClose || attempt == 199)
+                {
+                    rts.X = candidateX;
+                    rts.Y = candidateY;
+                    break;
+                }
+            }
+
             rts.Heading = _rng.NextDouble() * 360;
             rts.GunHeading = rts.Heading;
             rts.RadarHeading = rts.Heading;
@@ -444,6 +524,7 @@ public sealed class ArenaEngine : IArena
             rts.Velocity = 0;
             rts.Energy = ArenaConstants.TankStartEnergy;
             rts.IsAlive = true;
+            rts.DestroyedAtTick = 0;
         }
     }
 

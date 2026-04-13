@@ -40,6 +40,16 @@ public partial class ArenaUserControl : UserControl
     private const int RadarHaloMinRadius = 8;     // px at near-dead energy (at spawn time)
     private const int ScanHaloLifetime = 10;      // ticks — 5 out + 5 back; ~1.7 s per phase at 3 TPS
 
+    // Explosion animation — plays once per destroyed tank at the tick the tank dies
+    private const float ExplosionDurationMs = 2100f;  // total wall-clock ms for the full sequence
+    private const float BurnStartMs        =  400f;  // flames ramp in from here
+    private const float BurnRampMs         =  800f;  // ms to reach full flame intensity
+
+    // Wall-clock birth time of the explosion for each destroyed tank (keyed by tank name).
+    // Recorded at _lastTickTime the first tick we see IsAlive == false.
+    private readonly Dictionary<string, DateTime> _explosionBirthTimes =
+        new(StringComparer.Ordinal);
+
     // Per-swarm colours (index = SwarmId % palette length)
     private static readonly Color[] SwarmColours =
     [
@@ -157,6 +167,7 @@ public partial class ArenaUserControl : UserControl
 
         _lastTickTime = DateTime.UtcNow;
         _engine.StepOnce();
+        HarvestExplosionBirthTimes();
         HarvestScanEvents();
         _statusMessage = $"Tick {_engine.TickNumber}";
         Invalidate();
@@ -170,6 +181,7 @@ public partial class ArenaUserControl : UserControl
         _engine = null;
         _radarTrails.Clear();
         _scanEvents.Clear();
+        _explosionBirthTimes.Clear();
         _waitingForPulse = false;
         _statusMessage = "Ready – call Start() to begin.";
         Invalidate();
@@ -192,7 +204,8 @@ public partial class ArenaUserControl : UserControl
 
     private void Engine_RoundEnded(object? sender, RoundEndedEventArgs e)
     {
-        _gameTimer.Stop();
+        // Keep the render timer running so burning-hulk animations continue playing.
+        // The engine simulation is already stopped; the timer just drives Invalidate calls.
         _statusMessage = $"Round ended after {e.TotalTicks} ticks.";
         Invalidate();
     }
@@ -217,14 +230,33 @@ public partial class ArenaUserControl : UserControl
 
         _lastTickTime = now;
         _engine?.Tick();
+        HarvestExplosionBirthTimes();
         HarvestScanEvents();
 
         Invalidate();
     }
 
     /// <summary>
+    /// Records the wall-clock birth time of every newly destroyed tank so
+    /// <see cref="DrawExplosionBlast"/> can drive a time-based explosion animation.
+    /// Using <see cref="_lastTickTime"/> (set at the start of the tick) keeps the
+    /// explosion onset tightly synchronised with the simulation pulse even during
+    /// the radar pulse-gate pause.
+    /// </summary>
+    private void HarvestExplosionBirthTimes()
+    {
+        if (_engine is null) return;
+
+        foreach (ISwarmTank tank in _engine.Tanks)
+        {
+            if (tank.State.IsAlive) continue;
+            _explosionBirthTimes.TryAdd(tank.Name, _lastTickTime);
+        }
+    }
+
+    /// <summary>
     /// Called once per engine tick (from <see cref="GameTimer_Tick"/>) to harvest physical
-    /// radar hits into <see cref="_scanEvents"/>.  Running here — not inside OnPaint — ensures
+    /// radar hits into <see cref="_scanEvents"/>.
     /// each contact fires at most one <see cref="ScanEvent"/> per tick regardless of how many
     /// repaints occur.  A deduplication guard prevents stacking when the same pair is still
     /// live from a previous tick.
@@ -344,11 +376,43 @@ public partial class ArenaUserControl : UserControl
         // Layer 1 – Radar reflections: beam from spotter to detected tank
         DrawAllRadarHalos(g);
 
+        // Layer 2 – Charred hulk bodies (static wrecks rendered below bullets and tanks)
+        foreach (ISwarmTank tank in _engine.Tanks)
+        {
+            if (!tank.State.IsAlive)
+                DrawHulkBody(g, tank.State);
+        }
+
+        // Layer 3 – Bullets
         foreach (BulletState bullet in _engine.Bullets)
             DrawBullet(g, bullet);
 
+        // Layer 4 – Living tanks
         foreach (ISwarmTank tank in _engine.Tanks)
-            DrawTank(g, tank.State);
+        {
+            if (tank.State.IsAlive)
+                DrawTank(g, tank.State);
+        }
+
+        // Layer 5 – Explosion blasts and burning flames (on top of everything for impact)
+        foreach (ISwarmTank tank in _engine.Tanks)
+        {
+            if (!tank.State.IsAlive)
+            {
+                float ageMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime bt)
+                    ? (float)(DateTime.UtcNow - bt).TotalMilliseconds
+                    : float.MaxValue;
+
+                if (ageMs < ExplosionDurationMs)
+                    DrawExplosionBlast(g, tank.State, ageMs);
+
+                if (ageMs > BurnStartMs)
+                {
+                    float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
+                    DrawBurningFlame(g, tank.State, intensity);
+                }
+            }
+        }
 
         DrawHud(g);
 
@@ -536,6 +600,263 @@ public partial class ArenaUserControl : UserControl
         using SolidBrush glowBrush = new(Color.FromArgb(60, Color.OrangeRed));
         float glow = radius * 2.5f;
         g.FillEllipse(glowBrush, bx - glow, by - glow, glow * 2, glow * 2);
+    }
+
+    /// <summary>
+    /// Draws the static charred wreck at the tank's death position.
+    /// Called first so the hull sits below all effects in every render pass.
+    /// </summary>
+    private void DrawHulkBody(Graphics g, TankState tank)
+    {
+        float x = (float)tank.Position.X;
+        float y = (float)tank.Position.Y;
+
+        GraphicsState saved = g.Save();
+        g.TranslateTransform(x, y);
+        g.RotateTransform((float)tank.Heading);
+
+        int half = TankBodySize / 2;
+
+        // Scorched ground shadow
+        using SolidBrush shadowBrush = new(Color.FromArgb(60, Color.DarkRed));
+        g.FillEllipse(shadowBrush, -half - 4, -half - 4, (half + 4) * 2, (half + 4) * 2);
+
+        // Charred tank body
+        using SolidBrush hullBrush = new(Color.FromArgb(55, 45, 40));
+        using Pen hullPen = new(Color.FromArgb(90, 70, 60), 1);
+        g.FillRectangle(hullBrush, -half, -half, TankBodySize, TankBodySize);
+        g.DrawRectangle(hullPen, -half, -half, TankBodySize, TankBodySize);
+
+        // Tread remnants
+        using Pen treadPen = new(Color.FromArgb(35, 30, 25), 2);
+        g.DrawLine(treadPen, -half, -half + 3, -half, half - 3);
+        g.DrawLine(treadPen,  half, -half + 3,  half, half - 3);
+
+        // Broken gun stub
+        g.RotateTransform(-(float)tank.Heading);
+        g.RotateTransform((float)tank.GunHeading);
+        using Pen gunStubPen = new(Color.FromArgb(70, 65, 60), 3);
+        g.DrawLine(gunStubPen, 0, 0, 0, -(int)(GunLength * 0.55f));
+        g.RotateTransform(-(float)tank.GunHeading);
+
+        g.Restore(saved);
+    }
+
+    /// <summary>
+    /// Draws animated burning flames and smoke above a charred hulk.
+    /// <paramref name="intensity"/> is 0→1: 0 = just kindling, 1 = full steady burn.
+    /// The transform is applied in world space (no saved-state rotation).
+    /// </summary>
+    private void DrawBurningFlame(Graphics g, TankState tank, float intensity)
+    {
+        float x = (float)tank.Position.X;
+        float y = (float)tank.Position.Y;
+
+        float phase = (float)(DateTime.UtcNow.Ticks % (TimeSpan.TicksPerSecond * 2))
+                      / (float)(TimeSpan.TicksPerSecond * 2) * MathF.PI * 2f;
+
+        GraphicsState saved = g.Save();
+        g.TranslateTransform(x, y);
+
+        // 3 flame tongues
+        float[] flameOffX  = [-3f,  0f,  3f];
+        float[] flamePhase = [ 0f, 0.7f, 1.4f];
+        float[] flameMaxH  = [10f, 14f,  9f];
+
+        for (int i = 0; i < 3; i++)
+        {
+            float fp    = phase + flamePhase[i];
+            float h     = flameMaxH[i] * intensity * (0.6f + 0.4f * MathF.Sin(fp));
+            float wobX  = flameOffX[i] + 2.5f * MathF.Sin(fp * 1.3f);
+            float baseW = (4f + 2f * MathF.Sin(fp * 0.9f)) * intensity;
+
+            using var flamePath = new GraphicsPath();
+            flamePath.AddPolygon([
+                new PointF(wobX - baseW, 0),
+                new PointF(wobX + baseW, 0),
+                new PointF(wobX, -h)
+            ]);
+            int alpha = (int)(200 * intensity * (0.7f + 0.3f * MathF.Sin(fp)));
+            using SolidBrush flameBrush = new(Color.FromArgb(alpha, 220, 80, 0));
+            g.FillPath(flameBrush, flamePath);
+
+            float innerH = h * 0.55f;
+            float innerW = baseW * 0.5f;
+            using var corePath = new GraphicsPath();
+            corePath.AddPolygon([
+                new PointF(wobX - innerW, 0),
+                new PointF(wobX + innerW, 0),
+                new PointF(wobX, -innerH)
+            ]);
+            using SolidBrush coreBrush = new(Color.FromArgb(alpha, 255, 220, 50));
+            g.FillPath(coreBrush, corePath);
+        }
+
+        // 2 smoke puffs drifting upward
+        for (int i = 0; i < 2; i++)
+        {
+            float sp    = phase + i * 1.1f;
+            float drift = 6f * MathF.Sin(sp * 0.7f);
+            float rise  = -(14f + 7f * i + 4f * MathF.Sin(sp));
+            float r     = 5f + 3f * MathF.Sin(sp * 0.5f);
+            int smokeAlpha = (int)(70 * intensity * (0.5f + 0.5f * MathF.Sin(sp * 0.8f)));
+            using SolidBrush smokeBrush = new(Color.FromArgb(smokeAlpha, 180, 170, 160));
+            g.FillEllipse(smokeBrush, drift - r, rise - r, r * 2, r * 2);
+        }
+
+        g.Restore(saved);
+    }
+
+    /// <summary>
+    /// Renders the one-shot explosion sequence that plays when a tank is first destroyed.
+    /// All phases run in world-space coordinates (no graphics transform applied on entry).
+    /// <list type="bullet">
+    ///   <item>0–250 ms — white flash blast expanding outward.</item>
+    ///   <item>0–700 ms — orange-red fireball with bright yellow core.</item>
+    ///   <item>100–900 ms — thin shockwave ring racing outward.</item>
+    ///   <item>150–1600 ms — 10 debris particles flying outward with slight gravity.</item>
+    ///   <item>300–2100 ms — 5 smoke-cloud puffs rising and fading.</item>
+    /// </list>
+    /// </summary>
+    private static void DrawExplosionBlast(Graphics g, TankState tank, float ageMs)
+    {
+        float x = (float)tank.Position.X;
+        float y = (float)tank.Position.Y;
+
+        // ── White flash (0-250 ms) ────────────────────────────────────────────
+        if (ageMs < 250f)
+        {
+            float t    = ageMs / 250f;
+            float fade = t < 0.18f ? t / 0.18f : 1f - (t - 0.18f) / 0.82f;
+            fade = Math.Clamp(fade, 0f, 1f);
+            float r    = 60f * t;
+            using SolidBrush flashBrush = new(Color.FromArgb((int)(255 * fade), Color.White));
+            g.FillEllipse(flashBrush, x - r, y - r, r * 2, r * 2);
+        }
+
+        // ── Fireball (0-700 ms) ───────────────────────────────────────────────
+        if (ageMs < 700f)
+        {
+            float t    = ageMs / 700f;
+            float fade = t < 0.14f ? t / 0.14f : 1f - (t - 0.14f) / 0.86f;
+            fade = MathF.Pow(Math.Clamp(fade, 0f, 1f), 0.65f);
+            float r    = 44f * MathF.Sqrt(t);
+
+            using SolidBrush outerBrush = new(Color.FromArgb((int)(215 * fade), 230, 60, 10));
+            g.FillEllipse(outerBrush, x - r, y - r, r * 2, r * 2);
+
+            float ir = r * 0.52f;
+            using SolidBrush innerBrush = new(Color.FromArgb((int)(240 * fade), 255, 185, 30));
+            g.FillEllipse(innerBrush, x - ir, y - ir, ir * 2, ir * 2);
+        }
+
+        // ── Shockwave ring (100-900 ms) ───────────────────────────────────────
+        if (ageMs >= 100f && ageMs < 900f)
+        {
+            float t    = (ageMs - 100f) / 800f;
+            float r    = 10f + 72f * t;
+            float fade = (1f - t) * (1f - t);
+            int   a    = (int)(200 * fade);
+            float penW = Math.Max(0.8f, 2.8f * (1f - t));
+            using Pen ringPen = new(Color.FromArgb(a, 255, 200, 80), penW);
+            g.DrawEllipse(ringPen, x - r, y - r, r * 2, r * 2);
+
+            // Fainter trailing ring slightly behind
+            if (t < 0.65f)
+            {
+                float r2 = 10f + 58f * t;
+                int   a2 = (int)(90 * (1f - t / 0.65f));
+                using Pen ring2 = new(Color.FromArgb(a2, 255, 140, 40), 1f);
+                g.DrawEllipse(ring2, x - r2, y - r2, r2 * 2, r2 * 2);
+            }
+        }
+
+        // ── Debris particles (150-1600 ms) ────────────────────────────────────
+        if (ageMs >= 150f && ageMs < 1600f)
+        {
+            float t = (ageMs - 150f) / 1450f;
+            // Stable per-tank random so particles stay on the same trajectories across frames.
+            var rng = new Random(tank.Name.GetHashCode());
+
+            for (int i = 0; i < 10; i++)
+            {
+                float angle = rng.NextSingle() * MathF.PI * 2f;
+                float speed = 20f + rng.NextSingle() * 22f;
+                float size  = 1.5f + rng.NextSingle() * 2.5f;
+
+                float dist = speed * MathF.Sqrt(t);         // decelerate via sqrt curve
+                float px   = x + MathF.Cos(angle) * dist;
+                float py   = y + MathF.Sin(angle) * dist + 8f * t * t;  // gravity
+
+                float fade = 1f - t;
+                int   a    = (int)(220 * fade * fade);
+                if (a < 5) continue;
+
+                Color dc = t < 0.28f
+                    ? Color.FromArgb(a, 255, (int)(140 * (1f - t * 3f)), 20)   // hot orange
+                    : Color.FromArgb(a, 75, 65, 55);                           // dark char
+
+                using SolidBrush db = new(dc);
+                g.FillEllipse(db, px - size, py - size, size * 2, size * 2);
+            }
+        }
+
+        // ── Rising smoke cloud (300-2100 ms) ─────────────────────────────────
+        if (ageMs >= 300f)
+        {
+            float t    = Math.Clamp((ageMs - 300f) / 1800f, 0f, 1f);
+            float fade = t < 0.35f ? t / 0.35f : 1f - (t - 0.35f) / 0.65f;
+            fade = Math.Clamp(fade, 0f, 1f);
+
+            var rng = new Random(tank.Name.GetHashCode() ^ 0x5A5A5A5A);
+
+            for (int i = 0; i < 6; i++)
+            {
+                float angle = rng.NextSingle() * MathF.PI * 2f;
+                float drift = (2f + rng.NextSingle() * 7f) * MathF.Sqrt(t);
+                float cx    = x + MathF.Cos(angle) * drift;
+                float cy    = y + MathF.Sin(angle) * drift - (12f + i * 5f) * t;
+                float r     = (5f + rng.NextSingle() * 7f) + 16f * t;
+                int   a     = (int)(75 * fade * (0.55f + 0.45f * rng.NextSingle()));
+                using SolidBrush sb = new(Color.FromArgb(a, 105, 98, 92));
+                g.FillEllipse(sb, cx - r, cy - r, r * 2, r * 2);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Orchestrates the full destroyed-tank visual: explosion sequence then steady burn.
+    /// <list type="bullet">
+    ///   <item>The static charred hull is drawn here only during the explosion window
+    ///         (it reappears in the dedicated hull pass in <see cref="OnPaint"/> once the
+    ///         explosion is over).</item>
+    ///   <item>Explosion phases run for <see cref="ExplosionDurationMs"/> ms.</item>
+    ///   <item>Burning flames ramp in from <see cref="BurnStartMs"/> ms onward.</item>
+    /// </list>
+    /// </summary>
+    private void DrawHulk(Graphics g, TankState tank)
+    {
+        float ageMs = float.MaxValue;
+
+        if (_explosionBirthTimes.TryGetValue(tank.Name, out DateTime birthTime))
+            ageMs = (float)(DateTime.UtcNow - birthTime).TotalMilliseconds;
+
+        bool exploding = ageMs < ExplosionDurationMs;
+
+        // Hull body appears once the initial flash subsides
+        if (!exploding || ageMs > 160f)
+            DrawHulkBody(g, tank);
+
+        // Explosion blast (one-shot, ages out automatically)
+        if (exploding)
+            DrawExplosionBlast(g, tank, ageMs);
+
+        // Burning flames ramp in during and after the explosion tail
+        if (ageMs > BurnStartMs)
+        {
+            float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
+            DrawBurningFlame(g, tank, intensity);
+        }
     }
 
     private void DrawHud(Graphics g)

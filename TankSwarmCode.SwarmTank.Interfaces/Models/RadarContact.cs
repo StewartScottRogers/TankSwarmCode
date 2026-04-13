@@ -1,19 +1,26 @@
 namespace TankSwarmCode.SwarmTank.Interfaces.Models;
 
 /// <summary>
-/// An enemy sighting recorded by one swarm member's radar sweep.
+/// A tank sighting recorded by one swarm member's radar sweep.
 /// Stored in each tank's <c>RadarMap</c> and shared automatically via
 /// <see cref="Enums.SwarmMessageType.RadarShare"/> swarm messages.
-/// Contacts from allies are merged so every member has the fullest
-/// possible picture — enemies are never included in radar sharing.
+/// Both enemy and allied contacts are recorded; use <see cref="IsAlly"/>
+/// to distinguish them.
 /// </summary>
 public record RadarContact
 {
-    /// <summary>Display name of the enemy tank.</summary>
+    /// <summary>Display name of the scanned tank.</summary>
     public string Name { get; init; } = string.Empty;
 
-    /// <summary>Swarm ID of the enemy.</summary>
+    /// <summary>Swarm ID of the scanned tank.</summary>
     public int EnemySwarmId { get; init; }
+
+    /// <summary>
+    /// <c>true</c> when the scanned tank belongs to the same swarm as the observer.
+    /// Friendly-fire is permitted by the engine; this flag lets AI authors choose
+    /// whether to skip or target allied tanks.
+    /// </summary>
+    public bool IsAlly { get; init; }
 
     /// <summary>Last known arena position.</summary>
     public Vector2D Position { get; init; }

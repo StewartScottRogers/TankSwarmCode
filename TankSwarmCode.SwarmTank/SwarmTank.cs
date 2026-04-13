@@ -51,8 +51,9 @@ public abstract class SwarmTankBase : ISwarmTank
     public IArenaContext Arena { get; private set; } = null!;
 
     /// <summary>
-    /// Read-only view of enemy contacts observed directly by this tank's own radar.
-    /// Contacts from the opposing swarm only — ally positions are never stored here.
+    /// Read-only view of all tank contacts observed by this tank's own radar,
+    /// including both enemies and allies. Use <see cref="RadarContact.IsAlly"/>
+    /// to filter by relationship.
     /// </summary>
     public IReadOnlyDictionary<string, RadarContact> RadarMap => _radarMap;
 
@@ -109,21 +110,19 @@ public abstract class SwarmTankBase : ISwarmTank
 
     /// <summary>
     /// Called when the radar sweeps over any tank.
-    /// The base implementation records enemy contacts in <see cref="RadarMap"/>.
-    /// Allied tank positions are never recorded.
-    /// Override to add firing or other reactions; call <c>base.OnScannedTank(e)</c> first
-    /// to ensure the radar map stays current.
+    /// The base implementation records all contacts (enemies and allies) in
+    /// <see cref="RadarMap"/>. Use <see cref="RadarContact.IsAlly"/> to
+    /// distinguish them in your AI.
+    /// Override to add firing or other reactions; call <c>base.OnScannedTank(e)</c>
+    /// first to ensure the radar map stays current.
     /// </summary>
     public virtual void OnScannedTank(ScannedTankEventArgs e)
     {
-        // Only track enemy contacts — never expose ally positions.
-        if (e.Result.SwarmId == SwarmId)
-            return;
-
         RadarContact contact = new()
         {
             Name = e.Result.Name,
             EnemySwarmId = e.Result.SwarmId,
+            IsAlly = e.Result.SwarmId == SwarmId,
             Position = e.Result.Position,
             Heading = e.Result.Heading,
             Velocity = e.Result.Velocity,
@@ -159,11 +158,22 @@ public abstract class SwarmTankBase : ISwarmTank
     // ── Radar helpers ─────────────────────────────────────────────────────────
 
     /// <summary>
-    /// Returns the most recently observed enemy contact that is not older than
-    /// <paramref name="staleAfterTicks"/> ticks, or <c>null</c> if no fresh contact exists.
-    /// Only contacts from this tank's own radar scans are considered.
+    /// Returns the most recently observed <em>enemy</em> contact (non-ally) that is not
+    /// older than <paramref name="staleAfterTicks"/> ticks, or <c>null</c> if none exists.
     /// </summary>
     protected RadarContact? GetFreshestEnemy(int staleAfterTicks = 30)
+        => GetFreshestContact(staleAfterTicks, includeAllies: false);
+
+    /// <summary>
+    /// Returns the most recently observed contact that is not older than
+    /// <paramref name="staleAfterTicks"/> ticks, or <c>null</c> if none exists.
+    /// </summary>
+    /// <param name="staleAfterTicks">Contacts older than this many ticks are ignored.</param>
+    /// <param name="includeAllies">
+    /// When <c>true</c>, allied tanks are eligible targets (friendly fire).
+    /// When <c>false</c> (default), only enemy contacts are returned.
+    /// </param>
+    protected RadarContact? GetFreshestContact(int staleAfterTicks = 30, bool includeAllies = false)
     {
         long threshold = Arena.TickNumber - staleAfterTicks;
         RadarContact? best = null;
@@ -171,6 +181,9 @@ public abstract class SwarmTankBase : ISwarmTank
         foreach (RadarContact c in _radarMap.Values)
         {
             if (c.Timestamp < threshold)
+                continue;
+
+            if (!includeAllies && c.IsAlly)
                 continue;
 
             if (best is null || c.Timestamp > best.Timestamp)

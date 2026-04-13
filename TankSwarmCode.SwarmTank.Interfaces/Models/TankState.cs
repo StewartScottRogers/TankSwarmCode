@@ -44,4 +44,10 @@ public record TankState
 
     /// <summary>Whether the tank is still in the round.</summary>
     public bool IsAlive { get; init; }
+
+    /// <summary>
+    /// Tick number on which this tank was destroyed. Zero means the tank has not yet died.
+    /// Allows the renderer to display a persistent burning hulk at the tank's last known position.
+    /// </summary>
+    public long DestroyedAtTick { get; init; }
 }
