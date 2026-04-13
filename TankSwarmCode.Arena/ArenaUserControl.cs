@@ -581,14 +581,14 @@ public partial class ArenaUserControl : UserControl
     }
 
     /// <summary>
-    /// Draws a contact-flash halo around a tank timed to the exact frame the animated
-    /// outbound radar arc reaches the tank's position.
+    /// Renders a brilliant point-flash halo at the moment the outbound radar wavefront
+    /// physically reaches the detected tank (<c>ageFraction == 0.5</c>).
     /// <para>
-    /// <see cref="DrawRadarReflection"/> drives the outbound arc with
-    /// <c>radius = dist * (ageFraction * 2)</c>, so the wavefront is physically at the
-    /// target when <c>ageFraction == 0.5</c>.  The halo ramps up sharply during the
-    /// final approach (last <c>preWin</c> of phase-1) and decays quadratically after
-    /// contact, making the underlying scan event directly readable on screen.
+    /// The flash is built from five concentric radial-bloom layers — wide spotter-colour
+    /// outer glow, a tighter white-shifted corona, a near-white inner fill, a crisp ring
+    /// at the hull edge, and a pure white-hot core — topped by an 8-spoke starburst that
+    /// sells the "brilliant flash of light" look.  The flash peaks instantly then snaps
+    /// off with a quintic decay so it never lingers.
     /// </para>
     /// </summary>
     private void DrawScanHalo(Graphics g, TankState tank, float cx, float cy)
@@ -607,34 +607,64 @@ public partial class ArenaUserControl : UserControl
         float elapsedMs   = (float)(DateTime.UtcNow - hit.TickFiredWallTime).TotalMilliseconds;
         float ageFraction = Math.Clamp(elapsedMs / lifetimeMs, 0f, 1f);
 
-        // Outbound wave arrives at target when ageFraction == 0.5.
-        // Halo ramps up in the final approach and decays after contact.
+        // Wave arrives at target when ageFraction == 0.5.
+        // Flash peaks instantly at contact then snaps off via quintic decay.
         const float arrival = 0.5f;
-        const float preWin  = 0.06f;   // ramp-up window before wave arrival  (~200 ms at 3 TPS)
-        const float postWin = 0.22f;   // decay window after contact           (~730 ms at 3 TPS)
+        const float preWin  = 0.03f;  // 3 % of lifetime — near-instant ramp to full brightness
+        const float postWin = 0.08f;  // 8 % of lifetime — fast snap-off after peak
 
         float fade;
         if (ageFraction < arrival - preWin || ageFraction > arrival + postWin)
             return;
         else if (ageFraction <= arrival)
-            fade = (ageFraction - (arrival - preWin)) / preWin;  // linear 0→1 as wave closes in
+            fade = (ageFraction - (arrival - preWin)) / preWin;  // linear 0→1 ramp-up
         else
         {
             float t = (ageFraction - arrival) / postWin;         // 0→1 post-contact
-            fade = 1f - t * t;                                   // quadratic decay
+            fade = 1f - t * t * t * t * t;                       // quintic — near-instant collapse
         }
 
         fade = Math.Clamp(fade, 0f, 1f);
         if (fade < 0.02f) return;
 
-        const float innerR = TankBodySize / 2f + 3f;  // just outside the hull edge
-        const float outerR = innerR + 8f;             // soft corona beyond the ring
+        float hull = TankBodySize / 2f;
 
-        using SolidBrush glowBrush = new(Color.FromArgb((int)(70 * fade), hit.SpotterColor));
-        g.FillEllipse(glowBrush, cx - outerR, cy - outerR, outerR * 2, outerR * 2);
+        // ── Layer 1: wide outer bloom in spotter colour ───────────────────────
+        float bloomR = hull + 16f;
+        using SolidBrush bloomBrush = new(Color.FromArgb((int)(110 * fade), hit.SpotterColor));
+        g.FillEllipse(bloomBrush, cx - bloomR, cy - bloomR, bloomR * 2, bloomR * 2);
 
-        using Pen ringPen = new(Color.FromArgb((int)(220 * fade), LightenColor(hit.SpotterColor, 90)), 2f);
-        g.DrawEllipse(ringPen, cx - innerR, cy - innerR, innerR * 2, innerR * 2);
+        // ── Layer 2: mid corona, white-shifted spotter colour ─────────────────
+        float coronaR = hull + 9f;
+        using SolidBrush coronaBrush = new(Color.FromArgb((int)(185 * fade), LightenColor(hit.SpotterColor, 100)));
+        g.FillEllipse(coronaBrush, cx - coronaR, cy - coronaR, coronaR * 2, coronaR * 2);
+
+        // ── Layer 3: tight inner fill, near-white ─────────────────────────────
+        float innerFillR = hull + 4f;
+        using SolidBrush innerBrush = new(Color.FromArgb((int)(220 * fade), LightenColor(hit.SpotterColor, 180)));
+        g.FillEllipse(innerBrush, cx - innerFillR, cy - innerFillR, innerFillR * 2, innerFillR * 2);
+
+        // ── Crisp ring at hull edge ───────────────────────────────────────────
+        float ringR = hull + 3f;
+        using Pen ringPen = new(Color.FromArgb((int)(255 * fade), LightenColor(hit.SpotterColor, 150)), 2.5f);
+        g.DrawEllipse(ringPen, cx - ringR, cy - ringR, ringR * 2, ringR * 2);
+
+        // ── Layer 4: white-hot core ───────────────────────────────────────────
+        float coreR = hull * 0.85f;
+        using SolidBrush coreBrush = new(Color.FromArgb((int)(255 * fade), Color.White));
+        g.FillEllipse(coreBrush, cx - coreR, cy - coreR, coreR * 2, coreR * 2);
+
+        // ── 8-spoke starburst — sells the brilliant flash look ────────────────
+        float rayLen = hull + 14f * fade;
+        using Pen rayPen = new(Color.FromArgb((int)(245 * fade), Color.White), 1.5f);
+
+        for (int i = 0; i < 4; i++)
+        {
+            float angle = i * MathF.PI / 4f;  // 0°, 45°, 90°, 135° — paired → 8 spokes
+            float dx = MathF.Cos(angle) * rayLen;
+            float dy = MathF.Sin(angle) * rayLen;
+            g.DrawLine(rayPen, cx - dx, cy - dy, cx + dx, cy + dy);
+        }
     }
 
     /// <summary>

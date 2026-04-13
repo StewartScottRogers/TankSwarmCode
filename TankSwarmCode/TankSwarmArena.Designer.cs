@@ -58,6 +58,12 @@
             _menuItemSingleStep = new ToolStripMenuItem();
             _separatorWar2 = new ToolStripSeparator();
             _menuItemResetArena = new ToolStripMenuItem();
+            _separatorWar3 = new ToolStripSeparator();
+            _menuItemSpeed = new ToolStripMenuItem();
+            _menuItemSpeedSlow = new ToolStripMenuItem();
+            _menuItemSpeedNormal = new ToolStripMenuItem();
+            _menuItemSpeedFast = new ToolStripMenuItem();
+            _menuItemSpeedVeryFast = new ToolStripMenuItem();
 
             arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
 
@@ -278,6 +284,12 @@
         private ToolStripMenuItem _menuItemSingleStep;
         private ToolStripSeparator _separatorWar2;
         private ToolStripMenuItem _menuItemResetArena;
+        private ToolStripSeparator _separatorWar3;
+        private ToolStripMenuItem _menuItemSpeed;
+        private ToolStripMenuItem _menuItemSpeedSlow;
+        private ToolStripMenuItem _menuItemSpeedNormal;
+        private ToolStripMenuItem _menuItemSpeedFast;
+        private ToolStripMenuItem _menuItemSpeedVeryFast;
 
         // Toolbar
         private ToolStrip _toolStrip;

@@ -12,7 +12,7 @@ public partial class TankSwarmArena : Form
     public TankSwarmArena()
     {
         InitializeComponent();
-        arenaUserControl1.TicksPerSecond = 3;
+        arenaUserControl1.TicksPerSecond = 10;  // Normal speed by default
     }
 
     protected override void OnLoad(EventArgs e)
@@ -127,6 +127,29 @@ public partial class TankSwarmArena : Form
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
         UpdateMenuState();
+    }
+
+    // ── Speed handler ────────────────────────────────────────────────────────────
+
+    private void MenuItemSpeed_Click(object? sender, EventArgs e)
+    {
+        if (sender is not ToolStripMenuItem clicked) return;
+
+        int tps = clicked switch
+        {
+            _ when ReferenceEquals(clicked, _menuItemSpeedSlow)     => 3,
+            _ when ReferenceEquals(clicked, _menuItemSpeedNormal)   => 10,
+            _ when ReferenceEquals(clicked, _menuItemSpeedFast)     => 20,
+            _ when ReferenceEquals(clicked, _menuItemSpeedVeryFast) => 30,
+            _                                                        => 10
+        };
+
+        arenaUserControl1.TicksPerSecond = tps;
+
+        _menuItemSpeedSlow.Checked     = ReferenceEquals(clicked, _menuItemSpeedSlow);
+        _menuItemSpeedNormal.Checked   = ReferenceEquals(clicked, _menuItemSpeedNormal);
+        _menuItemSpeedFast.Checked     = ReferenceEquals(clicked, _menuItemSpeedFast);
+        _menuItemSpeedVeryFast.Checked = ReferenceEquals(clicked, _menuItemSpeedVeryFast);
     }
 
     // ── Menu state ────────────────────────────────────────────────────────────
