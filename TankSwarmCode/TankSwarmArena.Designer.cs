@@ -73,9 +73,15 @@
             _btnStopWar = new ToolStripButton();
             _separatorToolbar1 = new ToolStripSeparator();
             _btnSingleStep = new ToolStripButton();
+            _separatorToolbar2 = new ToolStripSeparator();
+            _lblSpeed = new ToolStripLabel();
+            _speedTrackBar = new TrackBar();
+            _speedTrackBarHost = new ToolStripControlHost(_speedTrackBar);
+            _lblSpeedValue = new ToolStripLabel();
 
             _mainMenuStrip.SuspendLayout();
             _toolStrip.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
             SuspendLayout();
 
             // ── _mainMenuStrip ────────────────────────────────────────────────
@@ -198,13 +204,39 @@
                 _btnStartWar,
                 _btnStopWar,
                 _separatorToolbar1,
-                _btnSingleStep
+                _btnSingleStep,
+                _separatorToolbar2,
+                _lblSpeed,
+                _speedTrackBarHost,
+                _lblSpeedValue
             });
             _toolStrip.Location = new Point(0, 24);
             _toolStrip.Name = "_toolStrip";
             _toolStrip.Size = new Size(1079, 25);
             _toolStrip.TabIndex = 2;
             _toolStrip.Text = "toolStrip";
+
+            _lblSpeed.Name = "_lblSpeed";
+            _lblSpeed.Text = "Speed:";
+
+            _speedTrackBar.AutoSize = false;
+            _speedTrackBar.Maximum = 30;
+            _speedTrackBar.Minimum = 1;
+            _speedTrackBar.Name = "_speedTrackBar";
+            _speedTrackBar.Size = new Size(150, 22);
+            _speedTrackBar.SmallChange = 1;
+            _speedTrackBar.LargeChange = 5;
+            _speedTrackBar.TickFrequency = 5;
+            _speedTrackBar.Value = 10;
+            _speedTrackBar.Scroll += SpeedTrackBar_Scroll;
+
+            _speedTrackBarHost.AutoSize = false;
+            _speedTrackBarHost.Name = "_speedTrackBarHost";
+            _speedTrackBarHost.Size = new Size(154, 22);
+            _speedTrackBarHost.ToolTipText = "Drag to adjust simulation speed (ticks per second)";
+
+            _lblSpeedValue.Name = "_lblSpeedValue";
+            _lblSpeedValue.Text = "10 TPS";
 
             _btnStartWar.Name = "_btnStartWar";
             _btnStartWar.Text = "\u25B6  Start War";
@@ -243,6 +275,7 @@
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Tank Swarm Arena";
             ClientSize = new Size(1079, 734);
+            ((System.ComponentModel.ISupportInitialize)_speedTrackBar).EndInit();
             _toolStrip.ResumeLayout(false);
             _toolStrip.PerformLayout();
             _mainMenuStrip.ResumeLayout(false);
@@ -297,5 +330,10 @@
         private ToolStripButton _btnStopWar;
         private ToolStripSeparator _separatorToolbar1;
         private ToolStripButton _btnSingleStep;
+        private ToolStripSeparator _separatorToolbar2;
+        private ToolStripLabel _lblSpeed;
+        private TrackBar _speedTrackBar;
+        private ToolStripControlHost _speedTrackBarHost;
+        private ToolStripLabel _lblSpeedValue;
     }
 }

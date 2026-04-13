@@ -145,11 +145,26 @@ public partial class TankSwarmArena : Form
         };
 
         arenaUserControl1.TicksPerSecond = tps;
+        _speedTrackBar.Value  = Math.Clamp(tps, _speedTrackBar.Minimum, _speedTrackBar.Maximum);
+        _lblSpeedValue.Text   = $"{tps} TPS";
+        SyncSpeedMenuChecks(tps);
+    }
 
-        _menuItemSpeedSlow.Checked     = ReferenceEquals(clicked, _menuItemSpeedSlow);
-        _menuItemSpeedNormal.Checked   = ReferenceEquals(clicked, _menuItemSpeedNormal);
-        _menuItemSpeedFast.Checked     = ReferenceEquals(clicked, _menuItemSpeedFast);
-        _menuItemSpeedVeryFast.Checked = ReferenceEquals(clicked, _menuItemSpeedVeryFast);
+    /// <summary>Handles the toolbar slider being dragged.</summary>
+    private void SpeedTrackBar_Scroll(object? sender, EventArgs e)
+    {
+        int tps = _speedTrackBar.Value;
+        arenaUserControl1.TicksPerSecond = tps;
+        _lblSpeedValue.Text = $"{tps} TPS";
+        SyncSpeedMenuChecks(tps);
+    }
+
+    private void SyncSpeedMenuChecks(int tps)
+    {
+        _menuItemSpeedSlow.Checked     = tps == 3;
+        _menuItemSpeedNormal.Checked   = tps == 10;
+        _menuItemSpeedFast.Checked     = tps == 20;
+        _menuItemSpeedVeryFast.Checked = tps == 30;
     }
 
     // ── Menu state ────────────────────────────────────────────────────────────
