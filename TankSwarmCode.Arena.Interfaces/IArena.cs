@@ -18,6 +18,9 @@ public interface IArena
     /// <summary>Whether the simulation is currently running.</summary>
     bool IsRunning { get; }
 
+    /// <summary>True once <see cref="Start"/> has been called (and until <see cref="Reset"/>).</summary>
+    bool HasStarted { get; }
+
     /// <summary>Current simulation tick number.</summary>
     long TickNumber { get; }
 

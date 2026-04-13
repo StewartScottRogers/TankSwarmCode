@@ -26,6 +26,9 @@ public sealed class ArenaEngine : IArena
     public double Height { get; private set; }
     public bool IsRunning { get; private set; }
     public long TickNumber { get; private set; }
+
+    /// <summary>True once <see cref="Start"/> has been called (and until <see cref="Reset"/>).</summary>
+    public bool HasStarted { get; private set; }
     public int LivingTankCount => RuntimeTanks.Count(t => t.IsAlive);
 
     public IReadOnlyList<ISwarmTank> Tanks =>
@@ -81,7 +84,34 @@ public sealed class ArenaEngine : IArena
             try { rts.Tank.OnStart(); } catch { /* prevent bad AI from killing the engine */ }
         }
 
+        HasStarted = true;
         IsRunning = true;
+    }
+
+    /// <summary>Resumes a paused simulation without re-spawning tanks.</summary>
+    public void Resume()
+    {
+        if (!HasStarted)
+            throw new InvalidOperationException("Call Start() before Resume().");
+
+        IsRunning = true;
+    }
+
+    /// <summary>
+    /// Advances simulation by exactly one tick regardless of running state.
+    /// No-op if <see cref="Start"/> has never been called.
+    /// </summary>
+    public void StepOnce()
+    {
+        if (!HasStarted) return;
+
+        bool wasRunning = IsRunning;
+        IsRunning = true;
+        Tick();
+
+        // Restore pause only if we forced it on and CheckRoundEnd didn't already stop it.
+        if (!wasRunning && IsRunning)
+            IsRunning = false;
     }
 
     public void Stop() => IsRunning = false;
@@ -89,6 +119,7 @@ public sealed class ArenaEngine : IArena
     public void Reset()
     {
         IsRunning = false;
+        HasStarted = false;
         TickNumber = 0;
         RuntimeTanks.Clear();
         RuntimeBullets.Clear();

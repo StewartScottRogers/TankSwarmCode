@@ -118,7 +118,12 @@ public partial class ArenaUserControl : UserControl
         _engine ??= CreateEngine();
 
         if (!_engine.IsRunning)
-            _engine.Start();
+        {
+            if (_engine.HasStarted)
+                _engine.Resume();
+            else
+                _engine.Start();
+        }
 
         _gameTimer.Interval = Math.Max(1, 1000 / Math.Max(1, TicksPerSecond));
         _gameTimer.Start();
@@ -133,6 +138,27 @@ public partial class ArenaUserControl : UserControl
         _engine?.Stop();
         _waitingForPulse = false;
         _statusMessage = "Paused";
+        Invalidate();
+    }
+
+    /// <summary>
+    /// Pauses the timer (if running) and advances exactly one simulation tick.
+    /// Initializes the engine on the first call if <see cref="Start"/> has not yet been called.
+    /// </summary>
+    public void SingleStep()
+    {
+        _gameTimer.Stop();
+        _waitingForPulse = false;
+
+        _engine ??= CreateEngine();
+
+        if (!_engine.HasStarted)
+            _engine.Start();
+
+        _lastTickTime = DateTime.UtcNow;
+        _engine.StepOnce();
+        HarvestScanEvents();
+        _statusMessage = $"Tick {_engine.TickNumber}";
         Invalidate();
     }
 
