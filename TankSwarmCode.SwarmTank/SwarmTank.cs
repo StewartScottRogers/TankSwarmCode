@@ -51,9 +51,7 @@ public abstract class SwarmTankBase : ISwarmTank
     public IArenaContext Arena { get; private set; } = null!;
 
     /// <summary>
-    /// Read-only view of all known enemy contacts for this swarm.
-    /// Updated automatically from direct radar scans and from
-    /// <see cref="SwarmMessageType.RadarShare"/> messages received from allies.
+    /// Read-only view of enemy contacts observed directly by this tank's own radar.
     /// Contacts from the opposing swarm only — ally positions are never stored here.
     /// </summary>
     public IReadOnlyDictionary<string, RadarContact> RadarMap => _radarMap;
@@ -111,15 +109,14 @@ public abstract class SwarmTankBase : ISwarmTank
 
     /// <summary>
     /// Called when the radar sweeps over any tank.
-    /// The base implementation records enemy contacts in <see cref="RadarMap"/> and
-    /// broadcasts a <see cref="SwarmMessageType.RadarShare"/> to all allies automatically.
-    /// Allied tank positions are never recorded or shared.
+    /// The base implementation records enemy contacts in <see cref="RadarMap"/>.
+    /// Allied tank positions are never recorded.
     /// Override to add firing or other reactions; call <c>base.OnScannedTank(e)</c> first
     /// to ensure the radar map stays current.
     /// </summary>
     public virtual void OnScannedTank(ScannedTankEventArgs e)
     {
-        // Only track and share enemy contacts — never expose ally positions.
+        // Only track enemy contacts — never expose ally positions.
         if (e.Result.SwarmId == SwarmId)
             return;
 
@@ -136,16 +133,6 @@ public abstract class SwarmTankBase : ISwarmTank
         };
 
         MergeContact(contact);
-
-        // Auto-broadcast fresh radar data to every living ally; the engine
-        // delivers only to same-swarm members, so enemies never receive this.
-        Broadcast(new SwarmMessage
-        {
-            SenderName = Name,
-            Type = SwarmMessageType.RadarShare,
-            RadarContact = contact,
-            Timestamp = Arena.TickNumber
-        });
     }
 
     /// <inheritdoc/>
@@ -174,7 +161,7 @@ public abstract class SwarmTankBase : ISwarmTank
     /// <summary>
     /// Returns the most recently observed enemy contact that is not older than
     /// <paramref name="staleAfterTicks"/> ticks, or <c>null</c> if no fresh contact exists.
-    /// Considers both own scans and data shared by allies.
+    /// Only contacts from this tank's own radar scans are considered.
     /// </summary>
     protected RadarContact? GetFreshestEnemy(int staleAfterTicks = 30)
     {
@@ -240,11 +227,6 @@ public abstract class SwarmTankBase : ISwarmTank
     /// <inheritdoc/>
     public void DeliverSwarmMessage(SwarmMessage message)
     {
-        // Automatically merge radar contacts before user code sees the message.
-        // This guarantees RadarMap is always current when OnSwarmMessage is called.
-        if (message.Type == SwarmMessageType.RadarShare && message.RadarContact is { } contact)
-            MergeContact(contact);
-
         OnSwarmMessage(new SwarmMessageEventArgs(message));
     }
 }

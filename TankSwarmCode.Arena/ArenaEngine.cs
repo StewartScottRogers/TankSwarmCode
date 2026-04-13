@@ -459,20 +459,36 @@ public sealed class ArenaEngine : IArena
         return rel;
     }
 
-    /// <summary>Returns true if <paramref name="angle"/> falls within the radar sweep arc.</summary>
+    /// <summary>
+    /// Returns true if <paramref name="angle"/> falls within the directed radar sweep arc
+    /// from <paramref name="sweepStart"/> to <paramref name="sweepEnd"/>.
+    /// <para>
+    /// Direction matters: a sweep from 350° to 10° is a clockwise 20° arc, not a
+    /// counter-clockwise 340° arc. The signed delta <c>sweepEnd − sweepStart</c> (normalised
+    /// to (−180, +180]) determines direction; the test then checks whether <paramref name="angle"/>
+    /// lies within that signed span rather than the complementary sector.
+    /// </para>
+    /// </summary>
     private static bool AngleInSweep(double angle, double sweepStart, double sweepEnd)
     {
-        angle = NormaliseAngle(angle);
+        angle      = NormaliseAngle(angle);
         sweepStart = NormaliseAngle(sweepStart);
-        sweepEnd = NormaliseAngle(sweepEnd);
+        sweepEnd   = NormaliseAngle(sweepEnd);
 
-        if (Math.Abs(sweepStart - sweepEnd) < 0.001) return false;
+        // Signed delta: positive = CW, negative = CCW. Clamped to (−180, +180].
+        double delta = sweepEnd - sweepStart;
+        while (delta >  180) delta -= 360;
+        while (delta < -180) delta += 360;
 
-        if (sweepStart <= sweepEnd)
-            return angle >= sweepStart && angle <= sweepEnd;
+        if (Math.Abs(delta) < 0.001) return false;
 
-        // Sweep wraps around 0/360
-        return angle >= sweepStart || angle <= sweepEnd;
+        // Angular distance from sweepStart to angle along the same direction as delta.
+        double dist = angle - sweepStart;
+        while (dist >  180) dist -= 360;
+        while (dist < -180) dist += 360;
+
+        // The angle is inside the swept sector when it is between 0 and delta (same sign).
+        return delta >= 0 ? (dist >= 0 && dist <= delta) : (dist <= 0 && dist >= delta);
     }
 
     private static void SafeCall(Action action)

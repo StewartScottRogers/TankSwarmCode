@@ -75,8 +75,8 @@ public partial class ArenaUserControl : UserControl
         Color SpotterColor,
         float EnergyFraction,
         Vector2D Velocity,
-        float SweepSpanDeg,      // absolute angular width swept this tick
-        float RadarHeadingDeg);  // radar heading at moment of contact (centre of swept arc)
+        float SweepSpanDeg,      // absolute angular width swept this tick (|PrevRadarHeading→RadarHeading|)
+        float SweepMidDeg);      // midpoint of the swept arc in arena coords (NOT the final heading)
 
     public ArenaUserControl()
     {
@@ -217,17 +217,7 @@ public partial class ArenaUserControl : UserControl
 
         _lastTickTime = now;
         _engine?.Tick();
-        int countBefore = _scanEvents.Count;
         HarvestScanEvents();
-
-        // If this tick produced any new radar contacts, gate the next tick until
-        // the full outbound + echo animation has played out.
-        if (_scanEvents.Count > countBefore)
-        {
-            float lifetimeMs = ScanHaloLifetime * _tickIntervalMs;
-            _pulseCompletionTime = _lastTickTime.AddMilliseconds(lifetimeMs);
-            _waitingForPulse = true;
-        }
 
         Invalidate();
     }
@@ -238,12 +228,25 @@ public partial class ArenaUserControl : UserControl
     /// each contact fires at most one <see cref="ScanEvent"/> per tick regardless of how many
     /// repaints occur.  A deduplication guard prevents stacking when the same pair is still
     /// live from a previous tick.
+    /// <para>
+    /// Scanner tanks are processed in deterministic order (by SwarmId then Name). Each scanner
+    /// that produces at least one new contact is assigned its own animation slot staggered by
+    /// one full <see cref="ScanHaloLifetime"/> so the outbound arc, halo, and echo of tank N
+    /// complete before tank N+1 begins. The simulation pulse-gate is extended to cover all
+    /// sequential slots.
+    /// </para>
     /// </summary>
     private void HarvestScanEvents()
     {
         if (_engine is null) return;
 
         long tick = _engine.TickNumber;
+        float lifetimeMs = ScanHaloLifetime * _tickIntervalMs;
+
+        // Each scanner tank that contributes at least one new event gets its own sequential
+        // animation slot. scannerGroupIndex drives both the TickFiredWallTime stagger and the
+        // total pulse-gate duration set at the end.
+        int scannerGroupIndex = 0;
 
         var bySwarm = _engine.Tanks
             .GroupBy(t => t.SwarmId)
@@ -260,6 +263,7 @@ public partial class ArenaUserControl : UserControl
                 if (!tank.State.IsAlive) continue;
 
                 Color spotterColor = LightenColor(baseColor, i * 22);
+                bool tankAddedEvent = false;
 
                 foreach (RadarContact contact in tank.RadarMap.Values)
                 {
@@ -283,9 +287,16 @@ public partial class ArenaUserControl : UserControl
                     while (sweepDelta < -180) sweepDelta += 360;
                     float sweepSpan = (float)Math.Max(Math.Abs(sweepDelta), 1.0);
 
+                    // True midpoint of [PrevRadarHeading, RadarHeading] along the swept direction.
+                    // Using PrevRadarHeading + sweepDelta/2 (signed) handles both CW and CCW
+                    // sweeps and the 0/360 wrap correctly.
+                    float sweepMidDeg = (float)(((tank.State.PrevRadarHeading + sweepDelta / 2) % 360 + 360) % 360);
+
+                    // All contacts from the same scanner share one slot so they appear together,
+                    // but each scanner tank's slot is offset by one full lifetime from the previous.
                     _scanEvents.Add(new ScanEvent(
                         TickFired:          tick,
-                        TickFiredWallTime:  _lastTickTime,
+                        TickFiredWallTime:  _lastTickTime.AddMilliseconds(scannerGroupIndex * lifetimeMs),
                         SpotterName:        tank.Name,
                         SpotterPosition: tank.State.Position,
                         Position:        contact.Position,
@@ -295,9 +306,22 @@ public partial class ArenaUserControl : UserControl
                         EnergyFraction:  energyFraction,
                         Velocity:        contact.VelocityVector,
                         SweepSpanDeg:    sweepSpan,
-                        RadarHeadingDeg: (float)tank.State.RadarHeading));
+                        SweepMidDeg:     sweepMidDeg));
+
+                    tankAddedEvent = true;
                 }
+
+                // Only advance the slot when this scanner actually contributed new events.
+                if (tankAddedEvent)
+                    scannerGroupIndex++;
             }
+        }
+
+        // Gate the next simulation tick until the last sequential animation has fully played out.
+        if (scannerGroupIndex > 0)
+        {
+            _pulseCompletionTime = _lastTickTime.AddMilliseconds(scannerGroupIndex * lifetimeMs);
+            _waitingForPulse = true;
         }
     }
 
@@ -421,7 +445,9 @@ public partial class ArenaUserControl : UserControl
         // ── Phosphor-decay trail ──────────────────────────────────────────────
         // Oldest frame = near-invisible, newest = 100-alpha glow.
         // GDI+ FillPie: 0° = east (3 o'clock), clockwise.
-        // Arena heading: 0° = north, clockwise → GDI+ start = heading − 90 − half-arc-width.
+        // Arena heading: 0° = north, clockwise → GDI+ start = heading − 90.
+        // Arc width per frame = actual sweep delta between this frame and the one before it,
+        // so the painted sectors faithfully mirror what the engine swept each tick.
         double[] history = [.. trail];
         int count = history.Length;
 
@@ -431,12 +457,29 @@ public partial class ArenaUserControl : UserControl
             int alpha = (int)(100 * ageFraction);
             if (alpha < 5) continue;
 
-            float gdiStart = (float)history[i] - 90f - 10f;
+            // Compute the signed delta between the previous recorded heading and this one.
+            // For the oldest frame (i == 0) there is no predecessor — use a minimal 1° arc.
+            float spanDeg;
+            if (i == 0)
+            {
+                spanDeg = 1f;
+            }
+            else
+            {
+                double d = history[i] - history[i - 1];
+                while (d >  180) d -= 360;
+                while (d < -180) d += 360;
+                spanDeg = Math.Max(1f, (float)Math.Abs(d));
+            }
+
+            // GDI+ arc starts at the trailing edge of the sweep (smaller angle for CW, larger for CCW).
+            // We always paint CW in GDI+ with a positive span, so the start is heading - span.
+            float gdiStart = (float)history[i] - 90f - spanDeg;
             using SolidBrush fadeBrush = new(Color.FromArgb(alpha, swarmColor));
             g.FillPie(fadeBrush,
                 -RadarLength, -RadarLength,
                 RadarLength * 2, RadarLength * 2,
-                gdiStart, 20f);
+                gdiStart, spanDeg);
         }
 
         // ── Exact scan-arc flash (this tick's true sweep zone) ────────────────
@@ -555,7 +598,7 @@ public partial class ArenaUserControl : UserControl
         ScanEvent? best = _scanEvents
             .Where(ev => string.Equals(ev.EnemyName, tank.Name, StringComparison.Ordinal))
             .Cast<ScanEvent?>()
-            .MaxBy(ev => ev!.Value.TickFired);
+            .MaxBy(ev => ev!.Value.TickFiredWallTime);
 
         if (best is null) return;
 
@@ -625,11 +668,12 @@ public partial class ArenaUserControl : UserControl
     /// Renders a radar scan event as two strictly sequential expanding arc wavefronts.
     /// Only one wave is ever visible at a time:
     /// <list type="bullet">
-    ///   <item>Phase 1 (first half of lifetime) — solid arc in spotter colour travels from the
-    ///         spotter outward along the radar heading, fading to nothing as it reaches the enemy.</item>
-    ///   <item>Dead gap — at the phase boundary both waves are fully transparent.</item>
-    ///   <item>Phase 2 (second half of lifetime) — dashed arc in enemy colour travels from the
-    ///         enemy back toward the spotter, fading to nothing as it arrives.</item>
+    ///   <item>Phase 1 (first half of lifetime) — solid arc in spotter colour expands from the
+    ///         spotter outward. The arc spans exactly the angular sector swept by the engine
+    ///         (<c>[PrevRadarHeading, RadarHeading]</c>), centred on the sweep midpoint, so
+    ///         every detected enemy lies within the arc when the wavefront reaches it.</item>
+    ///   <item>Phase 2 (second half of lifetime) — dashed echo arc travels from the detected
+    ///         enemy back toward the spotter.</item>
     /// </list>
     /// </summary>
     private void DrawRadarReflection(Graphics g, ScanEvent ev, DateTime now)
@@ -648,19 +692,22 @@ public partial class ArenaUserControl : UserControl
 
         Color spotterColor = ev.SpotterColor;
 
-        // Outbound arc: centred on the radar heading at contact time (arena 0°=N → GDI+ subtract 90°).
-        float outboundMid = ev.RadarHeadingDeg - 90f;
+        // Outbound arc: centred on the midpoint of [PrevRadarHeading, RadarHeading] so the
+        // visual sector exactly matches the angular region the engine checked.
+        // Arena 0°=N clockwise → GDI+ (0°=E clockwise) requires subtracting 90°.
+        float outboundMid = ev.SweepMidDeg - 90f;
         float arcSpan     = ev.SweepSpanDeg;
 
         // ── Phase 1: outbound wave (ageFraction 0 → <0.5) ────────────────────
         // t goes 0→1 across the first half-lifetime.
-        // Fade: full brightness at t=0, completely gone at t=1 so the phase boundary is clean.
-        // A smooth-step curve keeps it visible during transit and drops sharply at arrival.
+        // Fade GROWS from 0 to 1 so the arc is invisible at the spotter and reaches full
+        // brightness exactly when the wavefront arrives at the enemy position (t=1).
+        // This ensures the target is visibly "painted" before the echo begins.
         if (ageFraction < 0.5f)
         {
             float t      = ageFraction * 2f;                          // 0→1
             float radius = dist * t;                                  // 0 → dist
-            float fade   = 1f - t * t * t;                           // cubic: slow drop then steep at end
+            float fade   = t;                                         // linear: dim at origin, full brightness at contact
             if (radius > 1f && fade > 0.01f)
             {
                 float penW = Math.Max(1f, 2.5f * (1f - t * 0.6f));
