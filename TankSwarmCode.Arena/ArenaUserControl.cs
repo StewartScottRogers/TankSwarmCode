@@ -996,19 +996,40 @@ public partial class ArenaUserControl : UserControl
     {
         float bx = (float)bullet.Position.X;
         float by = (float)bullet.Position.Y;
-        float radius = (float)(1.5 + bullet.Power);
 
         Color bulletColor = ownerColors.TryGetValue(bullet.OwnerName, out Color c)
             ? LightenColor(c, 80)
             : Color.Yellow;
 
-        using SolidBrush bulletBrush = new(bulletColor);
-        g.FillEllipse(bulletBrush, bx - radius, by - radius, radius * 2, radius * 2);
+        // Arrow dimensions scale with power
+        float headLen  = (float)(5.0 + bullet.Power * 3.0);   // tip to base of arrowhead
+        float headHalf = (float)(2.0 + bullet.Power * 1.2);   // half-width of arrowhead base
+        float tailLen  = (float)(3.0 + bullet.Power * 2.0);   // shaft behind the arrowhead
 
-        // Glow — tinted to the firing tank's swarm colour
-        using SolidBrush glowBrush = new(Color.FromArgb(80, bulletColor));
-        float glow = radius * 2.5f;
-        g.FillEllipse(glowBrush, bx - glow, by - glow, glow * 2, glow * 2);
+        // heading: 0 = north (−Y), clockwise → convert to radians pointing up
+        double rad = (bullet.Heading - 90.0) * Math.PI / 180.0;
+        float dx = (float)Math.Cos(rad);   // unit vector in travel direction
+        float dy = (float)Math.Sin(rad);
+        float px = -dy;                     // perpendicular (left)
+        float py =  dx;
+
+        // Arrowhead triangle: tip, left base corner, right base corner
+        PointF tip   = new(bx + dx * headLen,  by + dy * headLen);
+        PointF baseL = new(bx + px * headHalf, by + py * headHalf);
+        PointF baseR = new(bx - px * headHalf, by - py * headHalf);
+
+        using SolidBrush arrowBrush = new(bulletColor);
+        g.FillPolygon(arrowBrush, [tip, baseL, baseR]);
+
+        // Tail shaft
+        PointF tailEnd = new(bx - dx * tailLen, by - dy * tailLen);
+        using Pen tailPen = new(Color.FromArgb(200, bulletColor), 1.2f);
+        g.DrawLine(tailPen, bx, by, tailEnd.X, tailEnd.Y);
+
+        // Glow behind the arrowhead
+        using SolidBrush glowBrush = new(Color.FromArgb(60, bulletColor));
+        float glow = headLen * 1.4f;
+        g.FillEllipse(glowBrush, bx - glow * 0.5f, by - glow * 0.5f, glow, glow);
     }
 
     /// <summary>

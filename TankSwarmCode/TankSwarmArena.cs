@@ -53,8 +53,10 @@ public partial class TankSwarmArena : Form
             for (int i = 0; i < RadioLogTrimLines && i < lines.Length; i++)
                 charsToRemove += lines[i].Length + 1; // +1 for newline
 
+            _radioLog.ReadOnly = false;
             _radioLog.Select(0, Math.Min(charsToRemove, _radioLog.TextLength));
             _radioLog.SelectedText = string.Empty;
+            _radioLog.ReadOnly = true;
         }
 
         _radioLog.SelectionStart = _radioLog.TextLength;
