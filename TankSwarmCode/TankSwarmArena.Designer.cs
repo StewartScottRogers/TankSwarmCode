@@ -29,8 +29,6 @@ namespace TankSwarmCode
         private void InitializeComponent()
         {
             _mainMenuStrip = new MenuStrip();
-
-            // ── Red Swarm menu items ──────────────────────────────────────────
             _menuItemRedSwarm = new ToolStripMenuItem();
             _menuItemBuildDefaultRedSwarm = new ToolStripMenuItem();
             _separatorRed1 = new ToolStripSeparator();
@@ -39,8 +37,6 @@ namespace TankSwarmCode
             _menuItemAddRedFlanker = new ToolStripMenuItem();
             _separatorRed2 = new ToolStripSeparator();
             _menuItemClearAllTanks = new ToolStripMenuItem();
-
-            // ── Blue Swarm menu items ─────────────────────────────────────────
             _menuItemBlueSwarm = new ToolStripMenuItem();
             _menuItemBuildDefaultBlueSwarm = new ToolStripMenuItem();
             _separatorBlue1 = new ToolStripSeparator();
@@ -49,8 +45,6 @@ namespace TankSwarmCode
             _menuItemAddBlueSniper = new ToolStripMenuItem();
             _separatorBlue2 = new ToolStripSeparator();
             _menuItemClearAllTanks2 = new ToolStripMenuItem();
-
-            // ── War menu items ────────────────────────────────────────────────
             _menuItemWar = new ToolStripMenuItem();
             _menuItemStart = new ToolStripMenuItem();
             _menuItemStop = new ToolStripMenuItem();
@@ -65,13 +59,9 @@ namespace TankSwarmCode
             _menuItemSpeedFast = new ToolStripMenuItem();
             _menuItemSpeedVeryFast = new ToolStripMenuItem();
             _separatorWar4 = new ToolStripSeparator();
-
-            // ── Player vs Player sub-menu items ───────────────────────────────
             _menuItemPlayerVsPlayer = new ToolStripMenuItem();
             _menuItemPvP1v1 = new ToolStripMenuItem();
             _menuItemPvP2v2 = new ToolStripMenuItem();
-
-            // ── Toolbar controls ──────────────────────────────────────────────
             _toolStrip = new ToolStrip();
             _btnStartWar = new ToolStripButton();
             _btnStopWar = new ToolStripButton();
@@ -82,293 +72,400 @@ namespace TankSwarmCode
             _speedTrackBar = new TrackBar();
             _speedTrackBarHost = new ToolStripControlHost(_speedTrackBar);
             _lblSpeedValue = new ToolStripLabel();
-
-            // ── Split container + pane contents ──────────────────────────────
             _splitContainer = new SplitContainer();
             _radioCommsPanel = new Panel();
-            _radioCommsHeader = new Label();
             _radioLog = new RichTextBox();
+            _radioCommsHeader = new Label();
             arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
-
             _mainMenuStrip.SuspendLayout();
             _toolStrip.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)_splitContainer).BeginInit();
             _splitContainer.Panel1.SuspendLayout();
             _splitContainer.Panel2.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)_splitContainer).BeginInit();
             _splitContainer.SuspendLayout();
             _radioCommsPanel.SuspendLayout();
-            ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
             SuspendLayout();
-
-            // ── _mainMenuStrip ────────────────────────────────────────────────
-            _mainMenuStrip.Items.AddRange(new ToolStripItem[]
-            {
-                _menuItemRedSwarm,
-                _menuItemBlueSwarm,
-                _menuItemWar
-            });
+            // 
+            // _mainMenuStrip
+            // 
+            _mainMenuStrip.Items.AddRange(new ToolStripItem[] { _menuItemRedSwarm, _menuItemBlueSwarm, _menuItemWar });
             _mainMenuStrip.Location = new Point(0, 0);
             _mainMenuStrip.Name = "_mainMenuStrip";
-            _mainMenuStrip.Size = new Size(1300, 24);
+            _mainMenuStrip.Size = new Size(1687, 24);
             _mainMenuStrip.TabIndex = 1;
             _mainMenuStrip.Text = "menuStrip";
-
-            // ── Red Swarm top-level ───────────────────────────────────────────
-            _menuItemRedSwarm.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                _menuItemBuildDefaultRedSwarm,
-                _separatorRed1,
-                _menuItemAddRedScout,
-                _menuItemAddRedAttacker,
-                _menuItemAddRedFlanker,
-                _separatorRed2,
-                _menuItemClearAllTanks
-            });
+            // 
+            // _menuItemRedSwarm
+            // 
+            _menuItemRedSwarm.DropDownItems.AddRange(new ToolStripItem[] { _menuItemBuildDefaultRedSwarm, _separatorRed1, _menuItemAddRedScout, _menuItemAddRedAttacker, _menuItemAddRedFlanker, _separatorRed2, _menuItemClearAllTanks });
             _menuItemRedSwarm.Name = "_menuItemRedSwarm";
+            _menuItemRedSwarm.Size = new Size(78, 20);
             _menuItemRedSwarm.Text = "&Red Swarm";
-
+            // 
+            // _menuItemBuildDefaultRedSwarm
+            // 
             _menuItemBuildDefaultRedSwarm.Name = "_menuItemBuildDefaultRedSwarm";
+            _menuItemBuildDefaultRedSwarm.Size = new Size(204, 22);
             _menuItemBuildDefaultRedSwarm.Text = "Build &Default Red Swarm";
             _menuItemBuildDefaultRedSwarm.Click += MenuItemBuildDefaultRedSwarm_Click;
-
+            // 
+            // _separatorRed1
+            // 
+            _separatorRed1.Name = "_separatorRed1";
+            _separatorRed1.Size = new Size(201, 6);
+            // 
+            // _menuItemAddRedScout
+            // 
             _menuItemAddRedScout.Name = "_menuItemAddRedScout";
+            _menuItemAddRedScout.Size = new Size(204, 22);
             _menuItemAddRedScout.Text = "Add Red &Scout";
             _menuItemAddRedScout.Click += MenuItemAddRedScout_Click;
-
+            // 
+            // _menuItemAddRedAttacker
+            // 
             _menuItemAddRedAttacker.Name = "_menuItemAddRedAttacker";
+            _menuItemAddRedAttacker.Size = new Size(204, 22);
             _menuItemAddRedAttacker.Text = "Add Red &Attacker";
             _menuItemAddRedAttacker.Click += MenuItemAddRedAttacker_Click;
-
+            // 
+            // _menuItemAddRedFlanker
+            // 
             _menuItemAddRedFlanker.Name = "_menuItemAddRedFlanker";
+            _menuItemAddRedFlanker.Size = new Size(204, 22);
             _menuItemAddRedFlanker.Text = "Add Red &Flanker";
             _menuItemAddRedFlanker.Click += MenuItemAddRedFlanker_Click;
-
+            // 
+            // _separatorRed2
+            // 
+            _separatorRed2.Name = "_separatorRed2";
+            _separatorRed2.Size = new Size(201, 6);
+            // 
+            // _menuItemClearAllTanks
+            // 
             _menuItemClearAllTanks.Name = "_menuItemClearAllTanks";
+            _menuItemClearAllTanks.Size = new Size(204, 22);
             _menuItemClearAllTanks.Text = "&Clear All Tanks";
             _menuItemClearAllTanks.Click += MenuItemClearAllTanks_Click;
-
-            // ── Blue Swarm top-level ──────────────────────────────────────────
-            _menuItemBlueSwarm.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                _menuItemBuildDefaultBlueSwarm,
-                _separatorBlue1,
-                _menuItemAddBlueWarden,
-                _menuItemAddBluePatrol,
-                _menuItemAddBlueSniper,
-                _separatorBlue2,
-                _menuItemClearAllTanks2
-            });
+            // 
+            // _menuItemBlueSwarm
+            // 
+            _menuItemBlueSwarm.DropDownItems.AddRange(new ToolStripItem[] { _menuItemBuildDefaultBlueSwarm, _separatorBlue1, _menuItemAddBlueWarden, _menuItemAddBluePatrol, _menuItemAddBlueSniper, _separatorBlue2, _menuItemClearAllTanks2 });
             _menuItemBlueSwarm.Name = "_menuItemBlueSwarm";
+            _menuItemBlueSwarm.Size = new Size(81, 20);
             _menuItemBlueSwarm.Text = "&Blue Swarm";
-
+            // 
+            // _menuItemBuildDefaultBlueSwarm
+            // 
             _menuItemBuildDefaultBlueSwarm.Name = "_menuItemBuildDefaultBlueSwarm";
+            _menuItemBuildDefaultBlueSwarm.Size = new Size(207, 22);
             _menuItemBuildDefaultBlueSwarm.Text = "Build &Default Blue Swarm";
             _menuItemBuildDefaultBlueSwarm.Click += MenuItemBuildDefaultBlueSwarm_Click;
-
+            // 
+            // _separatorBlue1
+            // 
+            _separatorBlue1.Name = "_separatorBlue1";
+            _separatorBlue1.Size = new Size(204, 6);
+            // 
+            // _menuItemAddBlueWarden
+            // 
             _menuItemAddBlueWarden.Name = "_menuItemAddBlueWarden";
+            _menuItemAddBlueWarden.Size = new Size(207, 22);
             _menuItemAddBlueWarden.Text = "Add Blue &Warden";
             _menuItemAddBlueWarden.Click += MenuItemAddBlueWarden_Click;
-
+            // 
+            // _menuItemAddBluePatrol
+            // 
             _menuItemAddBluePatrol.Name = "_menuItemAddBluePatrol";
+            _menuItemAddBluePatrol.Size = new Size(207, 22);
             _menuItemAddBluePatrol.Text = "Add Blue &Patrol";
             _menuItemAddBluePatrol.Click += MenuItemAddBluePatrol_Click;
-
+            // 
+            // _menuItemAddBlueSniper
+            // 
             _menuItemAddBlueSniper.Name = "_menuItemAddBlueSniper";
+            _menuItemAddBlueSniper.Size = new Size(207, 22);
             _menuItemAddBlueSniper.Text = "Add Blue &Sniper";
             _menuItemAddBlueSniper.Click += MenuItemAddBlueSniper_Click;
-
+            // 
+            // _separatorBlue2
+            // 
+            _separatorBlue2.Name = "_separatorBlue2";
+            _separatorBlue2.Size = new Size(204, 6);
+            // 
+            // _menuItemClearAllTanks2
+            // 
             _menuItemClearAllTanks2.Name = "_menuItemClearAllTanks2";
+            _menuItemClearAllTanks2.Size = new Size(207, 22);
             _menuItemClearAllTanks2.Text = "&Clear All Tanks";
             _menuItemClearAllTanks2.Click += MenuItemClearAllTanks_Click;
-
-            // ── War top-level ─────────────────────────────────────────────────
-            _menuItemWar.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                _menuItemStart,
-                _menuItemStop,
-                _separatorWar1,
-                _menuItemSingleStep,
-                _separatorWar2,
-                _menuItemResetArena,
-                _separatorWar3,
-                _menuItemSpeed,
-                _separatorWar4,
-                _menuItemPlayerVsPlayer
-            });
+            // 
+            // _menuItemWar
+            // 
+            _menuItemWar.DropDownItems.AddRange(new ToolStripItem[] { _menuItemStart, _menuItemStop, _separatorWar1, _menuItemSingleStep, _separatorWar2, _menuItemResetArena, _separatorWar3, _menuItemSpeed, _separatorWar4, _menuItemPlayerVsPlayer });
             _menuItemWar.Name = "_menuItemWar";
+            _menuItemWar.Size = new Size(40, 20);
             _menuItemWar.Text = "&War";
-
+            // 
+            // _menuItemStart
+            // 
             _menuItemStart.Name = "_menuItemStart";
             _menuItemStart.ShortcutKeys = Keys.F5;
+            _menuItemStart.Size = new Size(157, 22);
             _menuItemStart.Text = "&Start";
             _menuItemStart.Click += MenuItemStart_Click;
-
+            // 
+            // _menuItemStop
+            // 
+            _menuItemStop.Enabled = false;
             _menuItemStop.Name = "_menuItemStop";
             _menuItemStop.ShortcutKeys = Keys.F6;
+            _menuItemStop.Size = new Size(157, 22);
             _menuItemStop.Text = "S&top";
-            _menuItemStop.Enabled = false;
             _menuItemStop.Click += MenuItemStop_Click;
-
+            // 
+            // _separatorWar1
+            // 
+            _separatorWar1.Name = "_separatorWar1";
+            _separatorWar1.Size = new Size(154, 6);
+            // 
+            // _menuItemSingleStep
+            // 
             _menuItemSingleStep.Name = "_menuItemSingleStep";
             _menuItemSingleStep.ShortcutKeys = Keys.F10;
+            _menuItemSingleStep.Size = new Size(157, 22);
             _menuItemSingleStep.Text = "S&ingle Step";
             _menuItemSingleStep.Click += MenuItemSingleStep_Click;
-
+            // 
+            // _separatorWar2
+            // 
+            _separatorWar2.Name = "_separatorWar2";
+            _separatorWar2.Size = new Size(154, 6);
+            // 
+            // _menuItemResetArena
+            // 
             _menuItemResetArena.Name = "_menuItemResetArena";
+            _menuItemResetArena.Size = new Size(157, 22);
             _menuItemResetArena.Text = "&Reset Arena";
             _menuItemResetArena.Click += MenuItemResetArena_Click;
-
-            // ── Player vs Player sub-menu ─────────────────────────────────────
-            // 3 vs 3 … 12 vs 12 are added dynamically in BuildNvNSubMenu()
-            _menuItemPlayerVsPlayer.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                _menuItemPvP1v1,
-                _menuItemPvP2v2
-            });
-            _menuItemPlayerVsPlayer.Name = "_menuItemPlayerVsPlayer";
-            _menuItemPlayerVsPlayer.Text = "&Player vs Player";
-
-            _menuItemPvP1v1.Name = "_menuItemPvP1v1";
-            _menuItemPvP1v1.Text = "&1 vs 1";
-            _menuItemPvP1v1.Click += MenuItemPvP1v1_Click;
-
-            _menuItemPvP2v2.Name = "_menuItemPvP2v2";
-            _menuItemPvP2v2.Text = "&2 vs 2";
-            _menuItemPvP2v2.Click += MenuItemPvP2v2_Click;
-
-            // ── Speed sub-menu ────────────────────────────────────────────────
-            _menuItemSpeed.DropDownItems.AddRange(new ToolStripItem[]
-            {
-                _menuItemSpeedSlow,
-                _menuItemSpeedNormal,
-                _menuItemSpeedFast,
-                _menuItemSpeedVeryFast
-            });
+            // 
+            // _separatorWar3
+            // 
+            _separatorWar3.Name = "_separatorWar3";
+            _separatorWar3.Size = new Size(154, 6);
+            // 
+            // _menuItemSpeed
+            // 
+            _menuItemSpeed.DropDownItems.AddRange(new ToolStripItem[] { _menuItemSpeedSlow, _menuItemSpeedNormal, _menuItemSpeedFast, _menuItemSpeedVeryFast });
             _menuItemSpeed.Name = "_menuItemSpeed";
+            _menuItemSpeed.Size = new Size(157, 22);
             _menuItemSpeed.Text = "S&peed";
-
+            // 
+            // _menuItemSpeedSlow
+            // 
             _menuItemSpeedSlow.Name = "_menuItemSpeedSlow";
+            _menuItemSpeedSlow.Size = new Size(166, 22);
             _menuItemSpeedSlow.Text = "&Slow (3 TPS)";
             _menuItemSpeedSlow.Click += MenuItemSpeed_Click;
-
+            // 
+            // _menuItemSpeedNormal
+            // 
             _menuItemSpeedNormal.Checked = true;
+            _menuItemSpeedNormal.CheckState = CheckState.Checked;
             _menuItemSpeedNormal.Name = "_menuItemSpeedNormal";
+            _menuItemSpeedNormal.Size = new Size(166, 22);
             _menuItemSpeedNormal.Text = "&Normal (10 TPS)";
             _menuItemSpeedNormal.Click += MenuItemSpeed_Click;
-
+            // 
+            // _menuItemSpeedFast
+            // 
             _menuItemSpeedFast.Name = "_menuItemSpeedFast";
+            _menuItemSpeedFast.Size = new Size(166, 22);
             _menuItemSpeedFast.Text = "&Fast (20 TPS)";
             _menuItemSpeedFast.Click += MenuItemSpeed_Click;
-
+            // 
+            // _menuItemSpeedVeryFast
+            // 
             _menuItemSpeedVeryFast.Name = "_menuItemSpeedVeryFast";
+            _menuItemSpeedVeryFast.Size = new Size(166, 22);
             _menuItemSpeedVeryFast.Text = "&Very Fast (30 TPS)";
             _menuItemSpeedVeryFast.Click += MenuItemSpeed_Click;
-
-            // ── Toolbar ───────────────────────────────────────────────────────
-            _toolStrip.Items.AddRange(new ToolStripItem[]
-            {
-                _btnStartWar,
-                _btnStopWar,
-                _separatorToolbar1,
-                _btnSingleStep,
-                _separatorToolbar2,
-                _lblSpeed,
-                _speedTrackBarHost,
-                _lblSpeedValue
-            });
+            // 
+            // _separatorWar4
+            // 
+            _separatorWar4.Name = "_separatorWar4";
+            _separatorWar4.Size = new Size(154, 6);
+            // 
+            // _menuItemPlayerVsPlayer
+            // 
+            _menuItemPlayerVsPlayer.DropDownItems.AddRange(new ToolStripItem[] { _menuItemPvP1v1, _menuItemPvP2v2 });
+            _menuItemPlayerVsPlayer.Name = "_menuItemPlayerVsPlayer";
+            _menuItemPlayerVsPlayer.Size = new Size(157, 22);
+            _menuItemPlayerVsPlayer.Text = "&Player vs Player";
+            // 
+            // _menuItemPvP1v1
+            // 
+            _menuItemPvP1v1.Name = "_menuItemPvP1v1";
+            _menuItemPvP1v1.Size = new Size(103, 22);
+            _menuItemPvP1v1.Text = "&1 vs 1";
+            _menuItemPvP1v1.Click += MenuItemPvP1v1_Click;
+            // 
+            // _menuItemPvP2v2
+            // 
+            _menuItemPvP2v2.Name = "_menuItemPvP2v2";
+            _menuItemPvP2v2.Size = new Size(103, 22);
+            _menuItemPvP2v2.Text = "&2 vs 2";
+            _menuItemPvP2v2.Click += MenuItemPvP2v2_Click;
+            // 
+            // _toolStrip
+            // 
+            _toolStrip.Items.AddRange(new ToolStripItem[] { _btnStartWar, _btnStopWar, _separatorToolbar1, _btnSingleStep, _separatorToolbar2, _lblSpeed, _speedTrackBarHost, _lblSpeedValue });
             _toolStrip.Location = new Point(0, 24);
             _toolStrip.Name = "_toolStrip";
-            _toolStrip.Size = new Size(1300, 25);
+            _toolStrip.Size = new Size(1687, 25);
             _toolStrip.TabIndex = 2;
             _toolStrip.Text = "toolStrip";
-
+            // 
+            // _btnStartWar
+            // 
+            _btnStartWar.Name = "_btnStartWar";
+            _btnStartWar.Size = new Size(75, 22);
+            _btnStartWar.Text = "▶  Start War";
+            _btnStartWar.ToolTipText = "Start simulation (F5)";
+            _btnStartWar.Click += MenuItemStart_Click;
+            // 
+            // _btnStopWar
+            // 
+            _btnStopWar.Enabled = false;
+            _btnStopWar.Name = "_btnStopWar";
+            _btnStopWar.Size = new Size(53, 22);
+            _btnStopWar.Text = "⏹  Stop";
+            _btnStopWar.ToolTipText = "Stop simulation (F6)";
+            _btnStopWar.Click += MenuItemStop_Click;
+            // 
+            // _separatorToolbar1
+            // 
+            _separatorToolbar1.Name = "_separatorToolbar1";
+            _separatorToolbar1.Size = new Size(6, 25);
+            // 
+            // _btnSingleStep
+            // 
+            _btnSingleStep.Name = "_btnSingleStep";
+            _btnSingleStep.Size = new Size(51, 22);
+            _btnSingleStep.Text = "→▏  Step";
+            _btnSingleStep.ToolTipText = "Advance one tick (F10)";
+            _btnSingleStep.Click += MenuItemSingleStep_Click;
+            // 
+            // _separatorToolbar2
+            // 
+            _separatorToolbar2.Name = "_separatorToolbar2";
+            _separatorToolbar2.Size = new Size(6, 25);
+            // 
+            // _lblSpeed
+            // 
             _lblSpeed.Name = "_lblSpeed";
+            _lblSpeed.Size = new Size(42, 22);
             _lblSpeed.Text = "Speed:";
-
+            // 
+            // _speedTrackBar
+            //
+            _speedTrackBar.AccessibleName = "_speedTrackBar";
             _speedTrackBar.AutoSize = false;
+            _speedTrackBar.Location = new Point(242, 1);
             _speedTrackBar.Maximum = 30;
             _speedTrackBar.Minimum = 1;
             _speedTrackBar.Name = "_speedTrackBar";
-            _speedTrackBar.Size = new Size(150, 22);
-            _speedTrackBar.SmallChange = 1;
-            _speedTrackBar.LargeChange = 5;
+            _speedTrackBar.Size = new Size(154, 22);
+            _speedTrackBar.TabIndex = 0;
             _speedTrackBar.TickFrequency = 5;
             _speedTrackBar.Value = 10;
             _speedTrackBar.Scroll += SpeedTrackBar_Scroll;
-
+            //
+            // _speedTrackBarHost
+            //
             _speedTrackBarHost.AutoSize = false;
             _speedTrackBarHost.Name = "_speedTrackBarHost";
             _speedTrackBarHost.Size = new Size(154, 22);
-            _speedTrackBarHost.ToolTipText = "Drag to adjust simulation speed (ticks per second)";
-
+            // 
+            // _lblSpeedValue
+            // 
             _lblSpeedValue.Name = "_lblSpeedValue";
+            _lblSpeedValue.Size = new Size(42, 22);
             _lblSpeedValue.Text = "10 TPS";
-
-            _btnStartWar.Name = "_btnStartWar";
-            _btnStartWar.Text = "\u25B6  Start War";
-            _btnStartWar.ToolTipText = "Start simulation (F5)";
-            _btnStartWar.Click += MenuItemStart_Click;
-
-            _btnStopWar.Name = "_btnStopWar";
-            _btnStopWar.Text = "\u23F9  Stop";
-            _btnStopWar.ToolTipText = "Stop simulation (F6)";
-            _btnStopWar.Enabled = false;
-            _btnStopWar.Click += MenuItemStop_Click;
-
-            _btnSingleStep.Name = "_btnSingleStep";
-            _btnSingleStep.Text = "\u2192\u258F  Step";
-            _btnSingleStep.ToolTipText = "Advance one tick (F10)";
-            _btnSingleStep.Click += MenuItemSingleStep_Click;
-
-            // ── Radio comms panel (SplitContainer Panel1) ─────────────────────
+            // 
+            // _splitContainer
+            // 
+            _splitContainer.BorderStyle = BorderStyle.Fixed3D;
+            _splitContainer.Dock = DockStyle.Fill;
+            _splitContainer.FixedPanel = FixedPanel.Panel1;
+            _splitContainer.Location = new Point(0, 49);
+            _splitContainer.Name = "_splitContainer";
+            // 
+            // _splitContainer.Panel1
+            // 
+            _splitContainer.Panel1.Controls.Add(_radioCommsPanel);
+            // 
+            // _splitContainer.Panel2
+            // 
+            _splitContainer.Panel2.Controls.Add(arenaUserControl1);
+            _splitContainer.Size = new Size(1687, 711);
+            _splitContainer.SplitterDistance = 523;
+            _splitContainer.SplitterWidth = 5;
+            _splitContainer.TabIndex = 3;
+            // 
+            // _radioCommsPanel
+            // 
+            _radioCommsPanel.BackColor = Color.FromArgb(12, 12, 12);
             _radioCommsPanel.Controls.Add(_radioLog);
             _radioCommsPanel.Controls.Add(_radioCommsHeader);
             _radioCommsPanel.Dock = DockStyle.Fill;
+            _radioCommsPanel.Location = new Point(0, 0);
             _radioCommsPanel.Name = "_radioCommsPanel";
-            _radioCommsPanel.BackColor = Color.FromArgb(12, 12, 12);
-
-            _radioCommsHeader.Dock = DockStyle.Top;
-            _radioCommsHeader.Height = 18;
-            _radioCommsHeader.Name = "_radioCommsHeader";
-            _radioCommsHeader.Text = "  \u25FC RADIO COMMS";
-            _radioCommsHeader.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
-            _radioCommsHeader.BackColor = Color.FromArgb(28, 28, 28);
-            _radioCommsHeader.ForeColor = Color.Goldenrod;
-            _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
-
+            _radioCommsPanel.Size = new Size(519, 707);
+            _radioCommsPanel.TabIndex = 0;
+            // 
+            // _radioLog
+            // 
+            _radioLog.BackColor = Color.FromArgb(12, 12, 12);
+            _radioLog.BorderStyle = BorderStyle.None;
             _radioLog.Dock = DockStyle.Fill;
+            _radioLog.Font = new Font("Consolas", 8.25F);
+            _radioLog.ForeColor = Color.DimGray;
+            _radioLog.Location = new Point(0, 18);
             _radioLog.Name = "_radioLog";
             _radioLog.ReadOnly = true;
             _radioLog.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _radioLog.BackColor = Color.FromArgb(12, 12, 12);
-            _radioLog.ForeColor = Color.DimGray;
-            _radioLog.Font = new Font("Consolas", 8.25f, FontStyle.Regular);
-            _radioLog.BorderStyle = BorderStyle.None;
-            _radioLog.WordWrap = true;
+            _radioLog.Size = new Size(519, 689);
+            _radioLog.TabIndex = 0;
             _radioLog.TabStop = false;
-
-            // ── Arena (SplitContainer Panel2) ────────────────────────────────
+            _radioLog.Text = "";
+            // 
+            // _radioCommsHeader
+            // 
+            _radioCommsHeader.BackColor = Color.FromArgb(28, 28, 28);
+            _radioCommsHeader.Dock = DockStyle.Top;
+            _radioCommsHeader.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+            _radioCommsHeader.ForeColor = Color.Goldenrod;
+            _radioCommsHeader.Location = new Point(0, 0);
+            _radioCommsHeader.Name = "_radioCommsHeader";
+            _radioCommsHeader.Size = new Size(519, 18);
+            _radioCommsHeader.TabIndex = 1;
+            _radioCommsHeader.Text = "  ◼ RADIO COMMS";
+            _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
+            // 
+            // arenaUserControl1
+            // 
             arenaUserControl1.Dock = DockStyle.Fill;
+            arenaUserControl1.Location = new Point(0, 0);
             arenaUserControl1.Name = "arenaUserControl1";
+            arenaUserControl1.Size = new Size(1155, 707);
             arenaUserControl1.TabIndex = 0;
-
-            // ── SplitContainer ────────────────────────────────────────────────
-            // Panel1MinSize, Panel2MinSize, and SplitterDistance are NOT set here.
-            // EndInit() validates SplitterDistance against the min sizes using the
-            // control's current width, which is still its tiny default at this point.
-            // Any combination that fails (e.g. default distance < Panel1MinSize) throws
-            // InvalidOperationException.  All three are applied safely in OnLoad().
-            _splitContainer.Dock = DockStyle.Fill;
-            _splitContainer.Name = "_splitContainer";
-            _splitContainer.Orientation = Orientation.Vertical;
-            _splitContainer.SplitterWidth = 5;
-            _splitContainer.TabIndex = 3;
-            _splitContainer.Panel1.Controls.Add(_radioCommsPanel);
-            _splitContainer.Panel2.Controls.Add(arenaUserControl1);
-
-            // ── TankSwarmArena ────────────────────────────────────────────────
+            // 
+            // TankSwarmArena
+            // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(1687, 760);
             Controls.Add(_splitContainer);
             Controls.Add(_toolStrip);
             Controls.Add(_mainMenuStrip);
@@ -380,18 +477,16 @@ namespace TankSwarmCode
             SizeGripStyle = SizeGripStyle.Show;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Tank Swarm Arena";
-            ClientSize = new Size(1300, 760);
-
-            ((System.ComponentModel.ISupportInitialize)_speedTrackBar).EndInit();
-            _toolStrip.ResumeLayout(false);
-            _toolStrip.PerformLayout();
             _mainMenuStrip.ResumeLayout(false);
             _mainMenuStrip.PerformLayout();
-            _radioCommsPanel.ResumeLayout(false);
+            _toolStrip.ResumeLayout(false);
+            _toolStrip.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)_speedTrackBar).EndInit();
             _splitContainer.Panel1.ResumeLayout(false);
             _splitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)_splitContainer).EndInit();
             _splitContainer.ResumeLayout(false);
+            _radioCommsPanel.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -451,7 +546,6 @@ namespace TankSwarmCode
         private ToolStripSeparator _separatorToolbar2;
         private ToolStripLabel _lblSpeed;
         private TrackBar _speedTrackBar;
-        private ToolStripControlHost _speedTrackBarHost;
         private ToolStripLabel _lblSpeedValue;
 
         // Split container + radio comms panel
@@ -459,5 +553,6 @@ namespace TankSwarmCode
         private Panel _radioCommsPanel;
         private Label _radioCommsHeader;
         private RichTextBox _radioLog;
+        private ToolStripControlHost _speedTrackBarHost;
     }
 }
