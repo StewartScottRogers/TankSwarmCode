@@ -159,6 +159,7 @@ public partial class TankSwarmArena : Form
         BuildRedTeam(n);
         BuildBlueTeam(n);
 
+        arenaUserControl1.Start();
         UpdateMenuState();
     }
 
