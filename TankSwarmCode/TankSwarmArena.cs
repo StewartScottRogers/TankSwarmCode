@@ -83,7 +83,7 @@ public partial class TankSwarmArena : Form
         // throw InvalidOperationException.
         _splitContainer.Panel1MinSize = 180;
         _splitContainer.Panel2MinSize = 400;
-        _splitContainer.SplitterDistance = 260;
+        _splitContainer.SplitterDistance = 527;
         UpdateMenuState();
     }
 

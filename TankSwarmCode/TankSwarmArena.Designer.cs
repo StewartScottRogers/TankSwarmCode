@@ -488,7 +488,6 @@ namespace TankSwarmCode
             // 
             _splitContainer.Panel2.Controls.Add(arenaUserControl1);
             _splitContainer.Size = new Size(1687, 711);
-            _splitContainer.SplitterDistance = 482;
             _splitContainer.SplitterWidth = 5;
             _splitContainer.TabIndex = 3;
             // 
@@ -500,7 +499,7 @@ namespace TankSwarmCode
             _radioCommsPanel.Dock = DockStyle.Fill;
             _radioCommsPanel.Location = new Point(0, 0);
             _radioCommsPanel.Name = "_radioCommsPanel";
-            _radioCommsPanel.Size = new Size(478, 707);
+            _radioCommsPanel.Size = new Size(719, 707);
             _radioCommsPanel.TabIndex = 0;
             // 
             // _radioLog
@@ -514,7 +513,7 @@ namespace TankSwarmCode
             _radioLog.Name = "_radioLog";
             _radioLog.ReadOnly = true;
             _radioLog.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _radioLog.Size = new Size(478, 689);
+            _radioLog.Size = new Size(719, 689);
             _radioLog.TabIndex = 0;
             _radioLog.TabStop = false;
             _radioLog.Text = "";
@@ -527,7 +526,7 @@ namespace TankSwarmCode
             _radioCommsHeader.ForeColor = Color.Goldenrod;
             _radioCommsHeader.Location = new Point(0, 0);
             _radioCommsHeader.Name = "_radioCommsHeader";
-            _radioCommsHeader.Size = new Size(478, 18);
+            _radioCommsHeader.Size = new Size(719, 18);
             _radioCommsHeader.TabIndex = 1;
             _radioCommsHeader.Text = "  ◼ RADIO COMMS";
             _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
