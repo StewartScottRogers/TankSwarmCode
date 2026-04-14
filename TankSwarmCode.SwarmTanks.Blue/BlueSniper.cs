@@ -117,8 +117,8 @@ public sealed class BlueSniper : SwarmTankBase
     {
         foreach (BulletState bullet in Arena.GetActiveBullets())
         {
-            // Skip allied bullets
-            // (BulletState doesn't expose OwnerId so we check any inbound bullet)
+            // BulletState.OwnerName is available, but mapping a name back to a swarm ID
+            // requires additional tracking; treat all inbound bullets as threats for now.
             Vector2D toTank = new(
                 State.Position.X - bullet.Position.X,
                 State.Position.Y - bullet.Position.Y);

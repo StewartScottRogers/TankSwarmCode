@@ -132,6 +132,19 @@ public abstract class SwarmTankBase : ISwarmTank
         };
 
         MergeContact(contact);
+
+        // Auto-broadcast enemy contacts so all swarm allies can update their RadarMap.
+        if (!contact.IsAlly)
+        {
+            Broadcast(new SwarmMessage
+            {
+                SenderName = Name,
+                Type = SwarmMessageType.RadarShare,
+                TargetName = contact.Name,
+                RadarContact = contact,
+                Timestamp = Arena.TickNumber
+            });
+        }
     }
 
     /// <inheritdoc/>
@@ -147,7 +160,16 @@ public abstract class SwarmTankBase : ISwarmTank
     public virtual void OnBulletHit(BulletHitEventArgs e) { }
 
     /// <inheritdoc/>
-    public virtual void OnSwarmMessage(SwarmMessageEventArgs e) { }
+    public virtual void OnSwarmMessage(SwarmMessageEventArgs e)
+    {
+        // Merge any incoming radar contact so the RadarMap stays current
+        // without subclasses needing to handle this themselves.
+        if (e.Message.Type == SwarmMessageType.RadarShare
+            && e.Message.RadarContact is { } incoming)
+        {
+            MergeContact(incoming);
+        }
+    }
 
     /// <inheritdoc/>
     public virtual void OnDeath() { }

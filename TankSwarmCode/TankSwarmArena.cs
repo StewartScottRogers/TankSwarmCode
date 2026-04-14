@@ -8,6 +8,7 @@ public partial class TankSwarmArena : Form
     private int _redAttackerCount;
     private int _redFlankerCount;
     private int _bluePatrolCount;
+    private int _blueSniperCount;
 
     public TankSwarmArena()
     {
@@ -86,8 +87,8 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddBlueSniper_Click(object? sender, EventArgs e)
     {
-        bool topLeft = (arenaUserControl1.Arena?.Tanks.Count(t => t.SwarmId == 2) ?? 0) % 2 == 0;
-        arenaUserControl1.AddTank(new BlueSniper($"BlueSniper{_bluePatrolCount}", topLeft));
+        _blueSniperCount++;
+        arenaUserControl1.AddTank(new BlueSniper($"BlueSniper{_blueSniperCount}", topLeft: _blueSniperCount % 2 == 1));
         UpdateMenuState();
     }
 
@@ -99,6 +100,7 @@ public partial class TankSwarmArena : Form
         _redAttackerCount = 0;
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
+        _blueSniperCount  = 0;
         UpdateMenuState();
     }
 
@@ -128,6 +130,7 @@ public partial class TankSwarmArena : Form
         _redAttackerCount = 0;
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
+        _blueSniperCount  = 0;
         UpdateMenuState();
     }
 
@@ -155,6 +158,7 @@ public partial class TankSwarmArena : Form
         _redAttackerCount = 0;
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
+        _blueSniperCount  = 0;
 
         BuildRedTeam(n);
         BuildBlueTeam(n);

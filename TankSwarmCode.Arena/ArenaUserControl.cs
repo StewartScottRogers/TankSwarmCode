@@ -376,11 +376,18 @@ public partial class ArenaUserControl : UserControl
         // Layer 1 – Radar reflections: beam from spotter to detected tank
         DrawAllRadarHalos(g);
 
-        // Layer 2 – Charred hulk bodies (static wrecks rendered below bullets and tanks)
+        // Layer 2 – Charred hulk bodies. Suppress for the first 160 ms while the white
+        // flash is bright enough to cover the hull; visible permanently thereafter.
         foreach (ISwarmTank tank in _engine.Tanks)
         {
             if (!tank.State.IsAlive)
-                DrawHulkBody(g, tank.State);
+            {
+                float hullAgeMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime hbt)
+                    ? (float)(DateTime.UtcNow - hbt).TotalMilliseconds
+                    : float.MaxValue;
+                if (hullAgeMs > 160f)
+                    DrawHulkBody(g, tank.State);
+            }
         }
 
         // Layer 3 – Bullets (coloured by the firing tank's swarm)
@@ -831,41 +838,6 @@ public partial class ArenaUserControl : UserControl
                 using SolidBrush sb = new(Color.FromArgb(a, 105, 98, 92));
                 g.FillEllipse(sb, cx - r, cy - r, r * 2, r * 2);
             }
-        }
-    }
-
-    /// <summary>
-    /// Orchestrates the full destroyed-tank visual: explosion sequence then steady burn.
-    /// <list type="bullet">
-    ///   <item>The static charred hull is drawn here only during the explosion window
-    ///         (it reappears in the dedicated hull pass in <see cref="OnPaint"/> once the
-    ///         explosion is over).</item>
-    ///   <item>Explosion phases run for <see cref="ExplosionDurationMs"/> ms.</item>
-    ///   <item>Burning flames ramp in from <see cref="BurnStartMs"/> ms onward.</item>
-    /// </list>
-    /// </summary>
-    private void DrawHulk(Graphics g, TankState tank)
-    {
-        float ageMs = float.MaxValue;
-
-        if (_explosionBirthTimes.TryGetValue(tank.Name, out DateTime birthTime))
-            ageMs = (float)(DateTime.UtcNow - birthTime).TotalMilliseconds;
-
-        bool exploding = ageMs < ExplosionDurationMs;
-
-        // Hull body appears once the initial flash subsides
-        if (!exploding || ageMs > 160f)
-            DrawHulkBody(g, tank);
-
-        // Explosion blast (one-shot, ages out automatically)
-        if (exploding)
-            DrawExplosionBlast(g, tank, ageMs);
-
-        // Burning flames ramp in during and after the explosion tail
-        if (ageMs > BurnStartMs)
-        {
-            float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
-            DrawBurningFlame(g, tank, intensity);
         }
     }
 
