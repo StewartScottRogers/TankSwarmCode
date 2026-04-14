@@ -100,6 +100,11 @@ public partial class ArenaUserControl : UserControl
     /// </summary>
     public event EventHandler<RadioTransmissionEventArgs>? RadioTransmission;
 
+    /// <summary>
+    /// Raised on the UI thread at the end of every simulation tick.
+    /// </summary>
+    public event EventHandler<TickEventArgs>? TickCompleted;
+
     // One entry per physical radar hit; each lives for ScanHaloLifetime ticks then is removed.
     private readonly List<ScanEvent> _scanEvents = [];
 
@@ -365,7 +370,7 @@ public partial class ArenaUserControl : UserControl
 
     private void Engine_TickCompleted(object? sender, TickEventArgs e)
     {
-        // Redraw is driven by the timer; nothing extra needed here.
+        TickCompleted?.Invoke(this, e);
     }
 
     private void Engine_RoundEnded(object? sender, RoundEndedEventArgs e)

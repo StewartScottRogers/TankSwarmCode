@@ -34,8 +34,10 @@ public partial class TankSwarmArena : Form
         InitializeComponent();
         arenaUserControl1.TicksPerSecond = 10;  // Normal speed by default
         arenaUserControl1.RadioTransmission += ArenaUserControl_RadioTransmission;
+        arenaUserControl1.TickCompleted    += (_, _) => UpdateStatusStrip();
         BuildNvNSubMenu();
         SyncSpeedMenuChecks(10);
+        UpdateStatusStrip();
     }
 
     // ── Radio comms log ───────────────────────────────────────────────────────
@@ -183,18 +185,21 @@ public partial class TankSwarmArena : Form
     {
         arenaUserControl1.Start();
         UpdateMenuState();
+        UpdateStatusStrip();
     }
 
     private void MenuItemStop_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.Stop();
         UpdateMenuState();
+        UpdateStatusStrip();
     }
 
     private void MenuItemSingleStep_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.SingleStep();
         UpdateMenuState();
+        UpdateStatusStrip();
     }
 
     private void MenuItemResetArena_Click(object? sender, EventArgs e)
@@ -206,6 +211,7 @@ public partial class TankSwarmArena : Form
         _blueSniperCount  = 0;
         ClearRadioLog();
         UpdateMenuState();
+        UpdateStatusStrip();
     }
 
     // ── Player vs Player handlers ─────────────────────────────────────────────
@@ -352,6 +358,39 @@ public partial class TankSwarmArena : Form
         _menuItemSpeedNormal.Checked   = tps == 10;
         _menuItemSpeedFast.Checked     = tps == 20;
         _menuItemSpeedVeryFast.Checked = tps == 30;
+    }
+
+    // ── Status strip ─────────────────────────────────────────────────────────
+
+    private void UpdateStatusStrip()
+    {
+        var arena = arenaUserControl1.Arena;
+
+        if (arena is null || !arena.HasStarted)
+        {
+            _statusLabelState.Text   = "Ready";
+            _statusLabelTick.Text    = "Tick: —";
+            _statusLabelRed.Text     = "— / —";
+            _statusLabelBlue.Text    = "— / —";
+            _statusLabelBullets.Text = "—";
+            return;
+        }
+
+        _statusLabelState.Text = arena.IsRunning ? "Running" : "Stopped";
+        _statusLabelState.ForeColor = arena.IsRunning ? Color.LawnGreen : Color.Silver;
+
+        _statusLabelTick.Text = $"Tick: {arena.TickNumber}";
+
+        var tanks = arena.Tanks;
+        int redTotal  = tanks.Count(t => t.SwarmId == 1);
+        int redAlive  = tanks.Count(t => t.SwarmId == 1 && t.State.IsAlive);
+        int blueTotal = tanks.Count(t => t.SwarmId == 2);
+        int blueAlive = tanks.Count(t => t.SwarmId == 2 && t.State.IsAlive);
+
+        _statusLabelRed.Text  = $"{redAlive} / {redTotal}";
+        _statusLabelBlue.Text = $"{blueAlive} / {blueTotal}";
+
+        _statusLabelBullets.Text = arena.Bullets.Count.ToString();
     }
 
     // ── Menu state ────────────────────────────────────────────────────────────
