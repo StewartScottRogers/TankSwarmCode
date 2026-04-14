@@ -1,6 +1,7 @@
 ﻿using System.Drawing.Drawing2D;
 using TankSwarmCode.Arena.Interfaces;
 using TankSwarmCode.SwarmTank.Interfaces;
+using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Events;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
@@ -84,6 +85,13 @@ public partial class ArenaUserControl : UserControl
     // Per-tank radar heading history used to paint phosphor-decay sweep trails
     private readonly Dictionary<string, LinkedList<double>> _radarTrails =
         new(StringComparer.Ordinal);
+
+    /// <summary>
+    /// Raised on the UI thread whenever a tank broadcasts a non-radar swarm message.
+    /// The <see cref="RadioTransmissionEventArgs.FormattedLine"/> follows the strict
+    /// [MSGTYPE]: content radio format.
+    /// </summary>
+    public event EventHandler<RadioTransmissionEventArgs>? RadioTransmission;
 
     // One entry per physical radar hit; each lives for ScanHaloLifetime ticks then is removed.
     private readonly List<ScanEvent> _scanEvents = [];
@@ -344,6 +352,7 @@ public partial class ArenaUserControl : UserControl
         var engine = new ArenaEngine(ClientSize.Width, ClientSize.Height);
         engine.TickCompleted += Engine_TickCompleted;
         engine.RoundEnded += Engine_RoundEnded;
+        engine.SwarmMessageBroadcast += Engine_SwarmMessageBroadcast;
         return engine;
     }
 
@@ -359,6 +368,50 @@ public partial class ArenaUserControl : UserControl
         _statusMessage = $"Round ended after {e.TotalTicks} ticks.";
         Invalidate();
     }
+
+    private void Engine_SwarmMessageBroadcast(SwarmMessage msg, int swarmId)
+    {
+        string? line = FormatRadioMessage(msg);
+        if (line is null) return;
+        RadioTransmission?.Invoke(this, new RadioTransmissionEventArgs(line, swarmId));
+    }
+
+    /// <summary>
+    /// Converts a <see cref="SwarmMessage"/> to the strict radio format
+    /// <c>[MSGTYPE]: content</c>.  Returns <see langword="null"/> for message
+    /// types that produce no meaningful radio traffic (e.g. RadarShare).
+    /// </summary>
+    private static string? FormatRadioMessage(SwarmMessage msg) => msg.Type switch
+    {
+        SwarmMessageType.EnemySpotted when msg.Position is { } pos
+            => $"[TARGET]: {msg.SenderName} contacts {msg.TargetName ?? "unknown"} at {(int)pos.X} {(int)pos.Y}",
+
+        SwarmMessageType.EnemySpotted
+            => $"[TARGET]: {msg.SenderName} contacts {msg.TargetName ?? "unknown"}",
+
+        SwarmMessageType.TargetLocked
+            => $"[TARGET]: {msg.SenderName} engaging {msg.TargetName ?? "unknown"}",
+
+        SwarmMessageType.RequestBackup
+            => $"[ALERT]: {msg.SenderName} requests immediate backup",
+
+        SwarmMessageType.FormationMove when msg.Position is { } pos
+            => $"[MOVE]: {msg.SenderName} rally point {(int)pos.X} {(int)pos.Y}",
+
+        SwarmMessageType.FormationMove
+            => $"[MOVE]: {msg.SenderName} rally point designated",
+
+        SwarmMessageType.FallBack
+            => $"[MOVE]: {msg.SenderName} all units fall back",
+
+        SwarmMessageType.RoleChange
+            => $"[STATUS]: {msg.SenderName} assuming {msg.CustomData ?? "new"} role",
+
+        SwarmMessageType.Custom when !string.IsNullOrWhiteSpace(msg.CustomData)
+            => $"[STATUS]: {msg.SenderName} {msg.CustomData}",
+
+        _ => null
+    };
 
     private void GameTimer_Tick(object? sender, EventArgs e)
     {

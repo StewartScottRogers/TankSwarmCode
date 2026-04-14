@@ -1,4 +1,4 @@
-﻿namespace TankSwarmCode
+namespace TankSwarmCode
 {
     partial class TankSwarmArena
     {
@@ -71,8 +71,6 @@
             _menuItemPvP1v1 = new ToolStripMenuItem();
             _menuItemPvP2v2 = new ToolStripMenuItem();
 
-            arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
-
             // ── Toolbar controls ──────────────────────────────────────────────
             _toolStrip = new ToolStrip();
             _btnStartWar = new ToolStripButton();
@@ -85,8 +83,20 @@
             _speedTrackBarHost = new ToolStripControlHost(_speedTrackBar);
             _lblSpeedValue = new ToolStripLabel();
 
+            // ── Split container + pane contents ──────────────────────────────
+            _splitContainer = new SplitContainer();
+            _radioCommsPanel = new Panel();
+            _radioCommsHeader = new Label();
+            _radioLog = new RichTextBox();
+            arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
+
             _mainMenuStrip.SuspendLayout();
             _toolStrip.SuspendLayout();
+            _splitContainer.Panel1.SuspendLayout();
+            _splitContainer.Panel2.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)_splitContainer).BeginInit();
+            _splitContainer.SuspendLayout();
+            _radioCommsPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
             SuspendLayout();
 
@@ -99,7 +109,7 @@
             });
             _mainMenuStrip.Location = new Point(0, 0);
             _mainMenuStrip.Name = "_mainMenuStrip";
-            _mainMenuStrip.Size = new Size(1079, 24);
+            _mainMenuStrip.Size = new Size(1300, 24);
             _mainMenuStrip.TabIndex = 1;
             _mainMenuStrip.Text = "menuStrip";
 
@@ -254,7 +264,7 @@
             _menuItemSpeedVeryFast.Text = "&Very Fast (30 TPS)";
             _menuItemSpeedVeryFast.Click += MenuItemSpeed_Click;
 
-            // ── _toolStrip
+            // ── Toolbar ───────────────────────────────────────────────────────
             _toolStrip.Items.AddRange(new ToolStripItem[]
             {
                 _btnStartWar,
@@ -268,7 +278,7 @@
             });
             _toolStrip.Location = new Point(0, 24);
             _toolStrip.Name = "_toolStrip";
-            _toolStrip.Size = new Size(1079, 25);
+            _toolStrip.Size = new Size(1300, 25);
             _toolStrip.TabIndex = 2;
             _toolStrip.Text = "toolStrip";
 
@@ -310,32 +320,78 @@
             _btnSingleStep.ToolTipText = "Advance one tick (F10)";
             _btnSingleStep.Click += MenuItemSingleStep_Click;
 
-            // ── arenaUserControl1 ─────────────────────────────────────────────
+            // ── Radio comms panel (SplitContainer Panel1) ─────────────────────
+            _radioCommsPanel.Controls.Add(_radioLog);
+            _radioCommsPanel.Controls.Add(_radioCommsHeader);
+            _radioCommsPanel.Dock = DockStyle.Fill;
+            _radioCommsPanel.Name = "_radioCommsPanel";
+            _radioCommsPanel.BackColor = Color.FromArgb(12, 12, 12);
+
+            _radioCommsHeader.Dock = DockStyle.Top;
+            _radioCommsHeader.Height = 18;
+            _radioCommsHeader.Name = "_radioCommsHeader";
+            _radioCommsHeader.Text = "  \u25FC RADIO COMMS";
+            _radioCommsHeader.Font = new Font("Segoe UI", 8f, FontStyle.Bold);
+            _radioCommsHeader.BackColor = Color.FromArgb(28, 28, 28);
+            _radioCommsHeader.ForeColor = Color.Goldenrod;
+            _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
+
+            _radioLog.Dock = DockStyle.Fill;
+            _radioLog.Name = "_radioLog";
+            _radioLog.ReadOnly = true;
+            _radioLog.ScrollBars = RichTextBoxScrollBars.Vertical;
+            _radioLog.BackColor = Color.FromArgb(12, 12, 12);
+            _radioLog.ForeColor = Color.DimGray;
+            _radioLog.Font = new Font("Consolas", 8.25f, FontStyle.Regular);
+            _radioLog.BorderStyle = BorderStyle.None;
+            _radioLog.WordWrap = true;
+            _radioLog.TabStop = false;
+
+            // ── Arena (SplitContainer Panel2) ────────────────────────────────
             arenaUserControl1.Dock = DockStyle.Fill;
-            arenaUserControl1.Location = new Point(0, 49);
             arenaUserControl1.Name = "arenaUserControl1";
-            arenaUserControl1.Size = new Size(1079, 660);
             arenaUserControl1.TabIndex = 0;
+
+            // ── SplitContainer ────────────────────────────────────────────────
+            // Panel1MinSize, Panel2MinSize, and SplitterDistance are NOT set here.
+            // EndInit() validates SplitterDistance against the min sizes using the
+            // control's current width, which is still its tiny default at this point.
+            // Any combination that fails (e.g. default distance < Panel1MinSize) throws
+            // InvalidOperationException.  All three are applied safely in OnLoad().
+            _splitContainer.Dock = DockStyle.Fill;
+            _splitContainer.Name = "_splitContainer";
+            _splitContainer.Orientation = Orientation.Vertical;
+            _splitContainer.SplitterWidth = 5;
+            _splitContainer.TabIndex = 3;
+            _splitContainer.Panel1.Controls.Add(_radioCommsPanel);
+            _splitContainer.Panel2.Controls.Add(arenaUserControl1);
 
             // ── TankSwarmArena ────────────────────────────────────────────────
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            Controls.Add(arenaUserControl1);
+            Controls.Add(_splitContainer);
             Controls.Add(_toolStrip);
             Controls.Add(_mainMenuStrip);
             MainMenuStrip = _mainMenuStrip;
             MinimizeBox = false;
+            MinimumSize = new Size(700, 500);
             Name = "TankSwarmArena";
             ShowIcon = false;
             SizeGripStyle = SizeGripStyle.Show;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Tank Swarm Arena";
-            ClientSize = new Size(1079, 734);
+            ClientSize = new Size(1300, 760);
+
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).EndInit();
             _toolStrip.ResumeLayout(false);
             _toolStrip.PerformLayout();
             _mainMenuStrip.ResumeLayout(false);
             _mainMenuStrip.PerformLayout();
+            _radioCommsPanel.ResumeLayout(false);
+            _splitContainer.Panel1.ResumeLayout(false);
+            _splitContainer.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)_splitContainer).EndInit();
+            _splitContainer.ResumeLayout(false);
             ResumeLayout(false);
             PerformLayout();
         }
@@ -397,5 +453,11 @@
         private TrackBar _speedTrackBar;
         private ToolStripControlHost _speedTrackBarHost;
         private ToolStripLabel _lblSpeedValue;
+
+        // Split container + radio comms panel
+        private SplitContainer _splitContainer;
+        private Panel _radioCommsPanel;
+        private Label _radioCommsHeader;
+        private RichTextBox _radioLog;
     }
 }

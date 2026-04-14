@@ -40,6 +40,13 @@ public sealed class ArenaEngine : IArena
     public event EventHandler<TickEventArgs>? TickCompleted;
     public event EventHandler<RoundEndedEventArgs>? RoundEnded;
 
+    /// <summary>
+    /// Fired once per non-RadarShare broadcast, before delivery to recipients.
+    /// Parameters: the message and the sender's SwarmId.
+    /// Internal — only <see cref="ArenaUserControl"/> subscribes.
+    /// </summary>
+    internal event Action<SwarmMessage, int>? SwarmMessageBroadcast;
+
     // ── Construction ──────────────────────────────────────────────────────────
 
     public ArenaEngine(double width = 800, double height = 600)
@@ -450,8 +457,13 @@ public sealed class ArenaEngine : IArena
             .ToList();
 
         foreach (SwarmMessage msg in cmd.BroadcastMessages)
+        {
+            if (msg.Type != SwarmMessageType.RadarShare)
+                SwarmMessageBroadcast?.Invoke(msg, sender.Tank.SwarmId);
+
             foreach (TankRuntimeState ally in allies)
                 SafeCall(() => ally.Tank.DeliverSwarmMessage(msg));
+        }
     }
 
     private void CheckDeath(TankRuntimeState rts)

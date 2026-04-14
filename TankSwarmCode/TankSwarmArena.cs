@@ -1,3 +1,4 @@
+using TankSwarmCode.Arena;
 using TankSwarmCode.SwarmTanks.Blue;
 using TankSwarmCode.SwarmTanks.Red;
 
@@ -10,17 +11,74 @@ public partial class TankSwarmArena : Form
     private int _bluePatrolCount;
     private int _blueSniperCount;
 
+    // Per-swarm colours for radio log text, indexed by SwarmId (SwarmId 0 = solo/unknown)
+    private static readonly Color[] _radioSwarmColours =
+    [
+        Color.Silver,       // 0 – solo / unknown
+        Color.OrangeRed,    // 1 – Red swarm
+        Color.DodgerBlue,   // 2 – Blue swarm
+        Color.LimeGreen,    // 3
+        Color.Gold,         // 4
+        Color.MediumOrchid, // 5
+        Color.DeepSkyBlue,  // 6
+        Color.Coral,        // 7
+        Color.Chartreuse,   // 8
+    ];
+
+    private const int RadioLogMaxLines = 300;
+    private const int RadioLogTrimLines = 50;
+
     public TankSwarmArena()
     {
         InitializeComponent();
         arenaUserControl1.TicksPerSecond = 10;  // Normal speed by default
+        arenaUserControl1.RadioTransmission += ArenaUserControl_RadioTransmission;
         BuildNvNSubMenu();
         SyncSpeedMenuChecks(10);
+    }
+
+    // ── Radio comms log ───────────────────────────────────────────────────────
+
+    private void ArenaUserControl_RadioTransmission(object? sender, RadioTransmissionEventArgs e)
+    {
+        Color color = e.SwarmId >= 0 && e.SwarmId < _radioSwarmColours.Length
+            ? _radioSwarmColours[e.SwarmId]
+            : Color.Silver;
+
+        // Trim when the log grows too long (measured by line count)
+        if (_radioLog.Lines.Length >= RadioLogMaxLines)
+        {
+            int charsToRemove = 0;
+            string[] lines = _radioLog.Lines;
+            for (int i = 0; i < RadioLogTrimLines && i < lines.Length; i++)
+                charsToRemove += lines[i].Length + 1; // +1 for newline
+
+            _radioLog.Select(0, Math.Min(charsToRemove, _radioLog.TextLength));
+            _radioLog.SelectedText = string.Empty;
+        }
+
+        _radioLog.SelectionStart = _radioLog.TextLength;
+        _radioLog.SelectionLength = 0;
+        _radioLog.SelectionColor = color;
+        _radioLog.AppendText(e.FormattedLine + "\n");
+        _radioLog.ScrollToCaret();
+    }
+
+    private void ClearRadioLog()
+    {
+        _radioLog.Clear();
     }
 
     protected override void OnLoad(EventArgs e)
     {
         base.OnLoad(e);
+        // Apply splitter constraints here, after the form is fully laid out and the
+        // SplitContainer has its real width.  Setting these in InitializeComponent
+        // causes EndInit() to validate against the control's tiny default size and
+        // throw InvalidOperationException.
+        _splitContainer.Panel1MinSize = 180;
+        _splitContainer.Panel2MinSize = 400;
+        _splitContainer.SplitterDistance = 260;
         UpdateMenuState();
     }
 
@@ -101,6 +159,7 @@ public partial class TankSwarmArena : Form
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
         _blueSniperCount  = 0;
+        ClearRadioLog();
         UpdateMenuState();
     }
 
@@ -131,6 +190,7 @@ public partial class TankSwarmArena : Form
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
         _blueSniperCount  = 0;
+        ClearRadioLog();
         UpdateMenuState();
     }
 
@@ -159,6 +219,7 @@ public partial class TankSwarmArena : Form
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
         _blueSniperCount  = 0;
+        ClearRadioLog();
 
         BuildRedTeam(n);
         BuildBlueTeam(n);
