@@ -27,6 +27,12 @@ public sealed class BlueWarden : SwarmTankBase
     private const int OscillateEvery = 25;
     private const double OscillateDistance = 35.0;
 
+    // Commander orders
+    private string? _commandTarget;              // priority target name from TargetLocked
+    private Vector2D _rallyPos;                  // rally position from FormationMove
+    private long     _rallyUntilTick;            // return to centre after this tick
+    private const int RallyDurationTicks = 60;
+
     public BlueWarden()
     {
         SwarmId = MySwarmId;
@@ -41,27 +47,51 @@ public sealed class BlueWarden : SwarmTankBase
 
     public override void OnTick(TickEventArgs e)
     {
-        double distToCenter = State.Position.DistanceTo(new Vector2D(_cx, _cy));
-
-        if (distToCenter > HoldRadius)
+        // Formation move: leave centre temporarily to rally with allies
+        if (e.TickNumber < _rallyUntilTick)
         {
-            // Navigate back to centre
-            double bearing = RelativeBearing(State.Heading,
-                State.Position.BearingTo(new Vector2D(_cx, _cy)));
-            if (bearing >= 0) SetTurnRight(bearing); else SetTurnLeft(-bearing);
-            SetAhead(distToCenter - HoldRadius / 2);
+            double distToRally = State.Position.DistanceTo(_rallyPos);
+            if (distToRally > HoldRadius)
+            {
+                double rb = RelativeBearing(State.Heading, State.Position.BearingTo(_rallyPos));
+                if (rb >= 0) SetTurnRight(rb); else SetTurnLeft(-rb);
+                SetAhead(distToRally - HoldRadius / 2);
+            }
         }
         else
         {
-            // Oscillate in place
-            _oscillateTick++;
-            if (_oscillateTick >= OscillateEvery)
+            double distToCenter = State.Position.DistanceTo(new Vector2D(_cx, _cy));
+
+            if (distToCenter > HoldRadius)
             {
-                _oscillateTick = 0;
-                _oscillateDir = -_oscillateDir;
+                double bearing = RelativeBearing(State.Heading,
+                    State.Position.BearingTo(new Vector2D(_cx, _cy)));
+                if (bearing >= 0) SetTurnRight(bearing); else SetTurnLeft(-bearing);
+                SetAhead(distToCenter - HoldRadius / 2);
             }
-            SetTurnRight(_oscillateDir * 5);
-            SetAhead(_oscillateDir * OscillateDistance);
+            else
+            {
+                _oscillateTick++;
+                if (_oscillateTick >= OscillateEvery)
+                {
+                    _oscillateTick = 0;
+                    _oscillateDir = -_oscillateDir;
+                }
+                SetTurnRight(_oscillateDir * 5);
+                SetAhead(_oscillateDir * OscillateDistance);
+            }
+        }
+
+        // Proactively aim at the Commander's priority target between radar sweeps
+        if (_commandTarget is not null
+            && RadarMap.TryGetValue(_commandTarget, out RadarContact? ordered)
+            && !ordered.IsAlly
+            && Arena.TickNumber - ordered.Timestamp <= 30)
+        {
+            double gunTurn = RelativeBearing(State.GunHeading,
+                State.Position.BearingTo(ordered.Position));
+            if (gunTurn >= 0) SetTurnGunRight(Math.Min(gunTurn, 20));
+            else              SetTurnGunLeft(Math.Min(-gunTurn, 20));
         }
 
         // Continuous radar sweep
@@ -99,6 +129,23 @@ public sealed class BlueWarden : SwarmTankBase
             Position = e.Result.Position,
             Timestamp = Arena.TickNumber
         });
+    }
+
+    public override void OnSwarmMessage(SwarmMessageEventArgs e)
+    {
+        base.OnSwarmMessage(e);
+
+        switch (e.Message.Type)
+        {
+            case SwarmMessageType.TargetLocked:
+                _commandTarget = e.Message.TargetName;
+                break;
+
+            case SwarmMessageType.FormationMove when e.Message.Position is { } pos:
+                _rallyPos       = pos;
+                _rallyUntilTick = Arena.TickNumber + RallyDurationTicks;
+                break;
+        }
     }
 
     public override void OnHitWall(HitWallEventArgs e)

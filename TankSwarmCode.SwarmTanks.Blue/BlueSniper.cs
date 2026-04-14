@@ -30,6 +30,9 @@ public sealed class BlueSniper : SwarmTankBase
     private bool _relocating;
     private const int StaleAfterTicks = 25;
 
+    // Commander orders
+    private string? _commandTarget;   // priority target name from TargetLocked
+
     public BlueSniper(string name, bool topLeft)
     {
         _name = name;
@@ -77,8 +80,8 @@ public sealed class BlueSniper : SwarmTankBase
             SetAhead(0);
         }
 
-        // RadarMap is kept fresh from both own scans and ally RadarShare messages.
-        RadarContact? target = GetFreshestEnemy(StaleAfterTicks);
+        // Prefer the Commander's nominated target; fall back to freshest contact.
+        RadarContact? target = GetCommandedOrFreshestEnemy();
 
         if (target is not null)
         {
@@ -104,6 +107,15 @@ public sealed class BlueSniper : SwarmTankBase
         base.OnScannedTank(e);
     }
 
+    public override void OnSwarmMessage(SwarmMessageEventArgs e)
+    {
+        base.OnSwarmMessage(e);
+
+        // Snipers only honour target orders — they never abandon their corner for a rally.
+        if (e.Message.Type == SwarmMessageType.TargetLocked)
+            _commandTarget = e.Message.TargetName;
+    }
+
     public override void OnHitWall(HitWallEventArgs e)
     {
         SetBack(20);
@@ -111,6 +123,18 @@ public sealed class BlueSniper : SwarmTankBase
     }
 
     // ── Private helpers ──────────────────────────────────────────────────────
+
+    private RadarContact? GetCommandedOrFreshestEnemy()
+    {
+        if (_commandTarget is not null
+            && RadarMap.TryGetValue(_commandTarget, out RadarContact? ordered)
+            && !ordered.IsAlly
+            && Arena.TickNumber - ordered.Timestamp <= StaleAfterTicks)
+        {
+            return ordered;
+        }
+        return GetFreshestEnemy(StaleAfterTicks);
+    }
 
     /// Returns true and issues evasive commands if an inbound bullet is detected.
     private bool TryEvadeBullet()

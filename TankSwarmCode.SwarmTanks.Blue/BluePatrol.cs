@@ -28,6 +28,10 @@ public sealed class BluePatrol : SwarmTankBase
     private bool _retreating;
     private const int StaleAfterTicks = 30;
 
+    // Commander orders
+    private string?   _commandTarget;   // name of priority target from TargetLocked
+    private Vector2D? _rallyPoint;      // formation position from FormationMove
+
     public BluePatrol(string name, int patrolSide)
     {
         _name = name;
@@ -80,8 +84,21 @@ public sealed class BluePatrol : SwarmTankBase
             return;
         }
 
-        // RadarMap is kept fresh from both own scans and ally RadarShare messages.
-        RadarContact? target = GetFreshestEnemy(StaleAfterTicks);
+        // Honour a rally point from the Commander until we arrive
+        if (_rallyPoint is { } rally)
+        {
+            double distToRally = State.Position.DistanceTo(rally);
+            if (distToRally > WaypointRadius)
+            {
+                MoveToward(rally, distToRally);
+                SetTurnRadarRight(45);
+                return;
+            }
+            _rallyPoint = null;   // arrived — resume normal patrol
+        }
+
+        // Prefer the Commander's nominated target; fall back to freshest contact
+        RadarContact? target = GetCommandedOrFreshestEnemy();
 
         if (target is not null)
         {
@@ -114,6 +131,22 @@ public sealed class BluePatrol : SwarmTankBase
             SetFire(power);
     }
 
+    public override void OnSwarmMessage(SwarmMessageEventArgs e)
+    {
+        base.OnSwarmMessage(e);
+
+        switch (e.Message.Type)
+        {
+            case SwarmMessageType.TargetLocked:
+                _commandTarget = e.Message.TargetName;
+                break;
+
+            case SwarmMessageType.FormationMove when e.Message.Position is { } pos:
+                _rallyPoint = pos;
+                break;
+        }
+    }
+
     public override void OnHitWall(HitWallEventArgs e)
     {
         SetBack(30);
@@ -122,6 +155,22 @@ public sealed class BluePatrol : SwarmTankBase
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Returns the Commander's nominated target if it is fresh in RadarMap,
+    /// otherwise falls back to the freshest enemy contact.
+    /// </summary>
+    private RadarContact? GetCommandedOrFreshestEnemy()
+    {
+        if (_commandTarget is not null
+            && RadarMap.TryGetValue(_commandTarget, out RadarContact? ordered)
+            && !ordered.IsAlly
+            && Arena.TickNumber - ordered.Timestamp <= StaleAfterTicks)
+        {
+            return ordered;
+        }
+        return GetFreshestEnemy(StaleAfterTicks);
+    }
 
     private void AdvanceWaypoint()
     {

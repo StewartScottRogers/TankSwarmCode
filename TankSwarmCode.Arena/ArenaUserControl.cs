@@ -76,14 +76,15 @@ public partial class ArenaUserControl : UserControl
     private const int InfoPanelOffsetY = -16;   // px above tank centre
 
     // Per-swarm colours (index = SwarmId % palette length)
+    // Index 0 = solo/unknown, 1 = Red swarm, 2 = Blue swarm
     private static readonly Color[] SwarmColours =
     [
-        Color.DodgerBlue,
+        Color.Silver,
         Color.OrangeRed,
-        Color.LimeGreen,
+        Color.DodgerBlue,
         Color.Gold,
         Color.MediumOrchid,
-        Color.DeepSkyBlue,
+        Color.LimeGreen,
         Color.Coral,
         Color.Chartreuse
     ];

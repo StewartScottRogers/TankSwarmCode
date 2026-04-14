@@ -43,6 +43,7 @@ namespace TankSwarmCode
             _menuItemAddBlueWarden = new ToolStripMenuItem();
             _menuItemAddBluePatrol = new ToolStripMenuItem();
             _menuItemAddBlueSniper = new ToolStripMenuItem();
+            _menuItemAddBlueCommander = new ToolStripMenuItem();
             _separatorBlue2 = new ToolStripSeparator();
             _menuItemClearAllTanks2 = new ToolStripMenuItem();
             _menuItemWar = new ToolStripMenuItem();
@@ -150,7 +151,7 @@ namespace TankSwarmCode
             // 
             // _menuItemBlueSwarm
             // 
-            _menuItemBlueSwarm.DropDownItems.AddRange(new ToolStripItem[] { _menuItemBuildDefaultBlueSwarm, _separatorBlue1, _menuItemAddBlueWarden, _menuItemAddBluePatrol, _menuItemAddBlueSniper, _separatorBlue2, _menuItemClearAllTanks2 });
+            _menuItemBlueSwarm.DropDownItems.AddRange(new ToolStripItem[] { _menuItemBuildDefaultBlueSwarm, _separatorBlue1, _menuItemAddBlueWarden, _menuItemAddBluePatrol, _menuItemAddBlueSniper, _menuItemAddBlueCommander, _separatorBlue2, _menuItemClearAllTanks2 });
             _menuItemBlueSwarm.Name = "_menuItemBlueSwarm";
             _menuItemBlueSwarm.Size = new Size(81, 20);
             _menuItemBlueSwarm.Text = "&Blue Swarm";
@@ -181,6 +182,13 @@ namespace TankSwarmCode
             _menuItemAddBluePatrol.Text = "Add Blue &Patrol";
             _menuItemAddBluePatrol.Click += MenuItemAddBluePatrol_Click;
             // 
+            // _menuItemAddBlueCommander
+            //
+            _menuItemAddBlueCommander.Name = "_menuItemAddBlueCommander";
+            _menuItemAddBlueCommander.Size = new Size(207, 22);
+            _menuItemAddBlueCommander.Text = "Add Blue &Commander";
+            _menuItemAddBlueCommander.Click += MenuItemAddBlueCommander_Click;
+            //
             // _menuItemAddBlueSniper
             // 
             _menuItemAddBlueSniper.Name = "_menuItemAddBlueSniper";
@@ -409,7 +417,7 @@ namespace TankSwarmCode
             // 
             _splitContainer.Panel2.Controls.Add(arenaUserControl1);
             _splitContainer.Size = new Size(1687, 711);
-            _splitContainer.SplitterDistance = 523;
+            _splitContainer.SplitterDistance = 700;
             _splitContainer.SplitterWidth = 5;
             _splitContainer.TabIndex = 3;
             // 
@@ -421,7 +429,7 @@ namespace TankSwarmCode
             _radioCommsPanel.Dock = DockStyle.Fill;
             _radioCommsPanel.Location = new Point(0, 0);
             _radioCommsPanel.Name = "_radioCommsPanel";
-            _radioCommsPanel.Size = new Size(519, 707);
+            _radioCommsPanel.Size = new Size(696, 707);
             _radioCommsPanel.TabIndex = 0;
             // 
             // _radioLog
@@ -435,7 +443,7 @@ namespace TankSwarmCode
             _radioLog.Name = "_radioLog";
             _radioLog.ReadOnly = true;
             _radioLog.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _radioLog.Size = new Size(519, 689);
+            _radioLog.Size = new Size(696, 689);
             _radioLog.TabIndex = 0;
             _radioLog.TabStop = false;
             _radioLog.Text = "";
@@ -448,7 +456,7 @@ namespace TankSwarmCode
             _radioCommsHeader.ForeColor = Color.Goldenrod;
             _radioCommsHeader.Location = new Point(0, 0);
             _radioCommsHeader.Name = "_radioCommsHeader";
-            _radioCommsHeader.Size = new Size(519, 18);
+            _radioCommsHeader.Size = new Size(696, 18);
             _radioCommsHeader.TabIndex = 1;
             _radioCommsHeader.Text = "  ◼ RADIO COMMS";
             _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
@@ -513,6 +521,7 @@ namespace TankSwarmCode
         private ToolStripMenuItem _menuItemAddBlueWarden;
         private ToolStripMenuItem _menuItemAddBluePatrol;
         private ToolStripMenuItem _menuItemAddBlueSniper;
+        private ToolStripMenuItem _menuItemAddBlueCommander;
         private ToolStripSeparator _separatorBlue2;
         private ToolStripMenuItem _menuItemClearAllTanks2;
 

@@ -10,6 +10,7 @@ public partial class TankSwarmArena : Form
     private int _redFlankerCount;
     private int _bluePatrolCount;
     private int _blueSniperCount;
+    private bool _blueCommanderAdded;
 
     // Per-swarm colours for radio log text, indexed by SwarmId (SwarmId 0 = solo/unknown)
     private static readonly Color[] _radioSwarmColours =
@@ -123,12 +124,14 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemBuildDefaultBlueSwarm_Click(object? sender, EventArgs e)
     {
+        arenaUserControl1.AddTank(new BlueCommander());
         arenaUserControl1.AddTank(new BlueWarden());
         arenaUserControl1.AddTank(new BluePatrol("BlueEast", 0));
         arenaUserControl1.AddTank(new BluePatrol("BlueWest", 1));
         arenaUserControl1.AddTank(new BlueSniper("BlueEagle", topLeft: true));
         arenaUserControl1.AddTank(new BlueSniper("BlueHawk",  topLeft: false));
         _bluePatrolCount = 2;
+        _blueCommanderAdded = true;
         UpdateMenuState();
     }
 
@@ -152,15 +155,24 @@ public partial class TankSwarmArena : Form
         UpdateMenuState();
     }
 
+    private void MenuItemAddBlueCommander_Click(object? sender, EventArgs e)
+    {
+        if (_blueCommanderAdded) return;
+        arenaUserControl1.AddTank(new BlueCommander());
+        _blueCommanderAdded = true;
+        UpdateMenuState();
+    }
+
     // ── Shared clear handler ──────────────────────────────────────────────────
 
     private void MenuItemClearAllTanks_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount = 0;
-        _redFlankerCount  = 0;
-        _bluePatrolCount  = 0;
-        _blueSniperCount  = 0;
+        _redAttackerCount   = 0;
+        _redFlankerCount    = 0;
+        _bluePatrolCount    = 0;
+        _blueSniperCount    = 0;
+        _blueCommanderAdded = false;
         ClearRadioLog();
         UpdateMenuState();
     }
@@ -217,10 +229,11 @@ public partial class TankSwarmArena : Form
     private void ConfigureNvN(int n)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount = 0;
-        _redFlankerCount  = 0;
-        _bluePatrolCount  = 0;
-        _blueSniperCount  = 0;
+        _redAttackerCount   = 0;
+        _redFlankerCount    = 0;
+        _bluePatrolCount    = 0;
+        _blueSniperCount    = 0;
+        _blueCommanderAdded = false;
         ClearRadioLog();
 
         BuildRedTeam(n);
@@ -264,14 +277,23 @@ public partial class TankSwarmArena : Form
     /// Adds n Blue tanks:
     ///   n=1 → 1 Patrol
     ///   n=2 → 1 Patrol + 1 Sniper
-    ///   n≥3 → 1 Warden + ceil((n-1)/2) Patrols + floor((n-1)/2) Snipers
+    ///   n=3 → 1 Commander + 1 Patrol + 1 Sniper
+    ///   n≥4 → 1 Commander + 1 Warden + ceil((n-2)/2) Patrols + floor((n-2)/2) Snipers
     /// </summary>
     private void BuildBlueTeam(int n)
     {
-        bool hasWarden = n >= 3;
-        int  combat    = n - (hasWarden ? 1 : 0);
-        int  patrols   = (combat + 1) / 2;
-        int  snipers   = combat / 2;
+        bool hasCommander = n >= 3;
+        int  rest         = n - (hasCommander ? 1 : 0);
+        bool hasWarden    = rest >= 3;
+        int  combat       = rest - (hasWarden ? 1 : 0);
+        int  patrols      = (combat + 1) / 2;
+        int  snipers      = combat / 2;
+
+        if (hasCommander)
+        {
+            arenaUserControl1.AddTank(new BlueCommander());
+            _blueCommanderAdded = true;
+        }
 
         if (hasWarden)
             arenaUserControl1.AddTank(new BlueWarden());
@@ -364,6 +386,7 @@ public partial class TankSwarmArena : Form
         _menuItemAddBlueWarden.Enabled         = canBuild;
         _menuItemAddBluePatrol.Enabled         = canBuild;
         _menuItemAddBlueSniper.Enabled         = canBuild;
+        _menuItemAddBlueCommander.Enabled      = canBuild && !_blueCommanderAdded;
         _menuItemClearAllTanks2.Enabled        = canBuild;
         _menuItemPlayerVsPlayer.Enabled        = canBuild;
 
