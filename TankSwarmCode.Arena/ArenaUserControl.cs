@@ -383,9 +383,15 @@ public partial class ArenaUserControl : UserControl
                 DrawHulkBody(g, tank.State);
         }
 
-        // Layer 3 – Bullets
+        // Layer 3 – Bullets (coloured by the firing tank's swarm)
+        Dictionary<string, Color> bulletOwnerColors = _engine.Tanks
+            .ToDictionary(
+                t => t.Name,
+                t => SwarmColours[Math.Abs(t.SwarmId) % SwarmColours.Length],
+                StringComparer.Ordinal);
+
         foreach (BulletState bullet in _engine.Bullets)
-            DrawBullet(g, bullet);
+            DrawBullet(g, bullet, bulletOwnerColors);
 
         // Layer 4 – Living tanks
         foreach (ISwarmTank tank in _engine.Tanks)
@@ -587,17 +593,21 @@ public partial class ArenaUserControl : UserControl
         g.DrawLine(radarPen, 0, 0, rdx, rdy);
     }
 
-    private static void DrawBullet(Graphics g, BulletState bullet)
+    private static void DrawBullet(Graphics g, BulletState bullet, Dictionary<string, Color> ownerColors)
     {
         float bx = (float)bullet.Position.X;
         float by = (float)bullet.Position.Y;
         float radius = (float)(1.5 + bullet.Power);
 
-        using SolidBrush bulletBrush = new(Color.Yellow);
+        Color bulletColor = ownerColors.TryGetValue(bullet.OwnerName, out Color c)
+            ? LightenColor(c, 80)
+            : Color.Yellow;
+
+        using SolidBrush bulletBrush = new(bulletColor);
         g.FillEllipse(bulletBrush, bx - radius, by - radius, radius * 2, radius * 2);
 
-        // Glow
-        using SolidBrush glowBrush = new(Color.FromArgb(60, Color.OrangeRed));
+        // Glow — tinted to the firing tank's swarm colour
+        using SolidBrush glowBrush = new(Color.FromArgb(80, bulletColor));
         float glow = radius * 2.5f;
         g.FillEllipse(glowBrush, bx - glow, by - glow, glow * 2, glow * 2);
     }
