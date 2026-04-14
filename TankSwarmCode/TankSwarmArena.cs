@@ -271,12 +271,23 @@ public partial class TankSwarmArena : Form
 
     // ── Menu state ────────────────────────────────────────────────────────────
 
+    protected override void OnFormClosed(FormClosedEventArgs e)
+    {
+        base.OnFormClosed(e);
+        ScreenWakeLock.Allow();
+    }
+
     /// <summary>
     /// Enables or disables menu items to reflect the current simulation state.
     /// </summary>
     private void UpdateMenuState()
     {
         bool running = arenaUserControl1.Arena?.IsRunning ?? false;
+
+        if (running)
+            ScreenWakeLock.Prevent();
+        else
+            ScreenWakeLock.Allow();
         bool hasStarted = arenaUserControl1.Arena?.HasStarted ?? false;
 
         // Build commands are only available when the war has not started
