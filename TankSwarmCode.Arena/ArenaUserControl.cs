@@ -50,6 +50,21 @@ public partial class ArenaUserControl : UserControl
     private readonly Dictionary<string, DateTime> _explosionBirthTimes =
         new(StringComparer.Ordinal);
 
+    // Tank names whose info panel is currently attached (right-click → Attach Info Panel).
+    private readonly HashSet<string> _attachedPanels = new(StringComparer.Ordinal);
+
+    // Screen bounds of each panel from the last paint pass — used for hover hit-testing.
+    private readonly Dictionary<string, RectangleF> _panelBounds = new(StringComparer.Ordinal);
+    private string? _hoveredPanelName;
+
+    // Info-panel layout constants
+    private const int InfoPanelWidth   = 165;
+    private const int InfoPanelRowH    =  13;
+    private const int InfoPanelPadX    =   6;
+    private const int InfoPanelPadY    =   5;
+    private const int InfoPanelOffsetX =  26;   // px right of tank centre
+    private const int InfoPanelOffsetY = -16;   // px above tank centre
+
     // Per-swarm colours (index = SwarmId % palette length)
     private static readonly Color[] SwarmColours =
     [
@@ -182,8 +197,100 @@ public partial class ArenaUserControl : UserControl
         _radarTrails.Clear();
         _scanEvents.Clear();
         _explosionBirthTimes.Clear();
+        _attachedPanels.Clear();
         _waitingForPulse = false;
         _statusMessage = "Ready – call Start() to begin.";
+        Invalidate();
+    }
+
+    // ── Right-click context menu ──────────────────────────────────────────────
+
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        base.OnMouseDown(e);
+        if (e.Button != MouseButtons.Right || _engine is null) return;
+
+        ISwarmTank? hit = HitTestTank(e.Location);
+        if (hit is null) return;
+
+        ShowTankContextMenu(hit.Name, e.Location);
+    }
+
+    protected override void OnMouseMove(MouseEventArgs e)
+    {
+        base.OnMouseMove(e);
+        if (_attachedPanels.Count == 0) return;
+
+        string? newHover = null;
+        foreach (var (name, bounds) in _panelBounds)
+        {
+            if (bounds.Contains(e.X, e.Y))
+            {
+                newHover = name;
+                break;
+            }
+        }
+
+        if (!string.Equals(newHover, _hoveredPanelName, StringComparison.Ordinal))
+        {
+            _hoveredPanelName = newHover;
+            Invalidate();
+        }
+    }
+
+    private ISwarmTank? HitTestTank(Point pt)
+    {
+        if (_engine is null) return null;
+        // Slightly larger radius than the visual body for comfortable clicking
+        const float hitRadius = (float)ArenaConstants.TankHalfSize + 5f;
+
+        return _engine.Tanks
+            .Where(t => t.State.IsAlive)
+            .Cast<ISwarmTank?>()
+            .FirstOrDefault(t =>
+            {
+                float dx = (float)t!.State.Position.X - pt.X;
+                float dy = (float)t.State.Position.Y - pt.Y;
+                return dx * dx + dy * dy <= hitRadius * hitRadius;
+            });
+    }
+
+    /// <summary>
+    /// Displays a context menu for the right-clicked tank.
+    /// To add more actions, yield additional <see cref="ToolStripItem"/> objects from
+    /// <see cref="BuildTankMenuItems"/>.
+    /// </summary>
+    private void ShowTankContextMenu(string tankName, Point location)
+    {
+        var menu = new ContextMenuStrip();
+
+        // Non-clickable header shows the tank name
+        menu.Items.Add(new ToolStripMenuItem(tankName) { Enabled = false });
+        menu.Items.Add(new ToolStripSeparator());
+
+        foreach (ToolStripItem item in BuildTankMenuItems(tankName))
+            menu.Items.Add(item);
+
+        menu.Show(this, location);
+    }
+
+    /// <summary>
+    /// Returns the set of <see cref="ToolStripItem"/>s that populate the context menu
+    /// for a given tank.  Add new items here to extend the menu.
+    /// </summary>
+    private IEnumerable<ToolStripItem> BuildTankMenuItems(string tankName)
+    {
+        // ── Info Panel ────────────────────────────────────────────────────────
+        bool attached = _attachedPanels.Contains(tankName);
+        var panelItem = new ToolStripMenuItem(attached ? "Detach Info Panel" : "Attach Info Panel");
+        panelItem.Click += (_, _) => ToggleAttachedPanel(tankName);
+        yield return panelItem;
+    }
+
+    private void ToggleAttachedPanel(string tankName)
+    {
+        if (!_attachedPanels.Remove(tankName))
+            _attachedPanels.Add(tankName);
         Invalidate();
     }
 
@@ -428,6 +535,9 @@ public partial class ArenaUserControl : UserControl
         }
 
         DrawHud(g);
+
+        // Layer 6 – Attached info panels (floats above all other content)
+        DrawAttachedPanels(g);
 
         if (!string.IsNullOrEmpty(_statusMessage))
             DrawCentredText(g, _statusMessage, new Font(Font.FontFamily, 14, FontStyle.Bold), Brushes.White);
@@ -838,6 +948,114 @@ public partial class ArenaUserControl : UserControl
                 using SolidBrush sb = new(Color.FromArgb(a, 105, 98, 92));
                 g.FillEllipse(sb, cx - r, cy - r, r * 2, r * 2);
             }
+        }
+    }
+
+    // ── Attached info panels ──────────────────────────────────────────────────
+
+    private void DrawAttachedPanels(Graphics g)
+    {
+        if (_engine is null || _attachedPanels.Count == 0) return;
+
+        _panelBounds.Clear();
+        var byName = _engine.Tanks.ToDictionary(t => t.Name, StringComparer.Ordinal);
+
+        foreach (string name in _attachedPanels)
+        {
+            if (!byName.TryGetValue(name, out ISwarmTank? tank)) continue;
+
+            bool hovered = string.Equals(name, _hoveredPanelName, StringComparison.Ordinal);
+            float opacity = hovered ? 1f : 0.4f;
+
+            DrawTankPanel(g, tank.State, opacity, out RectangleF bounds);
+            _panelBounds[name] = bounds;
+        }
+    }
+
+    /// <summary>
+    /// Renders a floating info panel anchored to the given tank's current position.
+    /// The panel lists all key state fields and updates automatically each paint cycle.
+    /// <paramref name="opacity"/> scales every alpha channel uniformly (1 = fully opaque,
+    /// 0.4 = 60 % translucent default).
+    /// </summary>
+    private void DrawTankPanel(Graphics g, TankState tank, float opacity, out RectangleF panelBounds)
+    {
+        // Inline helper: scales a base alpha by the panel opacity
+        int A(int baseAlpha) => (int)(baseAlpha * opacity);
+
+        Color swarmColor = SwarmColours[Math.Abs(tank.SwarmId) % SwarmColours.Length];
+        float tx = (float)tank.Position.X;
+        float ty = (float)tank.Position.Y;
+
+        // Ordered rows displayed in the panel body (label, value)
+        (string Label, string Value)[] rows =
+        [
+            ("Swarm",    tank.SwarmId.ToString()),
+            ("Role",     tank.Role.ToString()),
+            ("Energy",   $"{tank.Energy:F1}"),
+            ("Pos",      $"{tank.Position.X:F0}, {tank.Position.Y:F0}"),
+            ("Heading",  $"{tank.Heading:F1}°"),
+            ("Gun",      $"{tank.GunHeading:F1}°"),
+            ("Radar",    $"{tank.RadarHeading:F1}°"),
+            ("Velocity", $"{tank.Velocity:F2} px/t"),
+            ("Status",   tank.IsAlive ? "Alive" : "Dead"),
+        ];
+
+        // Header row + small gap + separator + data rows
+        int panelHeight = InfoPanelPadY * 2 + InfoPanelRowH + 3 + rows.Length * InfoPanelRowH;
+
+        // Position panel to the right of the tank, clamped inside the arena
+        float px = Math.Clamp(tx + InfoPanelOffsetX, 2, ClientSize.Width  - InfoPanelWidth - 2);
+        float py = Math.Clamp(ty + InfoPanelOffsetY, 2, ClientSize.Height - panelHeight    - 2);
+
+        panelBounds = new RectangleF(px, py, InfoPanelWidth, panelHeight);
+
+        // ── Background ───────────────────────────────────────────────────────
+        using SolidBrush bgBrush = new(Color.FromArgb(A(210), 12, 14, 18));
+        g.FillRectangle(bgBrush, px, py, InfoPanelWidth, panelHeight);
+
+        // ── Border in swarm colour ────────────────────────────────────────────
+        using Pen borderPen = new(Color.FromArgb(A(200), swarmColor), 1.5f);
+        g.DrawRectangle(borderPen, px, py, InfoPanelWidth, panelHeight);
+
+        // ── Dotted connector line to the tank centre ──────────────────────────
+        using Pen connectorPen = new(Color.FromArgb(A(70), swarmColor), 1f)
+        {
+            DashStyle   = DashStyle.Dot,
+            DashPattern = [1f, 3f]
+        };
+        // Attach the connector to the nearest horizontal edge of the panel
+        float attachX = tx < px ? px : px + InfoPanelWidth;
+        float attachY = py + panelHeight / 2f;
+        g.DrawLine(connectorPen, tx, ty, attachX, attachY);
+
+        // ── Header: tank name ─────────────────────────────────────────────────
+        float fy = py + InfoPanelPadY;
+        float fx = px + InfoPanelPadX;
+
+        using Font headerFont = new(Font.FontFamily, 7.5f, FontStyle.Bold);
+        using Font dataFont   = new(Font.FontFamily, 7f);
+        using SolidBrush nameBrush  = new(Color.FromArgb(A(255), swarmColor));
+        using SolidBrush labelBrush = new(Color.FromArgb(A(175), Color.LightGray));
+        using SolidBrush valueBrush = new(Color.FromArgb(A(255), Color.White));
+
+        g.DrawString(tank.Name, headerFont, nameBrush, fx, fy);
+        fy += InfoPanelRowH + 1;
+
+        // Thin separator under the name
+        using Pen sepPen = new(Color.FromArgb(A(55), swarmColor), 1f);
+        g.DrawLine(sepPen, px + 3, fy, px + InfoPanelWidth - 3, fy);
+        fy += 3;
+
+        // ── Data rows (label left, value right-aligned) ───────────────────────
+        using StringFormat rightAlign = new() { Alignment = StringAlignment.Far };
+        foreach ((string label, string value) in rows)
+        {
+            g.DrawString(label, dataFont, labelBrush, fx, fy);
+            g.DrawString(value, dataFont, valueBrush,
+                new RectangleF(px, fy, InfoPanelWidth - InfoPanelPadX, InfoPanelRowH),
+                rightAlign);
+            fy += InfoPanelRowH;
         }
     }
 
