@@ -304,16 +304,18 @@ public partial class TankSwarmArena : Form
         _menuItemClearAllTanks2.Enabled        = canBuild;
         _menuItemPlayerVsPlayer.Enabled        = canBuild;
 
-        _menuItemStart.Enabled      = !running;
+        bool hasTanks = arenaUserControl1.TankCount > 0;
+
+        _menuItemStart.Enabled      = !running && hasTanks;
         _menuItemStop.Enabled       = running;
-        _menuItemSingleStep.Enabled = !running;
+        _menuItemSingleStep.Enabled = !running && hasTanks;
         // Reset is always available
         _menuItemResetArena.Enabled = true;
 
         // ── Toolbar mirrors War menu ──────────────────────────────────────────
-        _btnStartWar.Enabled   = !running;
+        _btnStartWar.Enabled   = !running && hasTanks;
         _btnStopWar.Enabled    = running;
-        _btnSingleStep.Enabled = !running;
+        _btnSingleStep.Enabled = !running && hasTanks;
     }
 }
 

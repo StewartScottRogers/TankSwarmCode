@@ -15,7 +15,7 @@ public partial class ArenaUserControl : UserControl
 {
     private ArenaEngine? _engine;
     private readonly System.Windows.Forms.Timer _gameTimer = new();
-    private string _statusMessage = "Ready – call Start() to begin.";
+    private string _statusMessage = "Add tanks via Red Swarm or Blue Swarm, then click Start.";
 
     // Wall-clock interpolation — smooths pulse animation between discrete ticks
     private DateTime _lastTickTime = DateTime.UtcNow;
@@ -56,6 +56,9 @@ public partial class ArenaUserControl : UserControl
     // Screen bounds of each panel from the last paint pass — used for hover hit-testing.
     private readonly Dictionary<string, RectangleF> _panelBounds = new(StringComparer.Ordinal);
     private string? _hoveredPanelName;
+
+    // Sensor-view: non-null while the user holds LMB on a tank.
+    private ISwarmTank? _focusedTank;
 
     // Info-panel layout constants
     private const int InfoPanelWidth   = 165;
@@ -129,6 +132,9 @@ public partial class ArenaUserControl : UserControl
     /// <summary>Underlying arena. Available after construction; populated by <see cref="AddTank"/>.</summary>
     public IArena? Arena => _engine;
 
+    /// <summary>Number of tanks currently registered (0 when no tanks have been added).</summary>
+    public int TankCount => _engine?.Tanks.Count ?? 0;
+
     /// <summary>Registers a tank. Call before <see cref="Start"/>.</summary>
     public void AddTank(ISwarmTank tank)
     {
@@ -140,6 +146,14 @@ public partial class ArenaUserControl : UserControl
     /// <summary>Starts (or resumes) the simulation.</summary>
     public void Start()
     {
+        // Guard: refuse to start with no tanks — show a friendly hint instead of crashing.
+        if (TankCount == 0)
+        {
+            _statusMessage = "Add tanks first — use the Red Swarm or Blue Swarm menus.";
+            Invalidate();
+            return;
+        }
+
         _engine ??= CreateEngine();
 
         if (!_engine.IsRunning)
@@ -175,6 +189,13 @@ public partial class ArenaUserControl : UserControl
         _gameTimer.Stop();
         _waitingForPulse = false;
 
+        if (TankCount == 0)
+        {
+            _statusMessage = "Add tanks first — use the Red Swarm or Blue Swarm menus.";
+            Invalidate();
+            return;
+        }
+
         _engine ??= CreateEngine();
 
         if (!_engine.HasStarted)
@@ -198,8 +219,9 @@ public partial class ArenaUserControl : UserControl
         _scanEvents.Clear();
         _explosionBirthTimes.Clear();
         _attachedPanels.Clear();
+        _focusedTank = null;
         _waitingForPulse = false;
-        _statusMessage = "Ready – call Start() to begin.";
+        _statusMessage = "Add tanks via Red Swarm or Blue Swarm, then click Start.";
         Invalidate();
     }
 
@@ -208,12 +230,33 @@ public partial class ArenaUserControl : UserControl
     protected override void OnMouseDown(MouseEventArgs e)
     {
         base.OnMouseDown(e);
-        if (e.Button != MouseButtons.Right || _engine is null) return;
+        if (_engine is null) return;
 
-        ISwarmTank? hit = HitTestTank(e.Location);
-        if (hit is null) return;
+        if (e.Button == MouseButtons.Right)
+        {
+            ISwarmTank? hit = HitTestTank(e.Location);
+            if (hit is not null)
+                ShowTankContextMenu(hit.Name, e.Location);
+        }
+        else if (e.Button == MouseButtons.Left)
+        {
+            ISwarmTank? hit = HitTestTank(e.Location);
+            if (hit is not null)
+            {
+                _focusedTank = hit;
+                Invalidate();
+            }
+        }
+    }
 
-        ShowTankContextMenu(hit.Name, e.Location);
+    protected override void OnMouseUp(MouseEventArgs e)
+    {
+        base.OnMouseUp(e);
+        if (e.Button == MouseButtons.Left && _focusedTank is not null)
+        {
+            _focusedTank = null;
+            Invalidate();
+        }
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -480,56 +523,63 @@ public partial class ArenaUserControl : UserControl
             return;
         }
 
-        // Layer 1 – Radar reflections: beam from spotter to detected tank
-        DrawAllRadarHalos(g);
-
-        // Layer 2 – Charred hulk bodies. Suppress for the first 160 ms while the white
-        // flash is bright enough to cover the hull; visible permanently thereafter.
-        foreach (ISwarmTank tank in _engine.Tanks)
+        if (_focusedTank is not null)
         {
-            if (!tank.State.IsAlive)
-            {
-                float hullAgeMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime hbt)
-                    ? (float)(DateTime.UtcNow - hbt).TotalMilliseconds
-                    : float.MaxValue;
-                if (hullAgeMs > 160f)
-                    DrawHulkBody(g, tank.State);
-            }
+            DrawSensorView(g);
         }
-
-        // Layer 3 – Bullets (coloured by the firing tank's swarm)
-        Dictionary<string, Color> bulletOwnerColors = _engine.Tanks
-            .ToDictionary(
-                t => t.Name,
-                t => SwarmColours[Math.Abs(t.SwarmId) % SwarmColours.Length],
-                StringComparer.Ordinal);
-
-        foreach (BulletState bullet in _engine.Bullets)
-            DrawBullet(g, bullet, bulletOwnerColors);
-
-        // Layer 4 – Living tanks
-        foreach (ISwarmTank tank in _engine.Tanks)
+        else
         {
-            if (tank.State.IsAlive)
-                DrawTank(g, tank.State);
-        }
+            // Layer 1 – Radar reflections: beam from spotter to detected tank
+            DrawAllRadarHalos(g);
 
-        // Layer 5 – Explosion blasts and burning flames (on top of everything for impact)
-        foreach (ISwarmTank tank in _engine.Tanks)
-        {
-            if (!tank.State.IsAlive)
+            // Layer 2 – Charred hulk bodies. Suppress for the first 160 ms while the white
+            // flash is bright enough to cover the hull; visible permanently thereafter.
+            foreach (ISwarmTank tank in _engine.Tanks)
             {
-                float ageMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime bt)
-                    ? (float)(DateTime.UtcNow - bt).TotalMilliseconds
-                    : float.MaxValue;
-
-                if (ageMs < ExplosionDurationMs)
-                    DrawExplosionBlast(g, tank.State, ageMs);
-
-                if (ageMs > BurnStartMs)
+                if (!tank.State.IsAlive)
                 {
-                    float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
-                    DrawBurningFlame(g, tank.State, intensity);
+                    float hullAgeMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime hbt)
+                        ? (float)(DateTime.UtcNow - hbt).TotalMilliseconds
+                        : float.MaxValue;
+                    if (hullAgeMs > 160f)
+                        DrawHulkBody(g, tank.State);
+                }
+            }
+
+            // Layer 3 – Bullets (coloured by the firing tank's swarm)
+            Dictionary<string, Color> bulletOwnerColors = _engine.Tanks
+                .ToDictionary(
+                    t => t.Name,
+                    t => SwarmColours[Math.Abs(t.SwarmId) % SwarmColours.Length],
+                    StringComparer.Ordinal);
+
+            foreach (BulletState bullet in _engine.Bullets)
+                DrawBullet(g, bullet, bulletOwnerColors);
+
+            // Layer 4 – Living tanks
+            foreach (ISwarmTank tank in _engine.Tanks)
+            {
+                if (tank.State.IsAlive)
+                    DrawTank(g, tank.State);
+            }
+
+            // Layer 5 – Explosion blasts and burning flames (on top of everything for impact)
+            foreach (ISwarmTank tank in _engine.Tanks)
+            {
+                if (!tank.State.IsAlive)
+                {
+                    float ageMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime bt)
+                        ? (float)(DateTime.UtcNow - bt).TotalMilliseconds
+                        : float.MaxValue;
+
+                    if (ageMs < ExplosionDurationMs)
+                        DrawExplosionBlast(g, tank.State, ageMs);
+
+                    if (ageMs > BurnStartMs)
+                    {
+                        float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
+                        DrawBurningFlame(g, tank.State, intensity);
+                    }
                 }
             }
         }
@@ -541,6 +591,108 @@ public partial class ArenaUserControl : UserControl
 
         if (!string.IsNullOrEmpty(_statusMessage))
             DrawCentredText(g, _statusMessage, new Font(Font.FontFamily, 14, FontStyle.Bold), Brushes.White);
+    }
+
+    // ── Sensor view (LMB held on tank) ───────────────────────────────────────
+
+    /// <summary>
+    /// Replaces the normal rendering with a "what does this tank know?" view.
+    /// Shows the focused tank fully, and every <see cref="RadarContact"/> in its
+    /// <see cref="ISwarmTank.RadarMap"/> as a ghost at the last-known position.
+    /// Contacts fade with staleness; allies are distinguished from enemies.
+    /// Bullets and other tanks are hidden — the tank has no knowledge of them.
+    /// </summary>
+    private void DrawSensorView(Graphics g)
+    {
+        ISwarmTank focused = _focusedTank!;
+        long currentTick = _engine!.TickNumber;
+
+        // Ghost contacts behind the focused tank
+        foreach (RadarContact contact in focused.RadarMap.Values)
+            DrawGhostContact(g, contact, currentTick);
+
+        // Focused tank: full rendering + its own effects if dead
+        if (focused.State.IsAlive)
+        {
+            DrawTank(g, focused.State);
+        }
+        else
+        {
+            float ageMs = _explosionBirthTimes.TryGetValue(focused.Name, out DateTime bt)
+                ? (float)(DateTime.UtcNow - bt).TotalMilliseconds
+                : float.MaxValue;
+            if (ageMs > 160f)
+                DrawHulkBody(g, focused.State);
+            if (ageMs < ExplosionDurationMs)
+                DrawExplosionBlast(g, focused.State, ageMs);
+            if (ageMs > BurnStartMs)
+            {
+                float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
+                DrawBurningFlame(g, focused.State, intensity);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws a ghost silhouette of a radar contact at its last-known position.
+    /// Ally contacts are rendered brighter and in their swarm colour.
+    /// Enemy contacts use a dimmer ghost style.
+    /// Both fade as the contact grows stale (based on tick age).
+    /// </summary>
+    private void DrawGhostContact(Graphics g, RadarContact contact, long currentTick)
+    {
+        float cx = (float)contact.Position.X;
+        float cy = (float)contact.Position.Y;
+
+        // Fade linearly from fresh (1.0) to floor (0.15) over 50 ticks of staleness.
+        long ticksAgo  = Math.Max(0, currentTick - contact.Timestamp);
+        float freshness = Math.Max(0.15f, 1f - ticksAgo / 50f);
+
+        Color contactColor = SwarmColours[Math.Abs(contact.EnemySwarmId) % SwarmColours.Length];
+        int A(int baseAlpha) => (int)(baseAlpha * freshness);
+
+        // ── Ghost body ────────────────────────────────────────────────────────
+        GraphicsState saved = g.Save();
+        g.TranslateTransform(cx, cy);
+        g.RotateTransform((float)contact.Heading);
+
+        int half = TankBodySize / 2;
+        int bodyAlpha  = contact.IsAlly ? 110 : 70;
+        int borderAlpha = contact.IsAlly ? 210 : 160;
+
+        using SolidBrush bodyBrush  = new(Color.FromArgb(A(bodyAlpha),  contactColor));
+        using Pen        bodyPen    = new(Color.FromArgb(A(borderAlpha), contactColor), 1.5f);
+        g.FillRectangle(bodyBrush, -half, -half, TankBodySize, TankBodySize);
+        g.DrawRectangle(bodyPen,   -half, -half, TankBodySize, TankBodySize);
+
+        // Gun stub at last-known gun heading (relative to body)
+        g.RotateTransform(-(float)contact.Heading);
+        float gunRad = (float)(contact.Heading * Math.PI / 180.0);  // re-derive absolute
+        float gdx = (float)Math.Sin(gunRad) * (GunLength * 0.7f);
+        float gdy = -(float)Math.Cos(gunRad) * (GunLength * 0.7f);
+        using Pen gunPen = new(Color.FromArgb(A(120), Color.LightGray), 2f);
+        g.DrawLine(gunPen, 0, 0, gdx, gdy);
+
+        g.Restore(saved);
+
+        // ── Energy bar ────────────────────────────────────────────────────────
+        float barX = cx - EnergyBarWidth / 2f;
+        float barY = cy - TankBodySize / 2f - 10;
+        float energyFraction = (float)Math.Clamp(contact.Energy / ArenaConstants.TankStartEnergy, 0, 1);
+        using SolidBrush emptyBrush  = new(Color.FromArgb(A(80),  Color.DarkRed));
+        using SolidBrush energyBrush = new(Color.FromArgb(A(150), Color.LawnGreen));
+        g.FillRectangle(emptyBrush,  barX, barY, EnergyBarWidth, EnergyBarHeight);
+        g.FillRectangle(energyBrush, barX, barY, EnergyBarWidth * energyFraction, EnergyBarHeight);
+
+        // ── Name + staleness label ────────────────────────────────────────────
+        using Font nameFont = new(Font.FontFamily, 7f);
+        string label = ticksAgo == 0
+            ? contact.Name
+            : $"{contact.Name}  -{ticksAgo}t";
+        SizeF textSize = g.MeasureString(label, nameFont);
+        using SolidBrush textBrush = new(Color.FromArgb(A(190), contactColor));
+        g.DrawString(label, nameFont, textBrush,
+            cx - textSize.Width / 2f, barY - textSize.Height - 1);
     }
 
     private void DrawBackground(Graphics g)
@@ -1089,8 +1241,22 @@ public partial class ArenaUserControl : UserControl
             scoreY += Font.Height + 2;
         }
 
-        // Radar legend (bottom-left)
-        DrawRadarLegend(g);
+        // Radar legend (bottom-left) — hidden during sensor view (irrelevant context)
+        if (_focusedTank is null)
+            DrawRadarLegend(g);
+
+        // Sensor-view mode banner — centred at bottom
+        if (_focusedTank is not null)
+        {
+            string label = $"SENSOR VIEW  ·  {_focusedTank.Name}  ·  hold LMB";
+            using Font sensorFont = new(Font.FontFamily, 8.5f, FontStyle.Bold);
+            SizeF sz = g.MeasureString(label, sensorFont);
+            float lx = (ClientSize.Width  - sz.Width)  / 2f;
+            float ly =  ClientSize.Height - sz.Height  - 8f;
+            Color bannerColor = SwarmColours[Math.Abs(_focusedTank.SwarmId) % SwarmColours.Length];
+            using SolidBrush bannerBrush = new(Color.FromArgb(200, bannerColor));
+            g.DrawString(label, sensorFont, bannerBrush, lx, ly);
+        }
     }
 
     private void DrawCentredText(Graphics g, string text, Font font, Brush brush)
