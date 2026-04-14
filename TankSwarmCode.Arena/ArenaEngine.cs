@@ -20,6 +20,11 @@ public sealed class ArenaEngine : IArena
     private readonly ArenaContext _context;
     private readonly Random _rng = new();
 
+    // Cached snapshots rebuilt once per tick — avoids per-access List allocations
+    private IReadOnlyList<ISwarmTank> _tanksSnapshot = [];
+    private IReadOnlyList<BulletState> _bulletsSnapshot = [];
+    private int _livingTankCount;
+
     // ── IArena ────────────────────────────────────────────────────────────────
 
     public double Width { get; private set; }
@@ -29,13 +34,11 @@ public sealed class ArenaEngine : IArena
 
     /// <summary>True once <see cref="Start"/> has been called (and until <see cref="Reset"/>).</summary>
     public bool HasStarted { get; private set; }
-    public int LivingTankCount => RuntimeTanks.Count(t => t.IsAlive);
+    public int LivingTankCount => _livingTankCount;
 
-    public IReadOnlyList<ISwarmTank> Tanks =>
-        RuntimeTanks.Select(t => t.Tank).ToList();
+    public IReadOnlyList<ISwarmTank> Tanks => _tanksSnapshot;
 
-    public IReadOnlyList<BulletState> Bullets =>
-        RuntimeBullets.Where(b => b.Active).Select(b => b.ToBulletState()).ToList();
+    public IReadOnlyList<BulletState> Bullets => _bulletsSnapshot;
 
     public event EventHandler<TickEventArgs>? TickCompleted;
     public event EventHandler<RoundEndedEventArgs>? RoundEnded;
@@ -62,6 +65,11 @@ public sealed class ArenaEngine : IArena
     {
         ArgumentNullException.ThrowIfNull(tank);
         RuntimeTanks.Add(new TankRuntimeState(tank));
+
+        // Keep snapshot current so TankCount is accurate before the first Tick() runs.
+        var snap = new ISwarmTank[RuntimeTanks.Count];
+        for (int i = 0; i < RuntimeTanks.Count; i++) snap[i] = RuntimeTanks[i].Tank;
+        _tanksSnapshot = snap;
     }
 
     public void Resize(double width, double height)
@@ -139,54 +147,72 @@ public sealed class ArenaEngine : IArena
         if (!IsRunning) return;
 
         TickNumber++;
-        var tickArgs = new TickEventArgs(TickNumber, LivingTankCount);
 
-        // 1. Call OnTick for every living tank
-        foreach (TankRuntimeState rts in RuntimeTanks.Where(t => t.IsAlive))
-            SafeCall(() => rts.Tank.OnTick(tickArgs));
+        // Pre-compute living tanks once — avoids repeated Where() passes each phase.
+        List<TankRuntimeState> livingTanks = [];
+        for (int i = 0; i < RuntimeTanks.Count; i++)
+            if (RuntimeTanks[i].IsAlive) livingTanks.Add(RuntimeTanks[i]);
 
-        // 2. Flush commands and apply movement + firing
+        var tickArgs = new TickEventArgs(TickNumber, livingTanks.Count);
+
+        // 1. Call OnTick for every living tank — parallel (each tank writes to its own command buffer only)
+        Parallel.ForEach(livingTanks, rts => SafeCall(() => rts.Tank.OnTick(tickArgs)));
+
+        // 2. Flush commands (single-threaded — ordering of FlushCommand matters)
         List<(TankRuntimeState Rts, TankCommand Cmd)> commands =
-            RuntimeTanks
-                .Where(t => t.IsAlive)
+            livingTanks
                 .Select(t => (t, t.Tank.FlushCommand()))
                 .ToList();
 
+        // 3. Apply movement (sequential — wall events call back into tank; cheap per-tank)
         foreach ((TankRuntimeState rts, TankCommand cmd) in commands)
             ApplyMovement(rts, cmd);
 
+        // 4. Apply firing (sequential — writes to shared RuntimeBullets list)
         foreach ((TankRuntimeState rts, TankCommand cmd) in commands)
             ApplyFiring(rts, cmd);
 
-        // 3. Move bullets
-        foreach (BulletRuntimeState b in RuntimeBullets.Where(b => b.Active))
-            MoveBullet(b);
+        // 5. Move bullets — parallel (each bullet is completely independent)
+        Parallel.ForEach(RuntimeBullets, b => { if (b.Active) MoveBullet(b); });
 
-        // 4. Bullet-tank collisions
+        // 6. Bullet-tank collisions (sequential — mutates b.Active and tank energy)
         CheckBulletTankCollisions();
 
-        // 5. Tank-tank collisions
+        // 7. Tank-tank collisions (sequential — mutates both tanks)
         CheckTankTankCollisions();
 
-        // 6. Radar scans
-        foreach ((TankRuntimeState rts, TankCommand cmd) in commands)
-            ProcessRadarScan(rts);
+        // 8. Radar scans — parallel (each scanner writes only to its own RadarMap/command buffer)
+        Parallel.ForEach(commands, pair => ProcessRadarScan(pair.Rts));
 
-        // 7. Deliver swarm messages
+        // 9. Deliver swarm messages (sequential — writes into ally RadarMaps)
         foreach ((TankRuntimeState rts, TankCommand cmd) in commands)
             DeliverSwarmMessages(rts, cmd);
 
-        // 8. Push updated state records back to tanks
-        foreach (TankRuntimeState rts in RuntimeTanks)
+        // 10. Push updated state records back to tanks — parallel (per-tank, no cross-writes)
+        Parallel.ForEach(RuntimeTanks, rts =>
         {
             rts.SyncToTank();
             rts.Tank.UpdateState(rts.ToTankState());
-        }
+        });
 
-        // 9. Remove spent bullets
+        // 11. Remove spent bullets
         RuntimeBullets.RemoveAll(b => !b.Active);
 
-        // 10. Check round-end condition
+        // 12. Rebuild cached snapshots once — avoids allocations in properties accessed by UI
+        var tanksSnap = new ISwarmTank[RuntimeTanks.Count];
+        for (int i = 0; i < RuntimeTanks.Count; i++) tanksSnap[i] = RuntimeTanks[i].Tank;
+        _tanksSnapshot = tanksSnap;
+
+        var bulletsSnap = new BulletState[RuntimeBullets.Count];
+        for (int i = 0; i < RuntimeBullets.Count; i++) bulletsSnap[i] = RuntimeBullets[i].ToBulletState();
+        _bulletsSnapshot = bulletsSnap;
+
+        int alive = 0;
+        for (int i = 0; i < RuntimeTanks.Count; i++)
+            if (RuntimeTanks[i].IsAlive) alive++;
+        _livingTankCount = alive;
+
+        // 13. Check round-end condition
         CheckRoundEnd();
 
         TickCompleted?.Invoke(this, tickArgs);
