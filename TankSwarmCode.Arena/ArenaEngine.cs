@@ -458,8 +458,7 @@ public sealed class ArenaEngine : IArena
 
         foreach (SwarmMessage msg in cmd.BroadcastMessages)
         {
-            if (msg.Type != SwarmMessageType.RadarShare)
-                SwarmMessageBroadcast?.Invoke(msg, sender.Tank.SwarmId);
+            SwarmMessageBroadcast?.Invoke(msg, sender.Tank.SwarmId);
 
             foreach (TankRuntimeState ally in allies)
                 SafeCall(() => ally.Tank.DeliverSwarmMessage(msg));

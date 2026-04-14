@@ -51,6 +51,12 @@ public partial class ArenaUserControl : UserControl
     private readonly Dictionary<string, DateTime> _explosionBirthTimes =
         new(StringComparer.Ordinal);
 
+    // Radar radio throttle — keyed by "sender|target"; value is the last position logged.
+    // A new log entry is only emitted when the contact has moved at least RadarLogMinMovePx.
+    private readonly Dictionary<string, Vector2D> _radarLogLastPos =
+        new(StringComparer.Ordinal);
+    private const float RadarLogMinMovePx = 30f;
+
     // Tank names whose info panel is currently attached (right-click → Attach Info Panel).
     private readonly HashSet<string> _attachedPanels = new(StringComparer.Ordinal);
 
@@ -371,6 +377,19 @@ public partial class ArenaUserControl : UserControl
 
     private void Engine_SwarmMessageBroadcast(SwarmMessage msg, int swarmId)
     {
+        if (msg.Type == SwarmMessageType.RadarShare)
+        {
+            if (msg.RadarContact is not { } rc) return;
+            string key = $"{msg.SenderName}|{rc.Name}";
+            if (_radarLogLastPos.TryGetValue(key, out Vector2D last))
+            {
+                float dx = (float)(rc.Position.X - last.X);
+                float dy = (float)(rc.Position.Y - last.Y);
+                if (dx * dx + dy * dy < RadarLogMinMovePx * RadarLogMinMovePx) return;
+            }
+            _radarLogLastPos[key] = rc.Position;
+        }
+
         string? line = FormatRadioMessage(msg);
         if (line is null) return;
         RadioTransmission?.Invoke(this, new RadioTransmissionEventArgs(line, swarmId));
@@ -409,6 +428,9 @@ public partial class ArenaUserControl : UserControl
 
         SwarmMessageType.Custom when !string.IsNullOrWhiteSpace(msg.CustomData)
             => $"[STATUS]: {msg.SenderName} {msg.CustomData}",
+
+        SwarmMessageType.RadarShare when msg.RadarContact is { } rc
+            => $"[RADAR]: {msg.SenderName} >> {rc.Name} at ({(int)rc.Position.X}, {(int)rc.Position.Y})  hdg {(int)rc.Heading}°  spd {rc.Velocity:F1}  E:{rc.Energy:F0}",
 
         _ => null
     };
