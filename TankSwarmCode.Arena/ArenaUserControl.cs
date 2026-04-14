@@ -607,9 +607,14 @@ public partial class ArenaUserControl : UserControl
         ISwarmTank focused = _focusedTank!;
         long currentTick = _engine!.TickNumber;
 
-        // Ghost contacts behind the focused tank
+        // Ghost contacts behind the focused tank.
+        // A contact is "direct" when the focused tank's own radar made the sighting;
+        // otherwise it arrived via a swarm ally's RadarShare broadcast.
         foreach (RadarContact contact in focused.RadarMap.Values)
-            DrawGhostContact(g, contact, currentTick);
+        {
+            bool direct = string.Equals(contact.SpottedBy, focused.Name, StringComparison.Ordinal);
+            DrawGhostContact(g, contact, currentTick, direct);
+        }
 
         // Focused tank: full rendering + its own effects if dead
         if (focused.State.IsAlive)
@@ -638,8 +643,12 @@ public partial class ArenaUserControl : UserControl
     /// Ally contacts are rendered brighter and in their swarm colour.
     /// Enemy contacts use a dimmer ghost style.
     /// Both fade as the contact grows stale (based on tick age).
+    /// When <paramref name="directRadarContact"/> is <see langword="true"/> the focused
+    /// tank scanned this contact itself; a pulsing radar halo is drawn to mark it.
+    /// Contacts known only through ally intelligence get no halo.
     /// </summary>
-    private void DrawGhostContact(Graphics g, RadarContact contact, long currentTick)
+    private void DrawGhostContact(Graphics g, RadarContact contact, long currentTick,
+                                  bool directRadarContact)
     {
         float cx = (float)contact.Position.X;
         float cy = (float)contact.Position.Y;
@@ -693,6 +702,52 @@ public partial class ArenaUserControl : UserControl
         using SolidBrush textBrush = new(Color.FromArgb(A(190), contactColor));
         g.DrawString(label, nameFont, textBrush,
             cx - textSize.Width / 2f, barY - textSize.Height - 1);
+
+        // ── Direct radar halo — own radar only, not relayed intelligence ──────
+        if (directRadarContact)
+            DrawDirectRadarHalo(g, cx, cy, contactColor, freshness);
+    }
+
+    /// <summary>
+    /// Draws a pulsing sonar-ring halo around a contact that the focused tank
+    /// scanned with its own radar (as opposed to receiving via swarm intelligence).
+    /// The ring oscillates in radius and brightness to make it unmistakably "live".
+    /// </summary>
+    private static void DrawDirectRadarHalo(Graphics g, float cx, float cy,
+                                            Color color, float freshness)
+    {
+        // Wall-clock pulse: full cycle every 1.4 s, independent of tick rate.
+        float phase = (float)(DateTime.UtcNow.Ticks % (long)(TimeSpan.TicksPerSecond * 1.4))
+                      / (float)(TimeSpan.TicksPerSecond * 1.4);
+        float pulse = 0.5f + 0.5f * MathF.Sin(phase * MathF.PI * 2f);  // 0 → 1 → 0
+
+        // Radius breathes between 16 and 24 px
+        float ringR  = 16f + 8f * pulse;
+        float glowR  = ringR + 5f;
+
+        int ringAlpha = (int)(200 * freshness * (0.55f + 0.45f * pulse));
+        int glowAlpha = (int)( 60 * freshness * (0.55f + 0.45f * pulse));
+
+        // Inner crisp ring
+        using Pen ringPen = new(Color.FromArgb(ringAlpha, LightenColor(color, 60)), 1.8f);
+        g.DrawEllipse(ringPen, cx - ringR, cy - ringR, ringR * 2, ringR * 2);
+
+        // Outer soft glow
+        using Pen glowPen = new(Color.FromArgb(glowAlpha, color), 5f);
+        g.DrawEllipse(glowPen, cx - glowR, cy - glowR, glowR * 2, glowR * 2);
+
+        // 4-spoke tick marks at cardinal points of the ring
+        float tickLen = 4f;
+        using Pen tickPen = new(Color.FromArgb(ringAlpha, LightenColor(color, 80)), 1.2f);
+        foreach (float angleDeg in new[] { 0f, 90f, 180f, 270f })
+        {
+            float rad = angleDeg * MathF.PI / 180f;
+            float ix  = cx + MathF.Cos(rad) * ringR;
+            float iy  = cy + MathF.Sin(rad) * ringR;
+            float ox  = cx + MathF.Cos(rad) * (ringR + tickLen);
+            float oy  = cy + MathF.Sin(rad) * (ringR + tickLen);
+            g.DrawLine(tickPen, ix, iy, ox, oy);
+        }
     }
 
     private void DrawBackground(Graphics g)
