@@ -66,7 +66,9 @@ public partial class ArenaUserControl : UserControl
     private string? _hoveredPanelName;
 
     // Sensor-view: non-null while the user holds LMB on a tank.
+    // Sensor-view: non-null while the user holds LMB on a tank, or when pinned via double-click.
     private ISwarmTank? _focusedTank;
+    private ISwarmTank? _pinnedTank;
 
     // Info-panel layout constants
     private const int InfoPanelWidth   = 165;
@@ -242,6 +244,7 @@ public partial class ArenaUserControl : UserControl
         _attachedPanels.Clear();
         _closeBtnBounds.Clear();
         _focusedTank = null;
+        _pinnedTank  = null;
         _waitingForPulse = false;
         _statusMessage = "Add tanks via Red Swarm or Blue Swarm, then click Start.";
         Invalidate();
@@ -287,11 +290,25 @@ public partial class ArenaUserControl : UserControl
     protected override void OnMouseUp(MouseEventArgs e)
     {
         base.OnMouseUp(e);
-        if (e.Button == MouseButtons.Left && _focusedTank is not null)
+        if (e.Button == MouseButtons.Left)
         {
-            _focusedTank = null;
+            _focusedTank = _pinnedTank; // release hold; keep pin if active
             Invalidate();
         }
+    }
+
+    protected override void OnMouseDoubleClick(MouseEventArgs e)
+    {
+        base.OnMouseDoubleClick(e);
+        if (_engine is null || e.Button != MouseButtons.Left) return;
+
+        ISwarmTank? hit = HitTestTank(e.Location);
+        if (hit is null) return;
+
+        // Same tank → unpin; any other tank (or no pin) → pin this one
+        _pinnedTank  = ReferenceEquals(_pinnedTank, hit) ? null : hit;
+        _focusedTank = _pinnedTank;
+        Invalidate();
     }
 
     protected override void OnMouseMove(MouseEventArgs e)
@@ -1437,7 +1454,9 @@ public partial class ArenaUserControl : UserControl
         // Sensor-view mode banner — centred at bottom
         if (_focusedTank is not null)
         {
-            string label = $"SENSOR VIEW  ·  {_focusedTank.Name}  ·  hold LMB";
+            string label = _pinnedTank is not null
+                ? $"SENSOR VIEW  ·  {_focusedTank.Name}  ·  double-click to unpin"
+                : $"SENSOR VIEW  ·  {_focusedTank.Name}  ·  hold LMB";
             using Font sensorFont = new(Font.FontFamily, 8.5f, FontStyle.Bold);
             SizeF sz = g.MeasureString(label, sensorFont);
             float lx = (ClientSize.Width  - sz.Width)  / 2f;
