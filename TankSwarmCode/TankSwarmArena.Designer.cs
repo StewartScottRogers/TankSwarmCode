@@ -29,13 +29,13 @@ namespace TankSwarmCode
         private void InitializeComponent()
         {
             _statusStrip = new StatusStrip();
-            _statusLabelState   = new ToolStripStatusLabel();
-            _statusLabelTick    = new ToolStripStatusLabel();
-            _statusSepRed       = new ToolStripStatusLabel();
-            _statusLabelRed     = new ToolStripStatusLabel();
-            _statusSepBlue      = new ToolStripStatusLabel();
-            _statusLabelBlue    = new ToolStripStatusLabel();
-            _statusSepBullets   = new ToolStripStatusLabel();
+            _statusLabelState = new ToolStripStatusLabel();
+            _statusLabelTick = new ToolStripStatusLabel();
+            _statusSepRed = new ToolStripStatusLabel();
+            _statusLabelRed = new ToolStripStatusLabel();
+            _statusSepBlue = new ToolStripStatusLabel();
+            _statusLabelBlue = new ToolStripStatusLabel();
+            _statusSepBullets = new ToolStripStatusLabel();
             _statusLabelBullets = new ToolStripStatusLabel();
             _mainMenuStrip = new MenuStrip();
             _menuItemRedSwarm = new ToolStripMenuItem();
@@ -88,6 +88,7 @@ namespace TankSwarmCode
             _radioCommsHeader = new Label();
             arenaUserControl1 = new ArenaUserControl();
             _arenaConfigUserControl = new ArenaConfigurationUserControl();
+            _statusStrip.SuspendLayout();
             _mainMenuStrip.SuspendLayout();
             _toolStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
@@ -96,8 +97,77 @@ namespace TankSwarmCode
             _splitContainer.Panel2.SuspendLayout();
             _splitContainer.SuspendLayout();
             _radioCommsPanel.SuspendLayout();
-            _arenaConfigUserControl.SuspendLayout();
             SuspendLayout();
+            // 
+            // _statusStrip
+            // 
+            _statusStrip.BackColor = SystemColors.MenuBar;
+            _statusStrip.ForeColor = Color.Silver;
+            _statusStrip.Items.AddRange(new ToolStripItem[] { _statusLabelState, _statusLabelTick, _statusSepRed, _statusLabelRed, _statusSepBlue, _statusLabelBlue, _statusSepBullets, _statusLabelBullets });
+            _statusStrip.Location = new Point(0, 758);
+            _statusStrip.Name = "_statusStrip";
+            _statusStrip.Size = new Size(1687, 24);
+            _statusStrip.TabIndex = 4;
+            // 
+            // _statusLabelState
+            // 
+            _statusLabelState.ForeColor = Color.Silver;
+            _statusLabelState.Name = "_statusLabelState";
+            _statusLabelState.Size = new Size(39, 19);
+            _statusLabelState.Text = "Ready";
+            // 
+            // _statusLabelTick
+            // 
+            _statusLabelTick.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            _statusLabelTick.ForeColor = Color.Silver;
+            _statusLabelTick.Name = "_statusLabelTick";
+            _statusLabelTick.Size = new Size(45, 19);
+            _statusLabelTick.Text = "Tick: 0";
+            // 
+            // _statusSepRed
+            // 
+            _statusSepRed.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            _statusSepRed.ForeColor = Color.OrangeRed;
+            _statusSepRed.Name = "_statusSepRed";
+            _statusSepRed.Size = new Size(34, 19);
+            _statusSepRed.Text = "Red:";
+            // 
+            // _statusLabelRed
+            // 
+            _statusLabelRed.ForeColor = Color.OrangeRed;
+            _statusLabelRed.Name = "_statusLabelRed";
+            _statusLabelRed.Size = new Size(30, 19);
+            _statusLabelRed.Text = "0 / 0";
+            // 
+            // _statusSepBlue
+            // 
+            _statusSepBlue.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            _statusSepBlue.ForeColor = Color.DodgerBlue;
+            _statusSepBlue.Name = "_statusSepBlue";
+            _statusSepBlue.Size = new Size(37, 19);
+            _statusSepBlue.Text = "Blue:";
+            // 
+            // _statusLabelBlue
+            // 
+            _statusLabelBlue.ForeColor = Color.DodgerBlue;
+            _statusLabelBlue.Name = "_statusLabelBlue";
+            _statusLabelBlue.Size = new Size(30, 19);
+            _statusLabelBlue.Text = "0 / 0";
+            // 
+            // _statusSepBullets
+            // 
+            _statusSepBullets.BorderSides = ToolStripStatusLabelBorderSides.Left;
+            _statusSepBullets.ForeColor = Color.Silver;
+            _statusSepBullets.Name = "_statusSepBullets";
+            _statusSepBullets.Size = new Size(49, 19);
+            _statusSepBullets.Text = "Bullets:";
+            // 
+            // _statusLabelBullets
+            // 
+            _statusLabelBullets.ForeColor = Color.Silver;
+            _statusLabelBullets.Name = "_statusLabelBullets";
+            _statusLabelBullets.Size = new Size(13, 19);
+            _statusLabelBullets.Text = "0";
             // 
             // _mainMenuStrip
             // 
@@ -193,19 +263,19 @@ namespace TankSwarmCode
             _menuItemAddBluePatrol.Text = "Add Blue &Patrol";
             _menuItemAddBluePatrol.Click += MenuItemAddBluePatrol_Click;
             // 
-            // _menuItemAddBlueCommander
-            //
-            _menuItemAddBlueCommander.Name = "_menuItemAddBlueCommander";
-            _menuItemAddBlueCommander.Size = new Size(207, 22);
-            _menuItemAddBlueCommander.Text = "Add Blue &Commander";
-            _menuItemAddBlueCommander.Click += MenuItemAddBlueCommander_Click;
-            //
             // _menuItemAddBlueSniper
             // 
             _menuItemAddBlueSniper.Name = "_menuItemAddBlueSniper";
             _menuItemAddBlueSniper.Size = new Size(207, 22);
             _menuItemAddBlueSniper.Text = "Add Blue &Sniper";
             _menuItemAddBlueSniper.Click += MenuItemAddBlueSniper_Click;
+            // 
+            // _menuItemAddBlueCommander
+            // 
+            _menuItemAddBlueCommander.Name = "_menuItemAddBlueCommander";
+            _menuItemAddBlueCommander.Size = new Size(207, 22);
+            _menuItemAddBlueCommander.Text = "Add Blue &Commander";
+            _menuItemAddBlueCommander.Click += MenuItemAddBlueCommander_Click;
             // 
             // _separatorBlue2
             // 
@@ -385,7 +455,7 @@ namespace TankSwarmCode
             _lblSpeed.Name = "_lblSpeed";
             _lblSpeed.Size = new Size(42, 22);
             _lblSpeed.Text = "Speed:";
-            // 
+            //
             // _speedTrackBar
             //
             _speedTrackBar.AccessibleName = "_speedTrackBar";
@@ -411,71 +481,9 @@ namespace TankSwarmCode
             _lblSpeedValue.Name = "_lblSpeedValue";
             _lblSpeedValue.Size = new Size(42, 22);
             _lblSpeedValue.Text = "10 TPS";
-            //
-            // _statusStrip
-            //
-            _statusStrip.Items.AddRange(new ToolStripItem[] { _statusLabelState, _statusLabelTick, _statusSepRed, _statusLabelRed, _statusSepBlue, _statusLabelBlue, _statusSepBullets, _statusLabelBullets });
-            _statusStrip.Location = new Point(0, 738);
-            _statusStrip.Name = "_statusStrip";
-            _statusStrip.Size = new Size(1687, 22);
-            _statusStrip.TabIndex = 4;
-            _statusStrip.BackColor = Color.FromArgb(28, 28, 28);
-            _statusStrip.ForeColor = Color.Silver;
-            //
-            // _statusLabelState
-            //
-            _statusLabelState.Name = "_statusLabelState";
-            _statusLabelState.Text = "Ready";
-            _statusLabelState.ForeColor = Color.Silver;
-            //
-            // _statusLabelTick
-            //
-            _statusLabelTick.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusLabelTick.Name = "_statusLabelTick";
-            _statusLabelTick.Text = "Tick: 0";
-            _statusLabelTick.ForeColor = Color.Silver;
-            //
-            // _statusSepRed
-            //
-            _statusSepRed.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusSepRed.Name = "_statusSepRed";
-            _statusSepRed.Text = "Red:";
-            _statusSepRed.ForeColor = Color.OrangeRed;
-            //
-            // _statusLabelRed
-            //
-            _statusLabelRed.Name = "_statusLabelRed";
-            _statusLabelRed.Text = "0 / 0";
-            _statusLabelRed.ForeColor = Color.OrangeRed;
-            //
-            // _statusSepBlue
-            //
-            _statusSepBlue.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusSepBlue.Name = "_statusSepBlue";
-            _statusSepBlue.Text = "Blue:";
-            _statusSepBlue.ForeColor = Color.DodgerBlue;
-            //
-            // _statusLabelBlue
-            //
-            _statusLabelBlue.Name = "_statusLabelBlue";
-            _statusLabelBlue.Text = "0 / 0";
-            _statusLabelBlue.ForeColor = Color.DodgerBlue;
-            //
-            // _statusSepBullets
-            //
-            _statusSepBullets.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusSepBullets.Name = "_statusSepBullets";
-            _statusSepBullets.Text = "Bullets:";
-            _statusSepBullets.ForeColor = Color.Silver;
-            //
-            // _statusLabelBullets
-            //
-            _statusLabelBullets.Name = "_statusLabelBullets";
-            _statusLabelBullets.Text = "0";
-            _statusLabelBullets.ForeColor = Color.Silver;
-            //
+            // 
             // _splitContainer
-            //
+            // 
             _splitContainer.BorderStyle = BorderStyle.Fixed3D;
             _splitContainer.Dock = DockStyle.Fill;
             _splitContainer.FixedPanel = FixedPanel.Panel1;
@@ -485,12 +493,12 @@ namespace TankSwarmCode
             // _splitContainer.Panel1
             // 
             _splitContainer.Panel1.Controls.Add(_radioCommsPanel);
-            //
+            // 
             // _splitContainer.Panel2
-            //
+            // 
             _splitContainer.Panel2.Controls.Add(arenaUserControl1);
             _splitContainer.Panel2.Controls.Add(_arenaConfigUserControl);
-            _splitContainer.Size = new Size(1687, 711);
+            _splitContainer.Size = new Size(1687, 709);
             _splitContainer.SplitterWidth = 5;
             _splitContainer.TabIndex = 3;
             // 
@@ -502,7 +510,7 @@ namespace TankSwarmCode
             _radioCommsPanel.Dock = DockStyle.Fill;
             _radioCommsPanel.Location = new Point(0, 0);
             _radioCommsPanel.Name = "_radioCommsPanel";
-            _radioCommsPanel.Size = new Size(719, 707);
+            _radioCommsPanel.Size = new Size(46, 705);
             _radioCommsPanel.TabIndex = 0;
             // 
             // _radioLog
@@ -516,7 +524,7 @@ namespace TankSwarmCode
             _radioLog.Name = "_radioLog";
             _radioLog.ReadOnly = true;
             _radioLog.ScrollBars = RichTextBoxScrollBars.Vertical;
-            _radioLog.Size = new Size(719, 689);
+            _radioLog.Size = new Size(46, 687);
             _radioLog.TabIndex = 0;
             _radioLog.TabStop = false;
             _radioLog.Text = "";
@@ -529,27 +537,28 @@ namespace TankSwarmCode
             _radioCommsHeader.ForeColor = Color.Goldenrod;
             _radioCommsHeader.Location = new Point(0, 0);
             _radioCommsHeader.Name = "_radioCommsHeader";
-            _radioCommsHeader.Size = new Size(719, 18);
+            _radioCommsHeader.Size = new Size(46, 18);
             _radioCommsHeader.TabIndex = 1;
             _radioCommsHeader.Text = "  ◼ RADIO COMMS";
             _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
-            //
+            // 
             // arenaUserControl1
-            //
+            // 
             arenaUserControl1.Dock = DockStyle.Fill;
             arenaUserControl1.Location = new Point(0, 0);
             arenaUserControl1.Name = "arenaUserControl1";
-            arenaUserControl1.Size = new Size(1155, 707);
+            arenaUserControl1.Size = new Size(1408, 705);
             arenaUserControl1.TabIndex = 0;
-            //
+            // 
             // _arenaConfigUserControl
-            //
+            // 
+            _arenaConfigUserControl.BackColor = SystemColors.MenuBar;
             _arenaConfigUserControl.Dock = DockStyle.Right;
-            _arenaConfigUserControl.Location = new Point(1155, 0);
+            _arenaConfigUserControl.Location = new Point(1408, 0);
             _arenaConfigUserControl.Name = "_arenaConfigUserControl";
-            _arenaConfigUserControl.Size = new Size(220, 707);
+            _arenaConfigUserControl.Size = new Size(220, 705);
             _arenaConfigUserControl.TabIndex = 1;
-            //
+            // 
             // TankSwarmArena
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -567,12 +576,13 @@ namespace TankSwarmCode
             SizeGripStyle = SizeGripStyle.Show;
             StartPosition = FormStartPosition.CenterScreen;
             Text = "Tank Swarm Arena";
+            _statusStrip.ResumeLayout(false);
+            _statusStrip.PerformLayout();
             _mainMenuStrip.ResumeLayout(false);
             _mainMenuStrip.PerformLayout();
             _toolStrip.ResumeLayout(false);
             _toolStrip.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).EndInit();
-            _arenaConfigUserControl.ResumeLayout(false);
             _splitContainer.Panel1.ResumeLayout(false);
             _splitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)_splitContainer).EndInit();
@@ -646,7 +656,6 @@ namespace TankSwarmCode
         private Panel _radioCommsPanel;
         private Label _radioCommsHeader;
         private RichTextBox _radioLog;
-        private ToolStripControlHost _speedTrackBarHost;
 
         // Status strip
         private StatusStrip _statusStrip;
@@ -658,5 +667,6 @@ namespace TankSwarmCode
         private ToolStripStatusLabel _statusLabelBlue;
         private ToolStripStatusLabel _statusSepBullets;
         private ToolStripStatusLabel _statusLabelBullets;
+        private ToolStripControlHost _speedTrackBarHost;
     }
 }
