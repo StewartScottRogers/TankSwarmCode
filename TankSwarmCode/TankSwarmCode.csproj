@@ -16,4 +16,10 @@
     <ProjectReference Include="..\TankSwarmCode.SwarmTanks.Blue\TankSwarmCode.SwarmTanks.Blue.csproj" />
   </ItemGroup>
 
+
+  <Target Name="PublishSingleFileOnReleaseBuild" AfterTargets="Build"
+          Condition="'$(Configuration)' == 'Release' AND '$(PublishSingleFile)' != 'true'">
+    <Exec Command="dotnet publish &quot;$(MSBuildProjectFullPath)&quot; /p:PublishProfile=SingleFileWin64 /p:RuntimeIdentifier=win-x64" />
+  </Target>
+
 </Project>
