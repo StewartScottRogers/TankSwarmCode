@@ -87,6 +87,7 @@ namespace TankSwarmCode
             _radioLog = new RichTextBox();
             _radioCommsHeader = new Label();
             arenaUserControl1 = new ArenaUserControl();
+            _arenaConfigUserControl = new ArenaConfigurationUserControl();
             _mainMenuStrip.SuspendLayout();
             _toolStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
@@ -95,6 +96,7 @@ namespace TankSwarmCode
             _splitContainer.Panel2.SuspendLayout();
             _splitContainer.SuspendLayout();
             _radioCommsPanel.SuspendLayout();
+            _arenaConfigUserControl.SuspendLayout();
             SuspendLayout();
             // 
             // _mainMenuStrip
@@ -483,10 +485,11 @@ namespace TankSwarmCode
             // _splitContainer.Panel1
             // 
             _splitContainer.Panel1.Controls.Add(_radioCommsPanel);
-            // 
+            //
             // _splitContainer.Panel2
-            // 
+            //
             _splitContainer.Panel2.Controls.Add(arenaUserControl1);
+            _splitContainer.Panel2.Controls.Add(_arenaConfigUserControl);
             _splitContainer.Size = new Size(1687, 711);
             _splitContainer.SplitterWidth = 5;
             _splitContainer.TabIndex = 3;
@@ -530,15 +533,23 @@ namespace TankSwarmCode
             _radioCommsHeader.TabIndex = 1;
             _radioCommsHeader.Text = "  ◼ RADIO COMMS";
             _radioCommsHeader.TextAlign = ContentAlignment.MiddleLeft;
-            // 
+            //
             // arenaUserControl1
-            // 
+            //
             arenaUserControl1.Dock = DockStyle.Fill;
             arenaUserControl1.Location = new Point(0, 0);
             arenaUserControl1.Name = "arenaUserControl1";
             arenaUserControl1.Size = new Size(1155, 707);
             arenaUserControl1.TabIndex = 0;
-            // 
+            //
+            // _arenaConfigUserControl
+            //
+            _arenaConfigUserControl.Dock = DockStyle.Right;
+            _arenaConfigUserControl.Location = new Point(1155, 0);
+            _arenaConfigUserControl.Name = "_arenaConfigUserControl";
+            _arenaConfigUserControl.Size = new Size(220, 707);
+            _arenaConfigUserControl.TabIndex = 1;
+            //
             // TankSwarmArena
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -561,6 +572,7 @@ namespace TankSwarmCode
             _toolStrip.ResumeLayout(false);
             _toolStrip.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).EndInit();
+            _arenaConfigUserControl.ResumeLayout(false);
             _splitContainer.Panel1.ResumeLayout(false);
             _splitContainer.Panel2.ResumeLayout(false);
             ((System.ComponentModel.ISupportInitialize)_splitContainer).EndInit();
@@ -573,6 +585,7 @@ namespace TankSwarmCode
         #endregion
 
         private ArenaUserControl arenaUserControl1;
+        private ArenaConfigurationUserControl _arenaConfigUserControl;
         private MenuStrip _mainMenuStrip;
 
         // Red Swarm menu
