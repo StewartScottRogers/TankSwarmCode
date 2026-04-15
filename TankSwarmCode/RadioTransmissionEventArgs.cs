@@ -1,4 +1,4 @@
-namespace TankSwarmCode.Arena;
+namespace TankSwarmCode;
 
 /// <summary>
 /// Carries a single formatted radio-traffic line and the SwarmId of the transmitting unit.
