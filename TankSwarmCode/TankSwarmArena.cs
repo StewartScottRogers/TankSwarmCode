@@ -380,7 +380,11 @@ public partial class TankSwarmArena : Form
         _statusLabelState.Text = arena.IsRunning ? "Running" : "Stopped";
         _statusLabelState.ForeColor = arena.IsRunning ? Color.LawnGreen : Color.Silver;
 
-        _statusLabelTick.Text = $"Tick: {arena.TickNumber}";
+        int eTps = arenaUserControl1.EffectiveTps;
+        int mult = arenaUserControl1.SimTicksPerFrame;
+        _statusLabelTick.Text = mult > 1
+            ? $"Tick: {arena.TickNumber}  ({eTps} TPS ×{mult})"
+            : $"Tick: {arena.TickNumber}  ({eTps} TPS)";
 
         var tanks = arena.Tanks;
         int redTotal  = tanks.Count(t => t.SwarmId == 1);

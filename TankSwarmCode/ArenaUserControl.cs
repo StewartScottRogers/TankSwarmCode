@@ -175,6 +175,40 @@ public partial class ArenaUserControl : UserControl
         set => _gameTimer.Interval = Math.Max(1, 1000 / Math.Max(1, value));
     }
 
+    /// <summary>
+    /// How many simulation ticks are run per timer fire.
+    /// Computed automatically from the active render toggles — disabling
+    /// animation layers (radar reflections, scan halos) removes the pulse gate
+    /// and allows batching multiple ticks per paint, multiplying effective speed.
+    /// </summary>
+    [System.ComponentModel.DesignerSerializationVisibility(
+        System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int SimTicksPerFrame => ComputeSimTicksPerFrame();
+
+    /// <summary>Effective simulation ticks per second, accounting for multi-tick batching.</summary>
+    [System.ComponentModel.DesignerSerializationVisibility(
+        System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public int EffectiveTps => TicksPerSecond * ComputeSimTicksPerFrame();
+
+    private int ComputeSimTicksPerFrame()
+    {
+        // Radar reflections and scan halos drive the pulse gate — while either is
+        // on the timer must pause between ticks for the animation to complete,
+        // so we can only run one tick per fire.
+        if (ShowRadarReflections || ShowScanHalos)
+            return 1;
+
+        // No pulse gate needed: batch additional ticks per frame.
+        // Each expensive layer that is off contributes extra capacity.
+        int ticks = 5;                          // base boost without animations
+        if (!ShowRadarSweepTrails) ticks += 3;
+        if (!ShowExplosions)       ticks += 3;
+        if (!ShowBullets)          ticks += 2;
+        if (!ShowEnergyBars)       ticks += 1;
+        if (!ShowTankLabels)       ticks += 1;
+        return Math.Min(ticks, 40);
+    }
+
     /// <summary>Underlying arena. Available after construction; populated by <see cref="AddTank"/>.</summary>
     public IArena? Arena => _engine;
 
@@ -501,23 +535,31 @@ public partial class ArenaUserControl : UserControl
         DateTime now = DateTime.UtcNow;
         _tickIntervalMs = _gameTimer.Interval;
 
-        // If we are waiting for a radar pulse round-trip to complete, just repaint
-        // so the animation keeps running — do not advance the simulation.
-        if (_waitingForPulse)
+        int ticksThisFrame = ComputeSimTicksPerFrame();
+        bool needsPulseGate = ticksThisFrame == 1; // only gate when not batching
+
+        // Pulse gate: hold simulation until radar-pulse animation completes.
+        // Skipped entirely when batching multiple ticks (animations are off).
+        if (needsPulseGate && _waitingForPulse)
         {
             if (now < _pulseCompletionTime)
             {
                 Invalidate();
                 return;
             }
-
-            _waitingForPulse = false;
         }
+        _waitingForPulse = false; // clear gate (either expired or bypassed)
 
-        _lastTickTime = now;
-        _engine?.Tick();
-        HarvestExplosionBirthTimes();
-        HarvestScanEvents();
+        bool harvestScans = ShowRadarReflections || ShowScanHalos;
+
+        for (int i = 0; i < ticksThisFrame; i++)
+        {
+            _lastTickTime = DateTime.UtcNow;
+            _engine?.Tick();
+            HarvestExplosionBirthTimes();
+            if (harvestScans)
+                HarvestScanEvents();
+        }
 
         Invalidate();
     }
