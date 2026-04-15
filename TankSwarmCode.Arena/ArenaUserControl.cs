@@ -61,7 +61,8 @@ public partial class ArenaUserControl : UserControl
     private readonly HashSet<string> _attachedPanels = new(StringComparer.Ordinal);
 
     // Screen bounds of each panel from the last paint pass — used for hover hit-testing.
-    private readonly Dictionary<string, RectangleF> _panelBounds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RectangleF> _panelBounds    = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RectangleF> _closeBtnBounds = new(StringComparer.Ordinal);
     private string? _hoveredPanelName;
 
     // Sensor-view: non-null while the user holds LMB on a tank.
@@ -239,6 +240,7 @@ public partial class ArenaUserControl : UserControl
         _scanEvents.Clear();
         _explosionBirthTimes.Clear();
         _attachedPanels.Clear();
+        _closeBtnBounds.Clear();
         _focusedTank = null;
         _waitingForPulse = false;
         _statusMessage = "Add tanks via Red Swarm or Blue Swarm, then click Start.";
@@ -260,6 +262,19 @@ public partial class ArenaUserControl : UserControl
         }
         else if (e.Button == MouseButtons.Left)
         {
+            // Check if the click landed on a panel close button first
+            foreach (var (name, btnRect) in _closeBtnBounds)
+            {
+                if (btnRect.Contains(e.X, e.Y))
+                {
+                    _attachedPanels.Remove(name);
+                    _closeBtnBounds.Remove(name);
+                    _panelBounds.Remove(name);
+                    Invalidate();
+                    return;
+                }
+            }
+
             ISwarmTank? hit = HitTestTank(e.Location);
             if (hit is not null)
             {
@@ -1267,6 +1282,7 @@ public partial class ArenaUserControl : UserControl
         if (_engine is null || _attachedPanels.Count == 0) return;
 
         _panelBounds.Clear();
+        _closeBtnBounds.Clear();
         var byName = _engine.Tanks.ToDictionary(t => t.Name, StringComparer.Ordinal);
 
         foreach (string name in _attachedPanels)
@@ -1276,8 +1292,9 @@ public partial class ArenaUserControl : UserControl
             bool hovered = string.Equals(name, _hoveredPanelName, StringComparison.Ordinal);
             float opacity = hovered ? 1f : 0.4f;
 
-            DrawTankPanel(g, tank.State, opacity, out RectangleF bounds);
-            _panelBounds[name] = bounds;
+            DrawTankPanel(g, tank.State, opacity, out RectangleF bounds, out RectangleF closeBtn);
+            _panelBounds[name]    = bounds;
+            _closeBtnBounds[name] = closeBtn;
         }
     }
 
@@ -1287,7 +1304,7 @@ public partial class ArenaUserControl : UserControl
     /// <paramref name="opacity"/> scales every alpha channel uniformly (1 = fully opaque,
     /// 0.4 = 60 % translucent default).
     /// </summary>
-    private void DrawTankPanel(Graphics g, TankState tank, float opacity, out RectangleF panelBounds)
+    private void DrawTankPanel(Graphics g, TankState tank, float opacity, out RectangleF panelBounds, out RectangleF closeBtnBounds)
     {
         // Inline helper: scales a base alpha by the panel opacity
         int A(int baseAlpha) => (int)(baseAlpha * opacity);
@@ -1349,6 +1366,21 @@ public partial class ArenaUserControl : UserControl
         using SolidBrush valueBrush = new(Color.FromArgb(A(255), Color.White));
 
         g.DrawString(tank.Name, headerFont, nameBrush, fx, fy);
+
+        // ── Close (×) button in upper-right corner ────────────────────────────
+        const float BtnSize = 13f;
+        const float BtnMargin = 3f;
+        float bx = px + InfoPanelWidth - BtnSize - BtnMargin;
+        float by_ = py + BtnMargin;
+        closeBtnBounds = new RectangleF(bx, by_, BtnSize, BtnSize);
+
+        using SolidBrush closeBg = new(Color.FromArgb(A(180), 80, 20, 20));
+        g.FillRectangle(closeBg, closeBtnBounds);
+        float xm = 3f;
+        using Pen xPen = new(Color.FromArgb(A(230), Color.White), 1.5f);
+        g.DrawLine(xPen, bx + xm, by_ + xm, bx + BtnSize - xm, by_ + BtnSize - xm);
+        g.DrawLine(xPen, bx + BtnSize - xm, by_ + xm, bx + xm, by_ + BtnSize - xm);
+
         fy += InfoPanelRowH + 1;
 
         // Thin separator under the name
