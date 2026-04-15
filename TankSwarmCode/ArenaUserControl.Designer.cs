@@ -1,4 +1,4 @@
-﻿namespace TankSwarmCode.Arena
+﻿namespace TankSwarmCode
 {
     partial class ArenaUserControl
     {

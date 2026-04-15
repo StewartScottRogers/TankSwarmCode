@@ -86,7 +86,7 @@ namespace TankSwarmCode
             _radioCommsPanel = new Panel();
             _radioLog = new RichTextBox();
             _radioCommsHeader = new Label();
-            arenaUserControl1 = new TankSwarmCode.Arena.ArenaUserControl();
+            arenaUserControl1 = new ArenaUserControl();
             _mainMenuStrip.SuspendLayout();
             _toolStrip.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)_speedTrackBar).BeginInit();
@@ -572,7 +572,7 @@ namespace TankSwarmCode
 
         #endregion
 
-        private Arena.ArenaUserControl arenaUserControl1;
+        private ArenaUserControl arenaUserControl1;
         private MenuStrip _mainMenuStrip;
 
         // Red Swarm menu

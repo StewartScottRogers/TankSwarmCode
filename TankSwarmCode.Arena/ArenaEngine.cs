@@ -48,7 +48,7 @@ public sealed class ArenaEngine : IArena
     /// Parameters: the message and the sender's SwarmId.
     /// Internal — only <see cref="ArenaUserControl"/> subscribes.
     /// </summary>
-    internal event Action<SwarmMessage, int>? SwarmMessageBroadcast;
+    public event Action<SwarmMessage, int>? SwarmMessageBroadcast;
 
     // ── Construction ──────────────────────────────────────────────────────────
 

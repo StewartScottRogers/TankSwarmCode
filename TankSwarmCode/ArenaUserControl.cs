@@ -1,11 +1,12 @@
 ﻿using System.Drawing.Drawing2D;
+using TankSwarmCode.Arena;
 using TankSwarmCode.Arena.Interfaces;
 using TankSwarmCode.SwarmTank.Interfaces;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Events;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
-namespace TankSwarmCode.Arena;
+namespace TankSwarmCode;
 
 /// <summary>
 /// WinForms control that hosts the <see cref="ArenaEngine"/> simulation and renders
