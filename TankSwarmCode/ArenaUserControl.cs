@@ -131,6 +131,11 @@ public partial class ArenaUserControl : UserControl
     /// </summary>
     public event EventHandler<TickEventArgs>? TickCompleted;
 
+    /// <summary>
+    /// Raised on the UI thread when the simulation round ends (one side eliminated).
+    /// </summary>
+    public event EventHandler<RoundEndedEventArgs>? RoundEnded;
+
     // One entry per physical radar hit; each lives for ScanHaloLifetime ticks then is removed.
     private readonly List<ScanEvent> _scanEvents = [];
 
@@ -467,6 +472,7 @@ public partial class ArenaUserControl : UserControl
         // Keep the render timer running so burning-hulk animations continue playing.
         // The engine simulation is already stopped; the timer just drives Invalidate calls.
         _statusMessage = $"Round ended after {e.TotalTicks} ticks.";
+        RoundEnded?.Invoke(this, e);
         Invalidate();
     }
 

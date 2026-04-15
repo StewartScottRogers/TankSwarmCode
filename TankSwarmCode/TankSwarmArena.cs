@@ -11,6 +11,7 @@ public partial class TankSwarmArena : Form
     private int _bluePatrolCount;
     private int _blueSniperCount;
     private bool _blueCommanderAdded;
+    private bool _roundEnded;
 
     // Per-swarm colours for radio log text, indexed by SwarmId (SwarmId 0 = solo/unknown)
     private static readonly Color[] _radioSwarmColours =
@@ -36,6 +37,7 @@ public partial class TankSwarmArena : Form
         arenaUserControl1.TicksPerSecond = 10;  // Normal speed by default
         arenaUserControl1.RadioTransmission += ArenaUserControl_RadioTransmission;
         arenaUserControl1.TickCompleted    += (_, _) => UpdateStatusStrip();
+        arenaUserControl1.RoundEnded       += (_, _) => { _roundEnded = true; UpdateMenuState(); UpdateStatusStrip(); };
         BuildNvNSubMenu();
         SyncSpeedMenuChecks(10);
         UpdateStatusStrip();
@@ -92,6 +94,7 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemBuildDefaultRedSwarm_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         arenaUserControl1.AddTank(new RedScout());
         arenaUserControl1.AddTank(new RedAttacker("RedAlpha"));
         arenaUserControl1.AddTank(new RedAttacker("RedBravo"));
@@ -104,12 +107,14 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddRedScout_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         arenaUserControl1.AddTank(new RedScout());
         UpdateMenuState();
     }
 
     private void MenuItemAddRedAttacker_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         _redAttackerCount++;
         arenaUserControl1.AddTank(new RedAttacker($"Red{_redAttackerCount}"));
         UpdateMenuState();
@@ -117,6 +122,7 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddRedFlanker_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         _redFlankerCount++;
         int angle = (_redFlankerCount % 2 == 1) ? 90 : -90;
         arenaUserControl1.AddTank(new RedFlank($"RedFlanker{_redFlankerCount}", angle));
@@ -127,6 +133,7 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemBuildDefaultBlueSwarm_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         arenaUserControl1.AddTank(new BlueCommander());
         arenaUserControl1.AddTank(new BlueWarden());
         arenaUserControl1.AddTank(new BluePatrol("BlueEast", 0));
@@ -140,12 +147,14 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddBlueWarden_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         arenaUserControl1.AddTank(new BlueWarden());
         UpdateMenuState();
     }
 
     private void MenuItemAddBluePatrol_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         arenaUserControl1.AddTank(new BluePatrol($"BluePatrol{_bluePatrolCount}", _bluePatrolCount % 2));
         _bluePatrolCount++;
         UpdateMenuState();
@@ -153,6 +162,7 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddBlueSniper_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         _blueSniperCount++;
         arenaUserControl1.AddTank(new BlueSniper($"BlueSniper{_blueSniperCount}", topLeft: _blueSniperCount % 2 == 1));
         UpdateMenuState();
@@ -160,6 +170,7 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddBlueCommander_Click(object? sender, EventArgs e)
     {
+        EnsureResetAfterRound();
         if (_blueCommanderAdded) return;
         arenaUserControl1.AddTank(new BlueCommander());
         _blueCommanderAdded = true;
@@ -167,6 +178,23 @@ public partial class TankSwarmArena : Form
     }
 
     // ── Shared clear handler ──────────────────────────────────────────────────
+
+    /// <summary>
+    /// If the last round has ended, silently resets the arena before the user
+    /// adds the first tank of the next game, clearing out all dead tanks.
+    /// </summary>
+    private void EnsureResetAfterRound()
+    {
+        if (!_roundEnded) return;
+        arenaUserControl1.Reset();
+        _redAttackerCount   = 0;
+        _redFlankerCount    = 0;
+        _bluePatrolCount    = 0;
+        _blueSniperCount    = 0;
+        _blueCommanderAdded = false;
+        _roundEnded         = false;
+        ClearRadioLog();
+    }
 
     private void MenuItemClearAllTanks_Click(object? sender, EventArgs e)
     {
@@ -176,6 +204,7 @@ public partial class TankSwarmArena : Form
         _bluePatrolCount    = 0;
         _blueSniperCount    = 0;
         _blueCommanderAdded = false;
+        _roundEnded         = false;
         ClearRadioLog();
         UpdateMenuState();
     }
@@ -210,6 +239,7 @@ public partial class TankSwarmArena : Form
         _redFlankerCount  = 0;
         _bluePatrolCount  = 0;
         _blueSniperCount  = 0;
+        _roundEnded       = false;
         ClearRadioLog();
         UpdateMenuState();
         UpdateStatusStrip();
@@ -241,6 +271,7 @@ public partial class TankSwarmArena : Form
         _bluePatrolCount    = 0;
         _blueSniperCount    = 0;
         _blueCommanderAdded = false;
+        _roundEnded         = false;
         ClearRadioLog();
 
         BuildRedTeam(n);
@@ -419,8 +450,9 @@ public partial class TankSwarmArena : Form
             ScreenWakeLock.Allow();
         bool hasStarted = arenaUserControl1.Arena?.HasStarted ?? false;
 
-        // Build commands are only available when the war has not started
-        bool canBuild = !hasStarted;
+        // Build commands are available before the game starts, or once a round has ended.
+        // When _roundEnded, EnsureResetAfterRound() will silently reset before the first add.
+        bool canBuild = !hasStarted || _roundEnded;
         _menuItemBuildDefaultRedSwarm.Enabled = canBuild;
         _menuItemAddRedScout.Enabled          = canBuild;
         _menuItemAddRedAttacker.Enabled       = canBuild;
@@ -436,16 +468,16 @@ public partial class TankSwarmArena : Form
 
         bool hasTanks = arenaUserControl1.TankCount > 0;
 
-        _menuItemStart.Enabled      = !running && hasTanks;
+        _menuItemStart.Enabled      = !running && hasTanks && !_roundEnded;
         _menuItemStop.Enabled       = running;
-        _menuItemSingleStep.Enabled = !running && hasTanks;
+        _menuItemSingleStep.Enabled = !running && hasTanks && !_roundEnded;
         // Reset is always available
         _menuItemResetArena.Enabled = true;
 
         // ── Toolbar mirrors War menu ──────────────────────────────────────────
-        _btnStartWar.Enabled   = !running && hasTanks;
+        _btnStartWar.Enabled   = !running && hasTanks && !_roundEnded;
         _btnStopWar.Enabled    = running;
-        _btnSingleStep.Enabled = !running && hasTanks;
+        _btnSingleStep.Enabled = !running && hasTanks && !_roundEnded;
     }
 }
 
