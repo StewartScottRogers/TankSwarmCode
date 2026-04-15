@@ -71,6 +71,28 @@ public partial class ArenaUserControl : UserControl
     private ISwarmTank? _focusedTank;
     private ISwarmTank? _pinnedTank;
 
+    // ── Render-toggle properties (set by ArenaConfigurationUserControl) ─────────
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowAntiAliasing     { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowRadarReflections { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowRadarSweepTrails { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowScanHalos        { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowBullets          { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowExplosions       { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowEnergyBars       { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowTankLabels       { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowHud              { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowInfoPanels       { get; set; } = true;
+
     // Info-panel layout constants
     private const int InfoPanelWidth   = 165;
     private const int InfoPanelRowH    =  13;
@@ -627,7 +649,7 @@ public partial class ArenaUserControl : UserControl
     {
         base.OnPaint(e);
         Graphics g = e.Graphics;
-        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.SmoothingMode = ShowAntiAliasing ? SmoothingMode.AntiAlias : SmoothingMode.None;
 
         DrawBackground(g);
 
@@ -644,7 +666,7 @@ public partial class ArenaUserControl : UserControl
         else
         {
             // Layer 1 – Radar reflections: beam from spotter to detected tank
-            DrawAllRadarHalos(g);
+            if (ShowRadarReflections) DrawAllRadarHalos(g);
 
             // Layer 2 – Charred hulk bodies. Suppress for the first 160 ms while the white
             // flash is bright enough to cover the hull; visible permanently thereafter.
@@ -655,7 +677,7 @@ public partial class ArenaUserControl : UserControl
                     float hullAgeMs = _explosionBirthTimes.TryGetValue(tank.Name, out DateTime hbt)
                         ? (float)(DateTime.UtcNow - hbt).TotalMilliseconds
                         : float.MaxValue;
-                    if (hullAgeMs > 160f)
+                    if (ShowExplosions && hullAgeMs > 160f)
                         DrawHulkBody(g, tank.State);
                 }
             }
@@ -667,8 +689,9 @@ public partial class ArenaUserControl : UserControl
                     t => SwarmColours[Math.Abs(t.SwarmId) % SwarmColours.Length],
                     StringComparer.Ordinal);
 
-            foreach (BulletState bullet in _engine.Bullets)
-                DrawBullet(g, bullet, bulletOwnerColors);
+            if (ShowBullets)
+                foreach (BulletState bullet in _engine.Bullets)
+                    DrawBullet(g, bullet, bulletOwnerColors);
 
             // Layer 4 – Living tanks
             foreach (ISwarmTank tank in _engine.Tanks)
@@ -686,10 +709,10 @@ public partial class ArenaUserControl : UserControl
                         ? (float)(DateTime.UtcNow - bt).TotalMilliseconds
                         : float.MaxValue;
 
-                    if (ageMs < ExplosionDurationMs)
+                    if (ShowExplosions && ageMs < ExplosionDurationMs)
                         DrawExplosionBlast(g, tank.State, ageMs);
 
-                    if (ageMs > BurnStartMs)
+                    if (ShowExplosions && ageMs > BurnStartMs)
                     {
                         float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
                         DrawBurningFlame(g, tank.State, intensity);
@@ -698,10 +721,10 @@ public partial class ArenaUserControl : UserControl
             }
         }
 
-        DrawHud(g);
+        if (ShowHud) DrawHud(g);
 
         // Layer 6 – Attached info panels (floats above all other content)
-        DrawAttachedPanels(g);
+        if (ShowInfoPanels) DrawAttachedPanels(g);
 
         if (!string.IsNullOrEmpty(_statusMessage))
             DrawCentredText(g, _statusMessage, new Font(Font.FontFamily, 14, FontStyle.Bold), Brushes.White);
@@ -880,7 +903,7 @@ public partial class ArenaUserControl : UserControl
         Color tankColor = SwarmColours[Math.Abs(tank.SwarmId) % SwarmColours.Length];
 
         // Drawn first so the glow ring sits behind the hull
-        DrawScanHalo(g, tank, x, y);
+        if (ShowScanHalos) DrawScanHalo(g, tank, x, y);
 
         GraphicsState saved = g.Save();
         g.TranslateTransform(x, y);
@@ -908,23 +931,38 @@ public partial class ArenaUserControl : UserControl
         g.DrawLine(gunPen, 0, 0, gunDx, gunDy);
 
         // --- Radar sweep trail ---
-        DrawRadarSweepTrail(g, tank, tankColor);
+        if (ShowRadarSweepTrails) DrawRadarSweepTrail(g, tank, tankColor);
 
         g.Restore(saved);
 
-        // --- Energy bar ---
-        float barX = x - EnergyBarWidth / 2f;
-        float barY = y - TankBodySize / 2f - 10;
-        float energyFraction = (float)Math.Clamp(tank.Energy / ArenaConstants.TankStartEnergy, 0, 1);
-        g.FillRectangle(Brushes.DarkRed, barX, barY, EnergyBarWidth, EnergyBarHeight);
-        using SolidBrush energyBrush = new(Color.LawnGreen);
-        g.FillRectangle(energyBrush, barX, barY, EnergyBarWidth * energyFraction, EnergyBarHeight);
+        if (ShowEnergyBars)
+        {
+            // --- Energy bar ---
+            float barX = x - EnergyBarWidth / 2f;
+            float barY = y - TankBodySize / 2f - 10;
+            float energyFraction = (float)Math.Clamp(tank.Energy / ArenaConstants.TankStartEnergy, 0, 1);
+            g.FillRectangle(Brushes.DarkRed, barX, barY, EnergyBarWidth, EnergyBarHeight);
+            using SolidBrush energyBrush = new(Color.LawnGreen);
+            g.FillRectangle(energyBrush, barX, barY, EnergyBarWidth * energyFraction, EnergyBarHeight);
 
-        // --- Name label ---
-        using Font nameFont = new(Font.FontFamily, 7);
-        SizeF textSize = g.MeasureString(tank.Name, nameFont);
-        g.DrawString(tank.Name, nameFont, Brushes.LightGray,
-                     x - textSize.Width / 2, barY - textSize.Height - 1);
+            if (ShowTankLabels)
+            {
+                // --- Name label ---
+                using Font nameFont = new(Font.FontFamily, 7);
+                SizeF textSize = g.MeasureString(tank.Name, nameFont);
+                g.DrawString(tank.Name, nameFont, Brushes.LightGray,
+                             x - textSize.Width / 2, barY - textSize.Height - 1);
+            }
+        }
+        else if (ShowTankLabels)
+        {
+            // --- Name label (above hull when no energy bar) ---
+            float labelY = y - TankBodySize / 2f - 12;
+            using Font nameFont = new(Font.FontFamily, 7);
+            SizeF textSize = g.MeasureString(tank.Name, nameFont);
+            g.DrawString(tank.Name, nameFont, Brushes.LightGray,
+                         x - textSize.Width / 2, labelY - textSize.Height);
+        }
     }
 
     /// <summary>

@@ -32,6 +32,7 @@ public partial class TankSwarmArena : Form
     public TankSwarmArena()
     {
         InitializeComponent();
+        _arenaConfigUserControl.SetArena(arenaUserControl1);
         arenaUserControl1.TicksPerSecond = 10;  // Normal speed by default
         arenaUserControl1.RadioTransmission += ArenaUserControl_RadioTransmission;
         arenaUserControl1.TickCompleted    += (_, _) => UpdateStatusStrip();
