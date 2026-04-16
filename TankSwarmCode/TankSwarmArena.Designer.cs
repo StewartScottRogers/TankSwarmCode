@@ -102,7 +102,7 @@ namespace TankSwarmCode
             // _statusStrip
             // 
             _statusStrip.BackColor = SystemColors.MenuBar;
-            _statusStrip.ForeColor = Color.Silver;
+            _statusStrip.ForeColor = SystemColors.MenuText;
             _statusStrip.Items.AddRange(new ToolStripItem[] { _statusLabelState, _statusLabelTick, _statusSepRed, _statusLabelRed, _statusSepBlue, _statusLabelBlue, _statusSepBullets, _statusLabelBullets });
             _statusStrip.Location = new Point(0, 758);
             _statusStrip.Name = "_statusStrip";
@@ -111,7 +111,7 @@ namespace TankSwarmCode
             // 
             // _statusLabelState
             // 
-            _statusLabelState.ForeColor = Color.Silver;
+            _statusLabelState.ForeColor = SystemColors.MenuText;
             _statusLabelState.Name = "_statusLabelState";
             _statusLabelState.Size = new Size(39, 19);
             _statusLabelState.Text = "Ready";
@@ -119,7 +119,7 @@ namespace TankSwarmCode
             // _statusLabelTick
             // 
             _statusLabelTick.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusLabelTick.ForeColor = Color.Silver;
+            _statusLabelTick.ForeColor = SystemColors.MenuText;
             _statusLabelTick.Name = "_statusLabelTick";
             _statusLabelTick.Size = new Size(45, 19);
             _statusLabelTick.Text = "Tick: 0";
@@ -142,14 +142,14 @@ namespace TankSwarmCode
             // _statusSepBlue
             // 
             _statusSepBlue.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusSepBlue.ForeColor = Color.DodgerBlue;
+            _statusSepBlue.ForeColor = Color.RoyalBlue;
             _statusSepBlue.Name = "_statusSepBlue";
             _statusSepBlue.Size = new Size(37, 19);
             _statusSepBlue.Text = "Blue:";
             // 
             // _statusLabelBlue
             // 
-            _statusLabelBlue.ForeColor = Color.DodgerBlue;
+            _statusLabelBlue.ForeColor = Color.RoyalBlue;
             _statusLabelBlue.Name = "_statusLabelBlue";
             _statusLabelBlue.Size = new Size(30, 19);
             _statusLabelBlue.Text = "0 / 0";
@@ -157,14 +157,14 @@ namespace TankSwarmCode
             // _statusSepBullets
             // 
             _statusSepBullets.BorderSides = ToolStripStatusLabelBorderSides.Left;
-            _statusSepBullets.ForeColor = Color.Silver;
+            _statusSepBullets.ForeColor = SystemColors.MenuText;
             _statusSepBullets.Name = "_statusSepBullets";
             _statusSepBullets.Size = new Size(49, 19);
             _statusSepBullets.Text = "Bullets:";
-            // 
+            //
             // _statusLabelBullets
-            // 
-            _statusLabelBullets.ForeColor = Color.Silver;
+            //
+            _statusLabelBullets.ForeColor = SystemColors.MenuText;
             _statusLabelBullets.Name = "_statusLabelBullets";
             _statusLabelBullets.Size = new Size(13, 19);
             _statusLabelBullets.Text = "0";

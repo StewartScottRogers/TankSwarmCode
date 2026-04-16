@@ -409,7 +409,7 @@ public partial class TankSwarmArena : Form
         }
 
         _statusLabelState.Text = arena.IsRunning ? "Running" : "Stopped";
-        _statusLabelState.ForeColor = arena.IsRunning ? Color.LawnGreen : Color.Silver;
+        _statusLabelState.ForeColor = arena.IsRunning ? Color.Green : SystemColors.MenuText;
 
         int eTps = arenaUserControl1.EffectiveTps;
         int mult = arenaUserControl1.SimTicksPerFrame;
