@@ -1,0 +1,159 @@
+# Chapter 7: Radar System
+
+[← Swarm Communication](ch06-swarm-communication.md) | [Table of Contents](TOC.md) | [Next: Data Models →](ch08-data-models.md)
+
+---
+
+## Overview
+
+The radar is the primary sense organ of every tank. It sweeps an arc each tick and detects other tanks whose centre point falls within that arc **and** who are not occluded by a building.
+
+---
+
+## Sweep Arc
+
+Each tick the radar rotates by up to **45°** in the commanded direction. The engine records:
+
+- `PrevRadarHeading` — the radar's heading at the start of the tick
+- `RadarHeading` — the radar's heading at the end of the tick (after the turn is applied)
+
+The sweep arc is the angular region between these two headings. Any tank whose absolute bearing from the scanning tank falls within this arc is a potential radar contact (subject to line-of-sight checks).
+
+### Wraparound Handling
+
+The arc correctly handles the 0°/360° wraparound. For example, a sweep from 350° to 10° (a 20° clockwise arc) detects targets at 355° and 5° without special-casing.
+
+---
+
+## Line-of-Sight Check
+
+After the arc test, the engine performs a segment-rectangle intersection test (Liang–Barsky algorithm) between:
+
+- The scanning tank's centre position
+- The target tank's centre position
+
+...against every building in the arena. If any building intersects this segment, the target is **not detected**.
+
+This creates realistic occlusion: tanks can hide behind buildings, and scouting manoeuvres around buildings are meaningful.
+
+---
+
+## RadarContact
+
+When a tank is detected, a `RadarContact` is created or updated:
+
+```csharp
+public class RadarContact
+{
+    public string   Name          { get; init; }  // target's Name
+    public int      EnemySwarmId  { get; init; }  // target's SwarmId
+    public bool     IsAlly        { get; init; }  // same SwarmId as scanner
+    public Vector2D Position      { get; init; }  // last-known position
+    public double   Heading       { get; init; }  // last-known body heading
+    public double   Velocity      { get; init; }  // last-known speed
+    public double   Energy        { get; init; }  // last-known energy
+    public long     Timestamp     { get; init; }  // tick when last updated
+    public string   SpottedBy     { get; init; }  // scanner's Name
+    public Vector2D VelocityVector { get; }       // derived from Heading × Velocity
+}
+```
+
+`VelocityVector` is computed from `Heading` and `Velocity` and is used for **linear prediction** (leading the target when firing).
+
+---
+
+## RadarMap
+
+`SwarmTankBase` maintains a `Dictionary<string, RadarContact>` called `RadarMap`. Entries are added or refreshed whenever:
+
+1. This tank's own radar arc detects a target.
+2. An ally broadcasts a `RadarShare` message containing a newer contact (higher `Timestamp`).
+
+The merge rule: **the newer timestamp wins**. If an ally spotted a target 2 ticks ago and your own radar spotted it 5 ticks ago, the ally's data replaces yours.
+
+### Staleness
+
+`RadarMap` entries are never automatically removed. An entry for a destroyed tank will remain with its last-known data. Always check `Timestamp` against `Arena.CurrentTick` to assess how stale a contact is. The helper `GetFreshestEnemy()` returns the entry with the highest `Timestamp` among non-ally contacts.
+
+---
+
+## Bearing Calculation
+
+Bearings are expressed **relative to this tank's body heading**, in the range (−180, +180]:
+
+```
+RelativeBearing = NormalizeTo180(absoluteAngleToTarget − State.Heading)
+```
+
+- **Positive** values are to the right (clockwise).
+- **Negative** values are to the left (counter-clockwise).
+
+`OnScannedTank(e)` provides `e.BearingDegrees` in this relative form. To aim the gun at a scanned target:
+
+```csharp
+double gunTurn = e.BearingDegrees                   // bearing to target
+               + State.GunHeading - State.Heading;  // offset: gun relative to body
+SetTurnGunRight(gunTurn);
+```
+
+Normalise all angular differences to (−180, +180] before using them in turn commands to avoid spinning the wrong way around.
+
+---
+
+## Radar Strategies
+
+### Continuous Spin
+
+The simplest strategy: keep the radar spinning at maximum speed.
+
+```csharp
+// OnTick
+SetTurnRadarRight(double.MaxValue);   // engine clamps to 45°/tick
+```
+
+Guarantees every tank in the arena will be scanned within 8 ticks.
+
+### Lock-on Tracking
+
+Narrow the radar to stay on a known target, refreshing the contact every tick:
+
+```csharp
+// OnTick
+var target = _myTarget;
+if (target != null)
+{
+    double absoluteBearingToTarget = Math.Atan2(
+        target.Position.X - State.Position.X,
+        target.Position.Y - State.Position.Y) * (180 / Math.PI);
+
+    double radarTurn = NormalizeTo180(absoluteBearingToTarget - State.RadarHeading);
+    SetTurnRadarRight(radarTurn * 2);  // × 2 to ensure the sweep crosses the target
+}
+```
+
+Multiplying by 2 creates a small oscillation that keeps the arc sweeping across the target even if it moves.
+
+### Wide-Sweep Scout
+
+Set the radar turn to a large fixed value each tick to maintain a consistent wide arc:
+
+```csharp
+SetTurnRadarRight(180);   // sweeps 45° per tick, effectively spinning
+```
+
+Used by `RedScout`, which pairs this with `RadarShare` broadcasts to keep the whole swarm informed.
+
+---
+
+## Rendering
+
+The renderer displays radar information in two ways:
+
+1. **Radar beam** — a short line from the tank centre in the direction of the current `RadarHeading`.
+2. **Radar halo** — when a scan detects a target, an expanding/fading sonar-like pulse is rendered at the scanner's position. The halo has a lifetime of 10 ticks.
+
+See [Chapter 11: Arena Rendering & UI](ch11-rendering.md) for visual details.
+
+---
+
+[← Swarm Communication](ch06-swarm-communication.md) | [Table of Contents](TOC.md) | [Next: Data Models →](ch08-data-models.md)
