@@ -156,4 +156,31 @@ See [Chapter 11: Arena Rendering & UI](ch11-rendering.md) for visual details.
 
 ---
 
+## Electronic Counter-Measures (ECM)
+
+ECM is a per-tick energy expenditure that interferes with the radar pipeline described above. It is activated by calling `SetEcm(EcmMode)` from `OnTick`. Full details are in [Chapter 13: ECM System](ch13-ecm-system.md).
+
+### How jamming intercepts the radar pipeline
+
+The engine normally calls `OnScannedTank` for every target whose bearing falls in the sweep arc. When the **target** is running `EcmMode.Jam`, the engine rolls a random number before delivering the event:
+
+| Scanner ECM | Drop chance | Corrupt chance | Normal chance |
+|-------------|-------------|----------------|---------------|
+| Off | 50 % | 30 % | 20 % |
+| Burnthrough | 8 % | 8 % | 84 % |
+
+- **Dropped** — `OnScannedTank` is never called; the target is invisible this tick.
+- **Corrupted** — `OnScannedTank` is called with randomised position, heading, velocity, and energy; the contact looks plausible but is entirely fabricated.
+- **Normal** — the scan proceeds exactly as without ECM.
+
+### Ghost echoes (Spoof mode)
+
+When a tank runs `EcmMode.Spoof`, the engine maintains two "ghost" positions that drift independently around the spoofing tank. For each ghost that falls within any enemy's sweep arc (and has clear LOS), the engine injects a fake `OnScannedTank` event with a name like `"Ghost-XXXX"`. The ghost contact is indistinguishable from a real tank unless the receiver is running Burnthrough (which filters ~70 % of ghosts) or explicitly checks for the `"Ghost-"` name prefix.
+
+### ECCM: Burnthrough
+
+`EcmMode.Burnthrough` is the defensive counter: it suppresses both jam and spoof effects for a cost of 0.3 energy/tick. When an ally broadcasts `SwarmMessageType.EcmAlert`, a well-designed ECCM tank can react by activating Burnthrough.
+
+---
+
 [← Swarm Communication](ch06-swarm-communication.md) | [Table of Contents](TOC.md) | [Next: Data Models →](ch08-data-models.md)

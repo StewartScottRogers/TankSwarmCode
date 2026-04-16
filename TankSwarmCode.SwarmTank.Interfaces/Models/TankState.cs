@@ -50,4 +50,11 @@ public record TankState
     /// Allows the renderer to display a persistent burning hulk at the tank's last known position.
     /// </summary>
     public long DestroyedAtTick { get; init; }
+
+    /// <summary>
+    /// The ECM mode this tank had active this tick, visible to anyone who scans it.
+    /// Jamming and spoofing tanks betray their ECM use via their EM signature;
+    /// a burnthrough scanner detecting an active jammer can infer the threat.
+    /// </summary>
+    public EcmMode ActiveEcm { get; init; }
 }

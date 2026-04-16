@@ -73,6 +73,13 @@ public interface ISwarmTank
     /// </summary>
     void SetFire(double power);
 
+    /// <summary>
+    /// Activates an ECM mode for this tick. The engine drains the appropriate
+    /// energy cost; if energy falls to zero the tank dies.
+    /// Call with <see cref="EcmMode.Off"/> (or simply do not call) to disable ECM.
+    /// </summary>
+    void SetEcm(EcmMode mode);
+
     // ── Swarm communication ─────────────────────────────────────────────────
 
     /// <summary>

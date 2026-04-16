@@ -16,7 +16,7 @@ The complete snapshot of a single tank's state for a given tick. Available as `S
 |----------|------|-------------|
 | `Name` | `string` | Unique identifier (e.g., `"RedAlpha"`) |
 | `SwarmId` | `int` | Swarm group; `0` = solo tank |
-| `Role` | `TankRole` | Declared role: Scout, Attacker, Defender, Support |
+| `Role` | `TankRole` | Declared role: Scout, Attacker, Defender, Support, or EcmSpecialist |
 | `Position` | `Vector2D` | Centre position in arena pixels |
 | `Heading` | `double` | Body heading in degrees (0 = North, clockwise) |
 | `GunHeading` | `double` | Absolute gun heading |
@@ -25,6 +25,7 @@ The complete snapshot of a single tank's state for a given tick. Available as `S
 | `Energy` | `double` | Current energy (0–100); 0 = destroyed |
 | `IsAlive` | `bool` | False once energy reaches 0 |
 | `DestroyedAtTick` | `long` | Tick number when destroyed; 0 if still alive |
+| `ActiveEcm` | `EcmMode` | ECM mode active this tick; visible to enemy scanners |
 
 ---
 
@@ -40,6 +41,7 @@ The command buffer that AI code fills each tick. Not directly accessible; popula
 | `RadarTurnDegrees` | `double` | Net radar rotation this tick |
 | `FirePower` | `double` | `> 0` to fire; clamped to `[0.1, 3.0]` |
 | `BroadcastMessages` | `List<SwarmMessage>` | Messages queued via `Broadcast()` |
+| `EcmMode` | `EcmMode` | ECM mode to activate this tick (default `Off`); set via `SetEcm()` |
 
 ---
 
@@ -156,8 +158,22 @@ The read-only view of the simulation world exposed to every tank.
 | `Attacker` | Direct combat, pursuit, high fire power |
 | `Defender` | Territorial control, protective positioning |
 | `Support` | Long-range fire, utility, secondary roles |
+| `EcmSpecialist` | Electronic warfare; typically carries no cannon |
 
 Roles are declared by the AI subclass and reported in `TankState.Role`. The engine imposes no mechanical differences — roles are purely advisory for swarm coordination logic.
+
+---
+
+## EcmMode Enum
+
+Controls the ECM (Electronic Counter-Measures) system. Set via `SetEcm(EcmMode)` in `OnTick`. The engine deducts the energy cost before the radar phase each tick.
+
+| Value | Effect | Energy cost/tick |
+|-------|--------|-----------------|
+| `Off` | No ECM active | 0 |
+| `Jam` | Enemy radar scans targeting this tank have a 50 % drop chance and 30 % corrupt chance. Burnthrough reduces these to 8 %/8 %. | 0.5 |
+| `Spoof` | Emits two drifting ghost contacts near this tank. Enemy scanners receive fake `OnScannedTank` events for each ghost in their sweep arc. Ghost names start with `"Ghost-"`. Burnthrough filters ~70 % of ghosts. | 0.8 |
+| `Burnthrough` | Penetrates enemy jamming and filters enemy ghost contacts for this tank's own radar. | 0.3 |
 
 ---
 

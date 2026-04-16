@@ -16,5 +16,12 @@ public enum TankRole
     Defender,
 
     /// <summary>Maintains distance, assists low-energy swarm members.</summary>
-    Support
+    Support,
+
+    /// <summary>
+    /// Electronic warfare specialist. Carries no cannon; instead dedicates all
+    /// capacity to jamming and spoofing enemy radar. An ECCM-capable variant may
+    /// forgo spoofing in favour of protecting its swarm's own radar with burnthrough.
+    /// </summary>
+    EcmSpecialist
 }

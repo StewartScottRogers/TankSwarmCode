@@ -12,6 +12,8 @@ public partial class TankSwarmArena : Form
     private int _blueSniperCount;
     private bool _blueCommanderAdded;
     private bool _roundEnded;
+    private bool _redEcmJammerAdded;
+    private bool _blueEcmOperatorAdded;
 
     // Per-swarm colours for radio log text, indexed by SwarmId (SwarmId 0 = solo/unknown)
     private static readonly Color[] _radioSwarmColours =
@@ -39,6 +41,7 @@ public partial class TankSwarmArena : Form
         arenaUserControl1.TickCompleted    += (_, _) => UpdateStatusStrip();
         arenaUserControl1.RoundEnded       += (_, _) => { _roundEnded = true; UpdateMenuState(); UpdateStatusStrip(); };
         BuildNvNSubMenu();
+        BuildEcmMenuItems();
         SyncSpeedMenuChecks(10);
         UpdateStatusStrip();
     }
@@ -90,6 +93,56 @@ public partial class TankSwarmArena : Form
         UpdateMenuState();
     }
 
+    // ── ECM menu items (added programmatically) ───────────────────────────────
+
+    private ToolStripMenuItem? _menuItemAddRedEcmJammer;
+    private ToolStripMenuItem? _menuItemAddBlueEcmOperator;
+
+    /// <summary>Injects ECM-specialist menu entries into the Red and Blue swarm menus.</summary>
+    private void BuildEcmMenuItems()
+    {
+        // Red ECM Jammer (goes after existing Red entries, before the separator/clear)
+        _menuItemAddRedEcmJammer = new ToolStripMenuItem("Add ECM Jammer (no cannon, Spoof/Jam)");
+        _menuItemAddRedEcmJammer.Click += (_, _) => MenuItemAddRedEcmJammer_Click();
+
+        // Insert before the last separator in the Red Swarm menu
+        var redMenu = _menuItemRedSwarm.DropDownItems;
+        int redClearIdx = redMenu.IndexOf(_menuItemClearAllTanks);
+        if (redClearIdx > 0)
+            redMenu.Insert(redClearIdx - 1, _menuItemAddRedEcmJammer);
+        else
+            redMenu.Add(_menuItemAddRedEcmJammer);
+
+        // Blue ECM Operator
+        _menuItemAddBlueEcmOperator = new ToolStripMenuItem("Add ECM Operator (ECCM + light cannon)");
+        _menuItemAddBlueEcmOperator.Click += (_, _) => MenuItemAddBlueEcmOperator_Click();
+
+        var blueMenu = _menuItemBlueSwarm.DropDownItems;
+        int blueClearIdx = blueMenu.IndexOf(_menuItemClearAllTanks2);
+        if (blueClearIdx > 0)
+            blueMenu.Insert(blueClearIdx - 1, _menuItemAddBlueEcmOperator);
+        else
+            blueMenu.Add(_menuItemAddBlueEcmOperator);
+    }
+
+    private void MenuItemAddRedEcmJammer_Click()
+    {
+        if (_redEcmJammerAdded) return;
+        EnsureResetAfterRound();
+        arenaUserControl1.AddTank(new RedEcmJammer());
+        _redEcmJammerAdded = true;
+        UpdateMenuState();
+    }
+
+    private void MenuItemAddBlueEcmOperator_Click()
+    {
+        if (_blueEcmOperatorAdded) return;
+        EnsureResetAfterRound();
+        arenaUserControl1.AddTank(new BlueEcmOperator());
+        _blueEcmOperatorAdded = true;
+        UpdateMenuState();
+    }
+
     // ── Red Swarm handlers ────────────────────────────────────────────────────
 
     private void MenuItemBuildDefaultRedSwarm_Click(object? sender, EventArgs e)
@@ -100,8 +153,10 @@ public partial class TankSwarmArena : Form
         arenaUserControl1.AddTank(new RedAttacker("RedBravo"));
         arenaUserControl1.AddTank(new RedFlank("RedWolf",  90));
         arenaUserControl1.AddTank(new RedFlank("RedFox",  -90));
-        _redAttackerCount = 2;
-        _redFlankerCount  = 2;
+        arenaUserControl1.AddTank(new RedEcmJammer());
+        _redAttackerCount  = 2;
+        _redFlankerCount   = 2;
+        _redEcmJammerAdded = true;
         UpdateMenuState();
     }
 
@@ -140,8 +195,10 @@ public partial class TankSwarmArena : Form
         arenaUserControl1.AddTank(new BluePatrol("BlueWest", 1));
         arenaUserControl1.AddTank(new BlueSniper("BlueEagle", topLeft: true));
         arenaUserControl1.AddTank(new BlueSniper("BlueHawk",  topLeft: false));
-        _bluePatrolCount = 2;
-        _blueCommanderAdded = true;
+        arenaUserControl1.AddTank(new BlueEcmOperator());
+        _bluePatrolCount        = 2;
+        _blueCommanderAdded     = true;
+        _blueEcmOperatorAdded   = true;
         UpdateMenuState();
     }
 
@@ -187,24 +244,28 @@ public partial class TankSwarmArena : Form
     {
         if (!_roundEnded) return;
         arenaUserControl1.Reset();
-        _redAttackerCount   = 0;
-        _redFlankerCount    = 0;
-        _bluePatrolCount    = 0;
-        _blueSniperCount    = 0;
-        _blueCommanderAdded = false;
-        _roundEnded         = false;
+        _redAttackerCount      = 0;
+        _redFlankerCount       = 0;
+        _bluePatrolCount       = 0;
+        _blueSniperCount       = 0;
+        _blueCommanderAdded    = false;
+        _redEcmJammerAdded     = false;
+        _blueEcmOperatorAdded  = false;
+        _roundEnded            = false;
         ClearRadioLog();
     }
 
     private void MenuItemClearAllTanks_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount   = 0;
-        _redFlankerCount    = 0;
-        _bluePatrolCount    = 0;
-        _blueSniperCount    = 0;
-        _blueCommanderAdded = false;
-        _roundEnded         = false;
+        _redAttackerCount      = 0;
+        _redFlankerCount       = 0;
+        _bluePatrolCount       = 0;
+        _blueSniperCount       = 0;
+        _blueCommanderAdded    = false;
+        _redEcmJammerAdded     = false;
+        _blueEcmOperatorAdded  = false;
+        _roundEnded            = false;
         ClearRadioLog();
         UpdateMenuState();
     }
@@ -235,11 +296,13 @@ public partial class TankSwarmArena : Form
     private void MenuItemResetArena_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount = 0;
-        _redFlankerCount  = 0;
-        _bluePatrolCount  = 0;
-        _blueSniperCount  = 0;
-        _roundEnded       = false;
+        _redAttackerCount     = 0;
+        _redFlankerCount      = 0;
+        _bluePatrolCount      = 0;
+        _blueSniperCount      = 0;
+        _redEcmJammerAdded    = false;
+        _blueEcmOperatorAdded = false;
+        _roundEnded           = false;
         ClearRadioLog();
         UpdateMenuState();
         UpdateStatusStrip();
@@ -266,12 +329,14 @@ public partial class TankSwarmArena : Form
     private void ConfigureNvN(int n)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount   = 0;
-        _redFlankerCount    = 0;
-        _bluePatrolCount    = 0;
-        _blueSniperCount    = 0;
-        _blueCommanderAdded = false;
-        _roundEnded         = false;
+        _redAttackerCount     = 0;
+        _redFlankerCount      = 0;
+        _bluePatrolCount      = 0;
+        _blueSniperCount      = 0;
+        _blueCommanderAdded   = false;
+        _redEcmJammerAdded    = false;
+        _blueEcmOperatorAdded = false;
+        _roundEnded           = false;
         ClearRadioLog();
 
         BuildRedTeam(n);
@@ -464,6 +529,9 @@ public partial class TankSwarmArena : Form
         _menuItemAddBlueSniper.Enabled         = canBuild;
         _menuItemAddBlueCommander.Enabled      = canBuild && !_blueCommanderAdded;
         _menuItemClearAllTanks2.Enabled        = canBuild;
+
+        if (_menuItemAddRedEcmJammer   is not null) _menuItemAddRedEcmJammer.Enabled   = canBuild && !_redEcmJammerAdded;
+        if (_menuItemAddBlueEcmOperator is not null) _menuItemAddBlueEcmOperator.Enabled = canBuild && !_blueEcmOperatorAdded;
         _menuItemPlayerVsPlayer.Enabled        = canBuild;
 
         bool hasTanks = arenaUserControl1.TankCount > 0;

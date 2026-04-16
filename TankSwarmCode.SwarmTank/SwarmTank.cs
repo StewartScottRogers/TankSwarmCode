@@ -95,6 +95,10 @@ public abstract class SwarmTankBase : ISwarmTank
     public void SetFire(double power) =>
         _pendingCommand = _pendingCommand with { FirePower = Math.Clamp(power, 0.1, 3.0) };
 
+    /// <inheritdoc/>
+    public void SetEcm(EcmMode mode) =>
+        _pendingCommand = _pendingCommand with { EcmMode = mode };
+
     // ── Swarm communication ───────────────────────────────────────────────────
 
     /// <inheritdoc/>

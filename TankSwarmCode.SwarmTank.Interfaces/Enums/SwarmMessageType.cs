@@ -25,6 +25,13 @@ public enum SwarmMessageType
     Custom,
 
     /// <summary>
+    /// <summary>
+    /// Sender has detected enemy ECM activity (jamming or ghost contacts).
+    /// Recipients should activate <see cref="EcmMode.Burnthrough"/> to protect their radar.
+    /// <c>CustomData</c> carries a human-readable description of the threat.
+    /// </summary>
+    EcmAlert,
+
     /// Automatic radar sighting broadcast. The message's
     /// <see cref="TankSwarmCode.SwarmTank.Interfaces.Models.SwarmMessage.RadarContact"/>
     /// carries the full contact snapshot.

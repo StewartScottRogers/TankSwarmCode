@@ -63,7 +63,8 @@ These read-only properties are always current (updated each tick by the engine):
 | `IsAlive` | `bool` | False after `OnDeath` |
 | `Name` | `string` | Unique tank name |
 | `SwarmId` | `int` | Swarm group (0 = solo) |
-| `Role` | `TankRole` | Scout, Attacker, Defender, or Support |
+| `Role` | `TankRole` | Scout, Attacker, Defender, Support, or EcmSpecialist |
+| `ActiveEcm` | `EcmMode` | ECM mode active this tick (Off / Jam / Spoof / Burnthrough) |
 
 ---
 
@@ -98,6 +99,21 @@ SetTurnRadarLeft(double degrees)
 ```
 
 To keep the radar locked on a target, recalculate and set the radar turn every tick. A common pattern is to spin the radar continuously by calling `SetTurnRadarRight(double.MaxValue)` (clamped to 45°/tick by the engine).
+
+### ECM (Electronic Counter-Measures)
+
+```csharp
+SetEcm(EcmMode mode)   // Off / Jam / Spoof / Burnthrough
+```
+
+Activates an ECM mode for the current tick. The engine deducts the energy cost and applies the effect during radar processing. See [Chapter 13: ECM System](ch13-ecm-system.md) for full details.
+
+| Mode | Effect | Energy/tick |
+|------|--------|-------------|
+| `Off` | No effect | 0 |
+| `Jam` | Corrupts / drops enemy radar scans of this tank | 0.5 |
+| `Spoof` | Projects ghost contacts into enemy radar sweeps | 0.8 |
+| `Burnthrough` | Pierces enemy jamming; filters ghost contacts | 0.3 |
 
 ---
 

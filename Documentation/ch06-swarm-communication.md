@@ -52,6 +52,7 @@ The engine queues the message and delivers it to all living allies at the end of
 | `FormationMove` | Commander orders a positional manoeuvre |
 | `FallBack` | Retreat order |
 | `RoleChange` | Dynamic role reassignment (e.g., Scout promoted to Attacker) |
+| `EcmAlert` | Sender has detected enemy jamming or ghost contacts; allies should activate `Burnthrough`. `CustomData` carries a human-readable description. |
 | `Custom` | Anything else; inspect `CustomData` for the payload |
 
 ---

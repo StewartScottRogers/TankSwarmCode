@@ -53,6 +53,24 @@ The gun fires only when `|gunBearing - aimAngle| < 5°`.
 
 ---
 
+### RedEcmJammer
+
+**File**: `TankSwarmCode.SwarmTanks.Red/RedEcmJammer.cs`  
+**Role**: EcmSpecialist  
+**Cannon**: None
+
+**Strategy**:
+- Carries no cannon — all energy is reserved for electronic warfare.
+- Default mode: **Spoof** — projects two ghost-tank echoes that drift around the arena, polluting every enemy's `RadarMap` with phantom contacts. Enemies who don't run Burnthrough will waste fire on these ghosts and misread the battlefield.
+- Threat response: switches to **Jam** for 25 ticks when hit by a bullet, making it very difficult for the shooter to re-acquire it. Reverts to Spoof automatically.
+- Orbits the arena centre so its ghost projections land in the contested mid-arena space where enemies are most active.
+- Broadcasts `EcmAlert` when it takes fire, alerting allies that the enemy has located it.
+- Broadcasts `EnemySpotted` for every radar contact so the swarm retains a common picture even though the jammer never fires.
+
+**Key interaction**: If the enemy swarm does not include a Burnthrough-capable tank, `RedEcmJammer`'s ghosts will contaminate the entire enemy `RadarMap` indefinitely. Adding a `BlueEcmOperator` to the Blue side is the primary counter.
+
+---
+
 ### RedFlank (RedWolf & RedFox)
 
 **File**: `TankSwarmCode.SwarmTanks.Red/RedFlank.cs` (~135 lines)  
@@ -146,6 +164,25 @@ For each bullet in Arena.Bullets:
 
 ---
 
+### BlueEcmOperator
+
+**File**: `TankSwarmCode.SwarmTanks.Blue/BlueEcmOperator.cs`  
+**Role**: EcmSpecialist  
+**Cannon**: Light (max 2.0 power)
+
+**Strategy**:
+- Primary mission: **Burnthrough** — keeps its radar cleared of enemy jamming and ghost echoes, protecting the Blue swarm's radar picture.
+- Detects `"Ghost-*"` contacts in `OnScannedTank`, broadcasts `EcmAlert`, and forces itself into Burnthrough mode for 40 ticks — ensuring it sees through the active spoof field.
+- **Responds to ally `EcmAlert` messages**: immediately activates Burnthrough, coordinating ECCM coverage across the swarm.
+- **Offensive Jam window**: when energy exceeds 70 and an enemy ECM tank has been confirmed, switches to Jam for 20 ticks, disrupting the enemy's Spoof pipeline and forcing them defensive.
+- Falls back to `Off` when energy drops below 25, preserving survival.
+- Patrols a figure-8 path to maintain arena coverage.
+- Fires opportunistically at confirmed enemy contacts (not ghosts) at up to 2.0 power.
+
+**Key interaction**: `BlueEcmOperator` directly counters `RedEcmJammer`. Its Burnthrough reduces ghost filter chance to ~70 % per sweep, and its `EcmAlert` broadcasts can trigger Burnthrough across the whole Blue swarm if other tanks implement `OnSwarmMessage`.
+
+---
+
 ### BlueWarden
 
 **File**: `TankSwarmCode.SwarmTanks.Blue/BlueWarden.cs` (~165 lines)  
@@ -164,12 +201,13 @@ For each bullet in Arena.Bullets:
 
 | | Red Swarm | Blue Swarm |
 |---|-----------|------------|
-| **Philosophy** | Aggressive, fast, offensive | Coordinated, defensive, controlled |
-| **Radar coverage** | Scout-driven, shared automatically | Commander-driven with broadcast alerts |
+| **Philosophy** | Aggressive, fast, offensive + EM deception | Coordinated, defensive, ECCM-protected |
+| **Radar coverage** | Scout-driven + ECM ghost injection | Commander-driven + Operator Burnthrough |
 | **Engagement range** | Close-to-medium | Medium-to-long |
-| **Coordination type** | Loose (auto RadarShare, backup request) | Tight (TargetLocked orders, FormationMove) |
-| **Special tactics** | Flanking pincer, linear prediction | Corner camping, bullet evasion, priority targeting |
-| **Tank count** | 5 | 6 |
+| **Coordination type** | Loose (auto RadarShare, backup request, EcmAlert) | Tight (TargetLocked, FormationMove, EcmAlert response) |
+| **Special tactics** | Flanking pincer, linear prediction, ghost spoofing | Corner camping, bullet evasion, priority targeting, ECCM |
+| **ECM capability** | Jammer (Spoof → Jam on threat) | Operator (Burnthrough → Jam offensive) |
+| **Tank count** | 6 (inc. ECM-Jammer) | 7 (inc. ECM-Operator) |
 
 ---
 

@@ -1,3 +1,5 @@
+using TankSwarmCode.SwarmTank.Interfaces.Enums;
+
 namespace TankSwarmCode.SwarmTank.Interfaces.Models;
 
 /// <summary>
@@ -29,4 +31,11 @@ public record TankCommand
 
     /// <summary>Messages to broadcast to swarm allies this tick.</summary>
     public IReadOnlyList<SwarmMessage> BroadcastMessages { get; init; } = [];
+
+    /// <summary>
+    /// ECM mode to activate this tick. Defaults to <see cref="EcmMode.Off"/>.
+    /// Active modes drain energy each tick; the engine silently ignores the request
+    /// if the tank lacks sufficient energy.
+    /// </summary>
+    public EcmMode EcmMode { get; init; }
 }

@@ -1,6 +1,6 @@
 # Chapter 12: Configuration & Constants
 
-[← Arena Rendering](ch11-rendering.md) | [Table of Contents](TOC.md)
+[← Arena Rendering](ch11-rendering.md) | [Table of Contents](TOC.md) | [Next: ECM System →](ch13-ecm-system.md) | [Next: ECM System →](ch13-ecm-system.md)
 
 ---
 
@@ -151,4 +151,4 @@ Wall
 
 ---
 
-[← Arena Rendering](ch11-rendering.md) | [Table of Contents](TOC.md)
+[← Arena Rendering](ch11-rendering.md) | [Table of Contents](TOC.md) | [Next: ECM System →](ch13-ecm-system.md)

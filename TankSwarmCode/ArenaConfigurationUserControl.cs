@@ -55,6 +55,7 @@ public partial class ArenaConfigurationUserControl : UserControl
             ("Radar reflections",   a => a.ShowRadarReflections,  (a, v) => a.ShowRadarReflections  = v),
             ("Radar sweep trails",  a => a.ShowRadarSweepTrails,  (a, v) => a.ShowRadarSweepTrails  = v),
             ("Scan halos",          a => a.ShowScanHalos,         (a, v) => a.ShowScanHalos         = v),
+            ("ECM effects",         a => a.ShowEcmEffects,        (a, v) => a.ShowEcmEffects        = v),
             ("Bullets",             a => a.ShowBullets,           (a, v) => a.ShowBullets           = v),
             ("Explosions & flames", a => a.ShowExplosions,        (a, v) => a.ShowExplosions        = v),
             ("Energy bars",         a => a.ShowEnergyBars,        (a, v) => a.ShowEnergyBars        = v),
