@@ -28,4 +28,11 @@ public interface IArenaContext
     /// Useful for evasion logic.
     /// </summary>
     IReadOnlyList<BulletState> GetActiveBullets();
+
+    /// <summary>
+    /// Returns the list of rectangular obstacles placed in the arena for this round.
+    /// Obstacles block movement, bullets, and radar line-of-sight.
+    /// Use this for navigation and firing-angle calculations.
+    /// </summary>
+    IReadOnlyList<ObstacleDefinition> Obstacles { get; }
 }

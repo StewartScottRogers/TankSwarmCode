@@ -710,6 +710,8 @@ public partial class ArenaUserControl : UserControl
         if (_focusedTank is not null)
         {
             DrawSensorView(g);
+            // Obstacles on top of sensor-view ghosts so walls look solid
+            DrawObstacles(g);
         }
         else
         {
@@ -747,6 +749,10 @@ public partial class ArenaUserControl : UserControl
                 if (tank.State.IsAlive)
                     DrawTank(g, tank.State);
             }
+
+            // Layer 4.5 – Obstacles (after tanks/hulks/bullets so walls are always solid;
+            // any residual visual overlap from physics transitions is covered here)
+            DrawObstacles(g);
 
             // Layer 5 – Explosion blasts and burning flames (on top of everything for impact)
             foreach (ISwarmTank tank in _engine.Tanks)
@@ -935,11 +941,121 @@ public partial class ArenaUserControl : UserControl
         }
     }
 
+    // ── Obstacle shadow geometry helpers ─────────────────────────────────────
+
+    /// <summary>
+    /// Returns the GDI+ start angle and sweep span (degrees) of the angular shadow an
+    /// obstacle casts from position (<paramref name="scanX"/>, <paramref name="scanY"/>).
+    /// Returns span = 0 when the scanner is inside or touching the obstacle.
+    /// Angles are in GDI+ convention (0 = east, clockwise).
+    /// </summary>
+    private static (float startDeg, float spanDeg) GetObstacleShadowArc(
+        float scanX, float scanY, ObstacleDefinition obs)
+    {
+        float ox = (float)obs.X - scanX;
+        float oy = (float)obs.Y - scanY;
+        float ow = (float)obs.Width;
+        float oh = (float)obs.Height;
+
+        // Bail if scanner is on or inside the obstacle
+        float cx = Math.Clamp(0f, ox, ox + ow);
+        float cy = Math.Clamp(0f, oy, oy + oh);
+        if (cx * cx + cy * cy < 0.01f) return (0f, 0f);
+
+        PointF[] corners = [new(ox, oy), new(ox + ow, oy), new(ox + ow, oy + oh), new(ox, oy + oh)];
+        float[]  angles  = corners.Select(c => MathF.Atan2(c.Y, c.X)).ToArray();
+
+        // Remap to avoid wraparound splitting the angular span at ±π
+        if (angles.Max() - angles.Min() > MathF.PI)
+            for (int k = 0; k < angles.Length; k++)
+                if (angles[k] < 0) angles[k] += 2 * MathF.PI;
+
+        float minA    = angles.Min();
+        float spanDeg = (angles.Max() - minA) * 180f / MathF.PI;
+
+        return spanDeg > 0.5f ? (minA * 180f / MathF.PI, spanDeg) : (0f, 0f);
+    }
+
+    /// <summary>
+    /// Computes the world-space shadow trapezoid cast by <paramref name="obs"/> as seen
+    /// from (<paramref name="scanX"/>, <paramref name="scanY"/>), extending to
+    /// <paramref name="farDist"/> pixels.  Returns null if the obstacle is out of range
+    /// or the scanner is inside it.
+    /// <para>
+    /// The polygon's inner edge is the obstacle's silhouette (near face); the outer edges
+    /// extend along the two tangent rays to <paramref name="farDist"/>.  Using this as a
+    /// <see cref="System.Drawing.Drawing2D.CombineMode.Exclude"/> clip region causes GDI+
+    /// to skip drawing anything in the occluded zone beyond the obstacle.
+    /// </para>
+    /// </summary>
+    private static PointF[]? ComputeObstacleShadowPolygon(
+        float scanX, float scanY, ObstacleDefinition obs, float farDist)
+    {
+        float ox = (float)obs.X - scanX;
+        float oy = (float)obs.Y - scanY;
+        float ow = (float)obs.Width;
+        float oh = (float)obs.Height;
+
+        float cx = Math.Clamp(0f, ox, ox + ow);
+        float cy = Math.Clamp(0f, oy, oy + oh);
+        float nearDistSq = cx * cx + cy * cy;
+        if (nearDistSq < 0.01f || nearDistSq >= farDist * farDist) return null;
+
+        PointF[] corners = [new(ox, oy), new(ox + ow, oy), new(ox + ow, oy + oh), new(ox, oy + oh)];
+        float[]  angles  = corners.Select(c => MathF.Atan2(c.Y, c.X)).ToArray();
+
+        if (angles.Max() - angles.Min() > MathF.PI)
+            for (int k = 0; k < angles.Length; k++)
+                if (angles[k] < 0) angles[k] += 2 * MathF.PI;
+
+        int minIdx = 0, maxIdx = 0;
+        for (int k = 1; k < angles.Length; k++)
+        {
+            if (angles[k] < angles[minIdx]) minIdx = k;
+            if (angles[k] > angles[maxIdx]) maxIdx = k;
+        }
+
+        float minA = angles[minIdx];
+        float maxA = angles[maxIdx];
+
+        // Trapezoid in world space: obstacle near-face corners → far tangent points
+        return
+        [
+            new(scanX + corners[minIdx].X, scanY + corners[minIdx].Y),
+            new(scanX + corners[maxIdx].X, scanY + corners[maxIdx].Y),
+            new(scanX + MathF.Cos(maxA) * farDist, scanY + MathF.Sin(maxA) * farDist),
+            new(scanX + MathF.Cos(minA) * farDist, scanY + MathF.Sin(minA) * farDist),
+        ];
+    }
+
     private void DrawBackground(Graphics g)
     {
         g.FillRectangle(Brushes.Black, ClientRectangle);
         using Pen borderPen = new(Color.FromArgb(60, 60, 60), 2);
         g.DrawRectangle(borderPen, 1, 1, ClientSize.Width - 2, ClientSize.Height - 2);
+    }
+
+    private void DrawObstacles(Graphics g)
+    {
+        if (_engine is null) return;
+        using SolidBrush fill    = new(Color.FromArgb(85, 68, 50));
+        using Pen         border = new(Color.FromArgb(130, 105, 72), 1);
+        using Pen         hilite = new(Color.FromArgb(160, 130, 90), 1);
+
+        foreach (ObstacleDefinition obs in _engine.Obstacles)
+        {
+            float ox = (float)obs.X;
+            float oy = (float)obs.Y;
+            float ow = (float)obs.Width;
+            float oh = (float)obs.Height;
+
+            g.FillRectangle(fill, ox, oy, ow, oh);
+            g.DrawRectangle(border, ox, oy, ow, oh);
+
+            // Subtle top-left highlight to give a stone/block feel
+            g.DrawLine(hilite, ox + 1, oy + 1, ox + ow - 2, oy + 1);
+            g.DrawLine(hilite, ox + 1, oy + 1, ox + 1,      oy + oh - 2);
+        }
     }
 
     private void DrawTank(Graphics g, TankState tank)
@@ -1107,6 +1223,38 @@ public partial class ArenaUserControl : UserControl
                 -innerR, -innerR,
                 innerR * 2, innerR * 2,
                 flashStart, flashSpan);
+        }
+
+        // ── Obstacle shadow sectors ───────────────────────────────────────────
+        // Dark filled pie slices show the angular zones blocked by obstacles, painted
+        // on top of the trail so the sweep visually "stops" at each obstacle.
+        if (_engine is not null)
+        {
+            float tx      = (float)tank.Position.X;
+            float ty      = (float)tank.Position.Y;
+            float farDist = RadarLength + 3f; // slightly past the pie edge
+
+            using SolidBrush shadowBrush = new(Color.FromArgb(200, Color.Black));
+
+            using Pen shadowEdgePen = new(Color.FromArgb(110, Color.LightGray), 0.9f);
+
+            foreach (ObstacleDefinition obs in _engine.Obstacles)
+            {
+                (float startDeg, float spanDeg) = GetObstacleShadowArc(tx, ty, obs);
+                if (spanDeg <= 0f) continue;
+
+                g.FillPie(shadowBrush,
+                    -farDist, -farDist, farDist * 2, farDist * 2,
+                    startDeg, spanDeg);
+
+                // Edge lines along both shadow boundaries
+                float e1 = startDeg            * MathF.PI / 180f;
+                float e2 = (startDeg + spanDeg) * MathF.PI / 180f;
+                g.DrawLine(shadowEdgePen,
+                    0f, 0f, MathF.Cos(e1) * farDist, MathF.Sin(e1) * farDist);
+                g.DrawLine(shadowEdgePen,
+                    0f, 0f, MathF.Cos(e2) * farDist, MathF.Sin(e2) * farDist);
+            }
         }
 
         // ── Leading-edge beam line at current heading ─────────────────────────
@@ -1722,21 +1870,66 @@ public partial class ArenaUserControl : UserControl
             float fade   = t;                                         // linear: dim at origin, full brightness at contact
             if (radius > 1f && fade > 0.01f)
             {
-                float penW = Math.Max(1f, 2.5f * (1f - t * 0.6f));
-                using Pen arcPen = new(Color.FromArgb((int)(230 * fade), spotterColor), penW);
-                g.DrawArc(arcPen,
-                    sx - radius, sy - radius, radius * 2, radius * 2,
-                    outboundMid - arcSpan / 2f, arcSpan);
-
-                // Two edge lines from the spotter back to each end of the arc.
-                float edgeAlpha = (int)(160 * fade);
-                using Pen trailPen = new(Color.FromArgb((int)edgeAlpha, spotterColor), 0.8f);
-                foreach (float edgeAngleDeg in new[] { outboundMid - arcSpan / 2f, outboundMid + arcSpan / 2f })
+                // Build an exclusion clip from obstacle shadow polygons so the outbound
+                // arc and edge lines are invisible where obstacles block line-of-sight.
+                // The shadow trapezoid starts at each obstacle's near face, so only the
+                // portion of the wavefront that has already passed an obstacle is hidden.
+                GraphicsState? preClip = null;
+                if (_engine is not null && _engine.Obstacles.Count > 0)
                 {
-                    float edgeRad = edgeAngleDeg * MathF.PI / 180f;
-                    float edgeX   = sx + MathF.Cos(edgeRad) * radius;
-                    float edgeY   = sy + MathF.Sin(edgeRad) * radius;
-                    g.DrawLine(trailPen, sx, sy, edgeX, edgeY);
+                    using GraphicsPath shadowPath = new();
+                    foreach (ObstacleDefinition obs in _engine.Obstacles)
+                    {
+                        PointF[]? poly = ComputeObstacleShadowPolygon(
+                            sx, sy, obs, radius + 60f);
+                        if (poly is not null)
+                        {
+                            shadowPath.StartFigure();
+                            shadowPath.AddPolygon(poly);
+                        }
+                    }
+                    preClip = g.Save();
+                    g.SetClip(shadowPath, CombineMode.Exclude);
+                }
+
+                try
+                {
+                    float penW = Math.Max(1f, 2.5f * (1f - t * 0.6f));
+                    using Pen arcPen = new(Color.FromArgb((int)(230 * fade), spotterColor), penW);
+                    g.DrawArc(arcPen,
+                        sx - radius, sy - radius, radius * 2, radius * 2,
+                        outboundMid - arcSpan / 2f, arcSpan);
+
+                    // Two edge lines from the spotter back to each end of the arc.
+                    float edgeAlpha = (int)(160 * fade);
+                    using Pen trailPen = new(Color.FromArgb((int)edgeAlpha, spotterColor), 0.8f);
+                    foreach (float edgeAngleDeg in new[] { outboundMid - arcSpan / 2f, outboundMid + arcSpan / 2f })
+                    {
+                        float edgeRad = edgeAngleDeg * MathF.PI / 180f;
+                        float edgeX   = sx + MathF.Cos(edgeRad) * radius;
+                        float edgeY   = sy + MathF.Sin(edgeRad) * radius;
+                        g.DrawLine(trailPen, sx, sy, edgeX, edgeY);
+                    }
+                }
+                finally
+                {
+                    if (preClip is not null) g.Restore(preClip);
+                }
+
+                // Shadow edge lines — drawn AFTER restoring clip so they are visible
+                // even in the occluded zone, marking the exact shadow boundary.
+                if (_engine is not null && radius > 5f)
+                {
+                    using Pen edgePen = new(Color.FromArgb((int)(70 * fade), spotterColor), 0.7f);
+                    foreach (ObstacleDefinition obs in _engine.Obstacles)
+                    {
+                        PointF[]? poly = ComputeObstacleShadowPolygon(
+                            sx, sy, obs, radius + 60f);
+                        if (poly is null) continue;
+                        // poly[0]/[3] = left silhouette edge, poly[1]/[2] = right silhouette edge
+                        g.DrawLine(edgePen, poly[0].X, poly[0].Y, poly[3].X, poly[3].Y);
+                        g.DrawLine(edgePen, poly[1].X, poly[1].Y, poly[2].X, poly[2].Y);
+                    }
                 }
             }
         }

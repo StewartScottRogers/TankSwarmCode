@@ -26,4 +26,6 @@ internal sealed class ArenaContext : IArenaContext
                .Where(b => b.Active)
                .Select(b => b.ToBulletState())
                .ToList();
+
+    public IReadOnlyList<ObstacleDefinition> Obstacles => _engine.Obstacles;
 }

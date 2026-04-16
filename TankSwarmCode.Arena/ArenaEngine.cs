@@ -16,6 +16,7 @@ public sealed class ArenaEngine : IArena
 
     internal readonly List<TankRuntimeState> RuntimeTanks = [];
     internal readonly List<BulletRuntimeState> RuntimeBullets = [];
+    private readonly List<ObstacleDefinition> _obstacles = [];
 
     private readonly ArenaContext _context;
     private readonly Random _rng = new();
@@ -39,6 +40,8 @@ public sealed class ArenaEngine : IArena
     public IReadOnlyList<ISwarmTank> Tanks => _tanksSnapshot;
 
     public IReadOnlyList<BulletState> Bullets => _bulletsSnapshot;
+
+    public IReadOnlyList<ObstacleDefinition> Obstacles => _obstacles;
 
     public event EventHandler<TickEventArgs>? TickCompleted;
     public event EventHandler<RoundEndedEventArgs>? RoundEnded;
@@ -90,6 +93,7 @@ public sealed class ArenaEngine : IArena
         if (RuntimeTanks.Count == 0)
             throw new InvalidOperationException("Add at least one tank before starting.");
 
+        GenerateObstacles();
         SpawnTanks();
 
         foreach (TankRuntimeState rts in RuntimeTanks)
@@ -138,6 +142,7 @@ public sealed class ArenaEngine : IArena
         TickNumber = 0;
         RuntimeTanks.Clear();
         RuntimeBullets.Clear();
+        _obstacles.Clear();
     }
 
     // ── Main tick ─────────────────────────────────────────────────────────────
@@ -286,6 +291,56 @@ public sealed class ArenaEngine : IArena
 
         rts.X = nx;
         rts.Y = ny;
+
+        // --- Obstacle collision ---
+        PushTankFromObstacles(rts);
+    }
+
+    /// <summary>
+    /// Pushes <paramref name="rts"/> out of any obstacle it currently overlaps.
+    /// Uses the tank body's half-diagonal as the clearance radius so that square
+    /// body corners never visually penetrate an obstacle face.
+    /// Safe to call after any position change (movement, tank-tank separation, etc.).
+    /// </summary>
+    private void PushTankFromObstacles(TankRuntimeState rts)
+    {
+        const double obsHalf = ArenaConstants.TankHalfSize * 1.415 + 0.5; // ≈ TankHalfSize*√2 + margin
+        double half = ArenaConstants.TankHalfSize;
+
+        foreach (ObstacleDefinition obs in _obstacles)
+        {
+            double cx = Math.Clamp(rts.X, obs.X, obs.X + obs.Width);
+            double cy = Math.Clamp(rts.Y, obs.Y, obs.Y + obs.Height);
+            double cdx = rts.X - cx;
+            double cdy = rts.Y - cy;
+            double distSq = cdx * cdx + cdy * cdy;
+
+            if (distSq >= obsHalf * obsHalf) continue; // no overlap
+
+            rts.Velocity = 0;
+
+            if (distSq < 0.0001) // center is inside — push on minimum axis
+            {
+                double oL = rts.X - obs.X;
+                double oR = obs.X + obs.Width  - rts.X;
+                double oT = rts.Y - obs.Y;
+                double oB = obs.Y + obs.Height - rts.Y;
+                double minOv = Math.Min(Math.Min(oL, oR), Math.Min(oT, oB));
+                if      (minOv == oL) rts.X = obs.X - obsHalf;
+                else if (minOv == oR) rts.X = obs.X + obs.Width  + obsHalf;
+                else if (minOv == oT) rts.Y = obs.Y - obsHalf;
+                else                  rts.Y = obs.Y + obs.Height + obsHalf;
+            }
+            else
+            {
+                double dist = Math.Sqrt(distSq);
+                rts.X += (cdx / dist) * (obsHalf - dist);
+                rts.Y += (cdy / dist) * (obsHalf - dist);
+            }
+
+            rts.X = Math.Clamp(rts.X, half, Width  - half);
+            rts.Y = Math.Clamp(rts.Y, half, Height - half);
+        }
     }
 
     private void ApplyFiring(TankRuntimeState rts, TankCommand cmd)
@@ -349,6 +404,20 @@ public sealed class ArenaEngine : IArena
             // Remove bullet if out of bounds
             if (b.X < 0 || b.X > Width || b.Y < 0 || b.Y > Height)
                 b.Active = false;
+
+            // Remove bullet if it hit an obstacle
+            if (b.Active)
+            {
+                foreach (ObstacleDefinition obs in _obstacles)
+                {
+                    if (b.X >= obs.X && b.X <= obs.X + obs.Width &&
+                        b.Y >= obs.Y && b.Y <= obs.Y + obs.Height)
+                    {
+                        b.Active = false;
+                        break;
+                    }
+                }
+            }
         }
     }
 
@@ -397,12 +466,14 @@ public sealed class ArenaEngine : IArena
                 {
                     a.X = Math.Clamp(a.X + nx * push, ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                     a.Y = Math.Clamp(a.Y + ny * push, ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
+                    PushTankFromObstacles(a); // tank-tank push may have sent a into an obstacle
                 }
 
                 if (b.IsAlive)
                 {
                     b.X = Math.Clamp(b.X - nx * push, ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                     b.Y = Math.Clamp(b.Y - ny * push, ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
+                    PushTankFromObstacles(b);
                 }
             }
         }
@@ -438,6 +509,7 @@ public sealed class ArenaEngine : IArena
 
                 live.X = Math.Clamp(live.X + nx * (overlap + 0.5), ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                 live.Y = Math.Clamp(live.Y + ny * (overlap + 0.5), ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
+                PushTankFromObstacles(live);
             }
         }
     }
@@ -454,6 +526,19 @@ public sealed class ArenaEngine : IArena
                                  .BearingTo(new Vector2D(target.X, target.Y));
 
             if (!AngleInSweep(bearing, sweepStart, sweepEnd)) continue;
+
+            // Check line-of-sight — obstacles block radar
+            bool losBlocked = false;
+            foreach (ObstacleDefinition obs in _obstacles)
+            {
+                if (SegmentIntersectsRect(scanner.X, scanner.Y, target.X, target.Y,
+                                          obs.X, obs.Y, obs.Width, obs.Height))
+                {
+                    losBlocked = true;
+                    break;
+                }
+            }
+            if (losBlocked) continue;
 
             double distance = Math.Sqrt(Math.Pow(target.X - scanner.X, 2)
                                       + Math.Pow(target.Y - scanner.Y, 2));
@@ -522,7 +607,45 @@ public sealed class ArenaEngine : IArena
         RoundEnded?.Invoke(this, new RoundEndedEventArgs(true, TickNumber));
     }
 
-    // ── Spawning ──────────────────────────────────────────────────────────────
+    // ── Spawning & obstacle generation ────────────────────────────────────────
+
+    /// <summary>
+    /// Randomly places rectangular obstacles in the arena for the upcoming round.
+    /// Count scales with arena area; each obstacle is kept away from the walls and
+    /// from other obstacles so tanks have room to navigate.
+    /// </summary>
+    private void GenerateObstacles()
+    {
+        _obstacles.Clear();
+
+        double arenaArea  = Width * Height;
+        int    count      = Math.Clamp((int)(arenaArea / 45_000), 4, 14);
+        double wallMargin = ArenaConstants.TankHalfSize * 6; // keep obstacles clear of walls
+        double obsGap     = ArenaConstants.TankHalfSize * 2; // minimum gap between obstacles
+
+        for (int i = 0; i < count; i++)
+        {
+            for (int attempt = 0; attempt < 100; attempt++)
+            {
+                double w = _rng.NextDouble() * 70 + 25; // 25–95 px wide
+                double h = _rng.NextDouble() * 60 + 20; // 20–80 px tall
+                double x = _rng.NextDouble() * (Width  - wallMargin * 2 - w) + wallMargin;
+                double y = _rng.NextDouble() * (Height - wallMargin * 2 - h) + wallMargin;
+
+                bool overlaps = _obstacles.Any(obs =>
+                    x < obs.X + obs.Width  + obsGap &&
+                    x + w > obs.X          - obsGap &&
+                    y < obs.Y + obs.Height + obsGap &&
+                    y + h > obs.Y          - obsGap);
+
+                if (!overlaps)
+                {
+                    _obstacles.Add(new ObstacleDefinition(x, y, w, h));
+                    break;
+                }
+            }
+        }
+    }
 
     private void SpawnTanks()
     {
@@ -546,7 +669,17 @@ public sealed class ArenaEngine : IArena
                         return Math.Sqrt(dx * dx + dy * dy) < minSep;
                     });
 
-                if (!tooClose || attempt == 199)
+                double spawnObsHalf = ArenaConstants.TankHalfSize * Math.Sqrt(2.0) + 4.0; // visual clearance at spawn
+                bool insideObstacle = !tooClose && _obstacles.Any(obs =>
+                {
+                    double closestX = Math.Clamp(candidateX, obs.X, obs.X + obs.Width);
+                    double closestY = Math.Clamp(candidateY, obs.Y, obs.Y + obs.Height);
+                    double dx = candidateX - closestX;
+                    double dy = candidateY - closestY;
+                    return Math.Sqrt(dx * dx + dy * dy) < spawnObsHalf;
+                });
+
+                if ((!tooClose && !insideObstacle) || attempt == 199)
                 {
                     rts.X = candidateX;
                     rts.Y = candidateY;
@@ -607,6 +740,34 @@ public sealed class ArenaEngine : IArena
 
         // The angle is inside the swept sector when it is between 0 and delta (same sign).
         return delta >= 0 ? (dist >= 0 && dist <= delta) : (dist <= 0 && dist >= delta);
+    }
+
+    /// <summary>
+    /// Liang–Barsky segment-vs-AABB test. Returns true if the segment from
+    /// (x1,y1) to (x2,y2) intersects or is contained by the rectangle.
+    /// </summary>
+    private static bool SegmentIntersectsRect(
+        double x1, double y1, double x2, double y2,
+        double rx, double ry, double rw, double rh)
+    {
+        double dx = x2 - x1;
+        double dy = y2 - y1;
+        double t0 = 0.0, t1 = 1.0;
+
+        if (!Clip(-dx, x1 - rx,       ref t0, ref t1)) return false;
+        if (!Clip( dx, rx + rw - x1,  ref t0, ref t1)) return false;
+        if (!Clip(-dy, y1 - ry,       ref t0, ref t1)) return false;
+        if (!Clip( dy, ry + rh - y1,  ref t0, ref t1)) return false;
+        return true;
+
+        static bool Clip(double p, double q, ref double t0, ref double t1)
+        {
+            if (Math.Abs(p) < 1e-10) return q >= 0; // parallel — inside only if q ≥ 0
+            double t = q / p;
+            if (p < 0) t0 = Math.Max(t0, t);
+            else       t1 = Math.Min(t1, t);
+            return t0 <= t1;
+        }
     }
 
     private static void SafeCall(Action action)
