@@ -30,6 +30,8 @@ public partial class ArenaUserControl : UserControl
     // Rendering constants
     private const int TankBodySize = 18;
     private const int GunLength = 22;
+    private const int BarrelW = 4;   // cannon barrel width (px)
+    private const int TurretR = 5;   // turret circle radius (px)
     private const int RadarLength = 16;
     private const int EnergyBarWidth = 36;
     private const int EnergyBarHeight = 4;
@@ -64,6 +66,9 @@ public partial class ArenaUserControl : UserControl
     // Screen bounds of each panel from the last paint pass — used for hover hit-testing.
     private readonly Dictionary<string, RectangleF> _panelBounds    = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RectangleF> _closeBtnBounds = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, RectangleF> _ecmBtnBounds   = new(StringComparer.Ordinal);
+    // ECM mode currently forced via the panel button (null = let tank AI decide)
+    private readonly Dictionary<string, TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode?> _ecmOverrides = new(StringComparer.Ordinal);
     private string? _hoveredPanelName;
 
     // Sensor-view: non-null while the user holds LMB on a tank.
@@ -92,6 +97,8 @@ public partial class ArenaUserControl : UserControl
     public bool ShowHud              { get; set; } = true;
     [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
     public bool ShowInfoPanels       { get; set; } = true;
+    [System.ComponentModel.DesignerSerializationVisibility(System.ComponentModel.DesignerSerializationVisibility.Hidden)]
+    public bool ShowEcmEffects       { get; set; } = true;
 
     // Info-panel layout constants
     private const int InfoPanelWidth   = 165;
@@ -305,6 +312,8 @@ public partial class ArenaUserControl : UserControl
         _explosionBirthTimes.Clear();
         _attachedPanels.Clear();
         _closeBtnBounds.Clear();
+        _ecmBtnBounds.Clear();
+        _ecmOverrides.Clear();
         _focusedTank = null;
         _pinnedTank  = null;
         _waitingForPulse = false;
@@ -327,14 +336,34 @@ public partial class ArenaUserControl : UserControl
         }
         else if (e.Button == MouseButtons.Left)
         {
-            // Check if the click landed on a panel close button first
+            // Check close buttons first
             foreach (var (name, btnRect) in _closeBtnBounds)
             {
                 if (btnRect.Contains(e.X, e.Y))
                 {
                     _attachedPanels.Remove(name);
                     _closeBtnBounds.Remove(name);
+                    _ecmBtnBounds.Remove(name);
                     _panelBounds.Remove(name);
+                    // ECM override intentionally preserved — tank keeps forced mode even with panel closed
+                    Invalidate();
+                    return;
+                }
+            }
+
+            // Check ECM cycle buttons
+            foreach (var (name, btnRect) in _ecmBtnBounds)
+            {
+                if (btnRect.Contains(e.X, e.Y))
+                {
+                    _ecmOverrides.TryGetValue(name, out var current);
+                    var next = CycleEcmOverride(current);
+                    if (next is null)
+                        _ecmOverrides.Remove(name);
+                    else
+                        _ecmOverrides[name] = next;
+                    if (_engine is Arena.ArenaEngine eng)
+                        eng.SetEcmOverride(name, next);
                     Invalidate();
                     return;
                 }
@@ -447,7 +476,12 @@ public partial class ArenaUserControl : UserControl
     private void ToggleAttachedPanel(string tankName)
     {
         if (!_attachedPanels.Remove(tankName))
+        {
             _attachedPanels.Add(tankName);
+            // Re-apply any stored override in case the engine was reset since the panel was last open
+            if (_ecmOverrides.TryGetValue(tankName, out var ov) && _engine is Arena.ArenaEngine eng)
+                eng.SetEcmOverride(tankName, ov);
+        }
         Invalidate();
     }
 
@@ -526,6 +560,12 @@ public partial class ArenaUserControl : UserControl
 
         SwarmMessageType.RoleChange
             => $"[STATUS]: {msg.SenderName} assuming {msg.CustomData ?? "new"} role",
+
+        SwarmMessageType.EcmAlert when !string.IsNullOrWhiteSpace(msg.CustomData)
+            => $"[ECM]: {msg.SenderName} — {msg.CustomData}",
+
+        SwarmMessageType.EcmAlert
+            => $"[ECM]: {msg.SenderName} — ECM activity detected",
 
         SwarmMessageType.Custom when !string.IsNullOrWhiteSpace(msg.CustomData)
             => $"[STATUS]: {msg.SenderName} {msg.CustomData}",
@@ -743,6 +783,9 @@ public partial class ArenaUserControl : UserControl
                 foreach (BulletState bullet in _engine.Bullets)
                     DrawBullet(g, bullet, bulletOwnerColors);
 
+            // Layer 3.5 – ECM ghost echoes (semi-transparent phantom tanks)
+            if (ShowEcmEffects) DrawGhostEchoes(g);
+
             // Layer 4 – Living tanks
             foreach (ISwarmTank tank in _engine.Tanks)
             {
@@ -943,38 +986,6 @@ public partial class ArenaUserControl : UserControl
 
     // ── Building shadow geometry helpers ─────────────────────────────────────
 
-    /// <summary>
-    /// Returns the GDI+ start angle and sweep span (degrees) of the angular shadow an
-    /// building casts from position (<paramref name="scanX"/>, <paramref name="scanY"/>).
-    /// Returns span = 0 when the scanner is inside or touching the building.
-    /// Angles are in GDI+ convention (0 = east, clockwise).
-    /// </summary>
-    private static (float startDeg, float spanDeg) GetBuildingShadowArc(
-        float scanX, float scanY, BuildingDefinition obs)
-    {
-        float ox = (float)obs.X - scanX;
-        float oy = (float)obs.Y - scanY;
-        float ow = (float)obs.Width;
-        float oh = (float)obs.Height;
-
-        // Bail if scanner is on or inside the building
-        float cx = Math.Clamp(0f, ox, ox + ow);
-        float cy = Math.Clamp(0f, oy, oy + oh);
-        if (cx * cx + cy * cy < 0.01f) return (0f, 0f);
-
-        PointF[] corners = [new(ox, oy), new(ox + ow, oy), new(ox + ow, oy + oh), new(ox, oy + oh)];
-        float[]  angles  = corners.Select(c => MathF.Atan2(c.Y, c.X)).ToArray();
-
-        // Remap to avoid wraparound splitting the angular span at ±π
-        if (angles.Max() - angles.Min() > MathF.PI)
-            for (int k = 0; k < angles.Length; k++)
-                if (angles[k] < 0) angles[k] += 2 * MathF.PI;
-
-        float minA    = angles.Min();
-        float spanDeg = (angles.Max() - minA) * 180f / MathF.PI;
-
-        return spanDeg > 0.5f ? (minA * 180f / MathF.PI, spanDeg) : (0f, 0f);
-    }
 
     /// <summary>
     /// Computes the world-space shadow trapezoid cast by <paramref name="obs"/> as seen
@@ -1129,17 +1140,31 @@ public partial class ArenaUserControl : UserControl
 
         g.RotateTransform(-(float)tank.Heading);
 
-        // --- Gun ---
-        float gunRad = (float)(tank.GunHeading * Math.PI / 180.0);
-        float gunDx = (float)Math.Sin(gunRad) * GunLength;
-        float gunDy = -(float)Math.Cos(gunRad) * GunLength;
-        using Pen gunPen = new(Color.LightGray, 3);
-        g.DrawLine(gunPen, 0, 0, gunDx, gunDy);
+        // --- Cannon barrel ---
+        // Rotate to gun heading and draw a filled rectangle so the barrel looks
+        // sharp at every angle (a plain DrawLine gets blurry when anti-aliased).
+        // In GDI+ heading 0 = north = −Y, so the barrel spans y=[−GunLength, 0].
+        GraphicsState gunState = g.Save();
+        g.RotateTransform((float)tank.GunHeading);
+        using SolidBrush barrelBrush = new(Color.DimGray);
+        using Pen        barrelPen   = new(Color.Silver, 1f);
+        g.FillRectangle(barrelBrush, -BarrelW / 2, -GunLength, BarrelW, GunLength);
+        g.DrawRectangle(barrelPen,   -BarrelW / 2, -GunLength, BarrelW, GunLength);
+        g.Restore(gunState);
+
+        // --- Turret ---
+        using SolidBrush turretBrush = new(Color.DarkGray);
+        using Pen        turretPen   = new(Color.Silver, 1f);
+        g.FillEllipse(turretBrush, -TurretR, -TurretR, TurretR * 2, TurretR * 2);
+        g.DrawEllipse(turretPen,   -TurretR, -TurretR, TurretR * 2, TurretR * 2);
 
         // --- Radar sweep trail ---
         if (ShowRadarSweepTrails) DrawRadarSweepTrail(g, tank, tankColor);
 
         g.Restore(saved);
+
+        // ECM aura drawn last so it sits on top of the hull and radar trails
+        if (ShowEcmEffects) DrawEcmAura(g, tank, x, y);
 
         if (ShowEnergyBars)
         {
@@ -1267,38 +1292,6 @@ public partial class ArenaUserControl : UserControl
                 flashStart, flashSpan);
         }
 
-        // ── Building shadow sectors ───────────────────────────────────────────
-        // Dark filled pie slices show the angular zones blocked by buildings, painted
-        // on top of the trail so the sweep visually "stops" at each building.
-        if (_engine is not null)
-        {
-            float tx      = (float)tank.Position.X;
-            float ty      = (float)tank.Position.Y;
-            float farDist = RadarLength + 3f; // slightly past the pie edge
-
-            using SolidBrush shadowBrush = new(Color.FromArgb(200, Color.Black));
-
-            using Pen shadowEdgePen = new(Color.FromArgb(110, Color.LightGray), 0.9f);
-
-            foreach (BuildingDefinition obs in _engine.Buildings)
-            {
-                (float startDeg, float spanDeg) = GetBuildingShadowArc(tx, ty, obs);
-                if (spanDeg <= 0f) continue;
-
-                g.FillPie(shadowBrush,
-                    -farDist, -farDist, farDist * 2, farDist * 2,
-                    startDeg, spanDeg);
-
-                // Edge lines along both shadow boundaries
-                float e1 = startDeg            * MathF.PI / 180f;
-                float e2 = (startDeg + spanDeg) * MathF.PI / 180f;
-                g.DrawLine(shadowEdgePen,
-                    0f, 0f, MathF.Cos(e1) * farDist, MathF.Sin(e1) * farDist);
-                g.DrawLine(shadowEdgePen,
-                    0f, 0f, MathF.Cos(e2) * farDist, MathF.Sin(e2) * farDist);
-            }
-        }
-
         // ── Leading-edge beam line at current heading ─────────────────────────
         float radarRad = (float)(tank.RadarHeading * Math.PI / 180.0);
         float rdx = (float)Math.Sin(radarRad) * RadarLength;
@@ -1377,12 +1370,14 @@ public partial class ArenaUserControl : UserControl
         g.DrawLine(treadPen, -half, -half + 3, -half, half - 3);
         g.DrawLine(treadPen,  half, -half + 3,  half, half - 3);
 
-        // Broken gun stub
+        // Broken gun stub — same barrel rectangle as the live tank, cut to ~55 %
         g.RotateTransform(-(float)tank.Heading);
+        GraphicsState stubState = g.Save();
         g.RotateTransform((float)tank.GunHeading);
-        using Pen gunStubPen = new(Color.FromArgb(70, 65, 60), 3);
-        g.DrawLine(gunStubPen, 0, 0, 0, -(int)(GunLength * 0.55f));
-        g.RotateTransform(-(float)tank.GunHeading);
+        int stubLen = (int)(GunLength * 0.55f);
+        using SolidBrush stubBrush = new(Color.FromArgb(70, 65, 60));
+        g.FillRectangle(stubBrush, -BarrelW / 2, -stubLen, BarrelW, stubLen);
+        g.Restore(stubState);
 
         g.Restore(saved);
     }
@@ -1577,6 +1572,7 @@ public partial class ArenaUserControl : UserControl
 
         _panelBounds.Clear();
         _closeBtnBounds.Clear();
+        _ecmBtnBounds.Clear();
         var byName = _engine.Tanks.ToDictionary(t => t.Name, StringComparer.Ordinal);
 
         foreach (string name in _attachedPanels)
@@ -1608,11 +1604,19 @@ public partial class ArenaUserControl : UserControl
         float ty = (float)tank.Position.Y;
 
         // Ordered rows displayed in the panel body (label, value)
+        string ecmLabel = tank.ActiveEcm switch
+        {
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam         => "JAM \u26a1",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof       => "SPOOF \ud83d\udc7b",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough => "ECCM \ud83d\udcf6",
+            _                                                             => "Off"
+        };
         (string Label, string Value)[] rows =
         [
             ("Swarm",    tank.SwarmId.ToString()),
             ("Role",     tank.Role.ToString()),
             ("Energy",   $"{tank.Energy:F1}"),
+            ("ECM",      ecmLabel),
             ("Pos",      $"{tank.Position.X:F0}, {tank.Position.Y:F0}"),
             ("Heading",  $"{tank.Heading:F1}°"),
             ("Gun",      $"{tank.GunHeading:F1}°"),
@@ -1621,8 +1625,10 @@ public partial class ArenaUserControl : UserControl
             ("Status",   tank.IsAlive ? "Alive" : "Dead"),
         ];
 
-        // Header row + small gap + separator + data rows
-        int panelHeight = InfoPanelPadY * 2 + InfoPanelRowH + 3 + rows.Length * InfoPanelRowH;
+        // Header row + small gap + separator + data rows + separator + ECM button + bottom pad
+        const int EcmBtnH = 16;
+        int panelHeight = InfoPanelPadY * 2 + InfoPanelRowH + 3 + rows.Length * InfoPanelRowH
+                          + 4 + EcmBtnH + InfoPanelPadY;
 
         // Position panel to the right of the tank, clamped inside the arena
         float px = Math.Clamp(tx + InfoPanelOffsetX, 2, ClientSize.Width  - InfoPanelWidth - 2);
@@ -1692,6 +1698,45 @@ public partial class ArenaUserControl : UserControl
                 rightAlign);
             fy += InfoPanelRowH;
         }
+
+        // ── ECM cycle button ──────────────────────────────────────────────────
+        fy += 4;   // small gap after data rows
+
+        _ecmOverrides.TryGetValue(tank.Name, out var ecmOv);
+        string ecmBtnLabel = ecmOv switch
+        {
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off         => "ECM: OFF",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam         => "ECM: JAM \u26a1",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof       => "ECM: SPOOF \ud83d\udc7b",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough => "ECM: ECCM \ud83d\udcf6",
+            _                                                             => "ECM: Auto (AI)"
+        };
+
+        float btnX = px + InfoPanelPadX;
+        float btnW = InfoPanelWidth - InfoPanelPadX * 2;
+        RectangleF ecmBtn = new(btnX, fy, btnW, EcmBtnH);
+
+        // Background shading — tinted if an override is active
+        bool hasOverride = ecmOv is not null;
+        Color btnBg = hasOverride
+            ? Color.FromArgb(A(170), 40, 20, 70)
+            : Color.FromArgb(A(110), 25, 30, 40);
+        Color btnBorder = hasOverride
+            ? Color.FromArgb(A(220), 160, 80, 255)
+            : Color.FromArgb(A(130), swarmColor);
+
+        using SolidBrush btnBgBrush   = new(btnBg);
+        using Pen        btnBorderPen = new(btnBorder, 1f);
+        g.FillRectangle(btnBgBrush,   ecmBtn);
+        g.DrawRectangle(btnBorderPen, ecmBtn);
+
+        using Font btnFont = new(Font.FontFamily, 6.5f, hasOverride ? FontStyle.Bold : FontStyle.Regular);
+        Color btnTextColor = hasOverride ? Color.FromArgb(A(255), 210, 140, 255) : Color.FromArgb(A(210), Color.LightGray);
+        using SolidBrush btnTextBrush = new(btnTextColor);
+        using StringFormat centred    = new() { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        g.DrawString(ecmBtnLabel, btnFont, btnTextBrush, ecmBtn, centred);
+
+        _ecmBtnBounds[tank.Name] = ecmBtn;
     }
 
     private void DrawHud(Graphics g)
@@ -2032,7 +2077,170 @@ public partial class ArenaUserControl : UserControl
         }
     }
 
+    // ── ECM rendering ─────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Draws the ECM aura around a tank based on its active ECM mode.
+    /// <list type="bullet">
+    ///   <item><b>Jam</b>  — pulsing concentric static rings that warn of EM interference.</item>
+    ///   <item><b>Spoof</b>  — a faint flickering haze that suggests deceptive transmissions.</item>
+    ///   <item><b>Burnthrough</b>  — a bright tight ring on the radar indicator showing ECCM focus.</item>
+    /// </list>
+    /// Called from <see cref="DrawTank"/> before the hull is painted so the aura sits behind the body.
+    /// </summary>
+    private void DrawEcmAura(Graphics g, TankState tank,
+                             float x, float y)
+    {
+        if (tank.ActiveEcm == TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off) return;
+
+        int half = TankBodySize / 2;
+        Color tankColor = SwarmColours[Math.Abs(tank.SwarmId) % SwarmColours.Length];
+
+        switch (tank.ActiveEcm)
+        {
+            case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam:
+            {
+                // Static pixel burst — dots scatter randomly just outside the hull,
+                // repositioning at ~16 fps to look like analog interference noise.
+                int seed = (int)(DateTime.UtcNow.Ticks / (TimeSpan.TicksPerMillisecond * 60L));
+                const int dotCount = 24;
+                using SolidBrush dotYellow = new(Color.FromArgb(230, 255, 230, 80));
+                using SolidBrush dotOrange = new(Color.FromArgb(230, 255, 80, 0));
+                for (int i = 0; i < dotCount; i++)
+                {
+                    double r0 = Frac(Math.Sin(seed * 443.0 + i * 31.0 + 0) * 9999.0);
+                    double r1 = Frac(Math.Sin(seed * 443.0 + i * 31.0 + 1) * 9999.0);
+                    double r2 = Frac(Math.Sin(seed * 443.0 + i * 31.0 + 2) * 9999.0);
+
+                    double angle = r0 * Math.PI * 2.0;
+                    double dist  = half + 2.0 + r1 * 14.0;
+                    float  dx    = x + (float)(Math.Cos(angle) * dist);
+                    float  dy    = y + (float)(Math.Sin(angle) * dist);
+
+                    g.FillRectangle(r2 > 0.5 ? dotYellow : dotOrange, dx, dy, 3, 3);
+                }
+                break;
+            }
+
+            case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof:
+            {
+                // A faint ghost copy of the hull that slowly orbits the tank — a decoy echo.
+                float phase = (float)(DateTime.UtcNow.Ticks % (long)(TimeSpan.TicksPerSecond * 3.0))
+                              / (float)(TimeSpan.TicksPerSecond * 3.0);
+                float pulse = 0.3f + 0.4f * MathF.Abs(MathF.Sin(phase * MathF.PI * 2f));
+                float orbitAngle = phase * MathF.PI * 2f;
+                float ox = x + MathF.Cos(orbitAngle) * (half + 7f);
+                float oy = y + MathF.Sin(orbitAngle) * (half + 7f);
+
+                GraphicsState saved = g.Save();
+                g.TranslateTransform(ox, oy);
+                g.RotateTransform((float)tank.Heading);
+                using SolidBrush ghostFill = new(Color.FromArgb((int)(55 * pulse), 190, 80, 255));
+                using Pen ghostBorder      = new(Color.FromArgb((int)(90 * pulse), 210, 120, 255), 1f);
+                g.FillRectangle(ghostFill,   -half, -half, TankBodySize, TankBodySize);
+                g.DrawRectangle(ghostBorder, -half, -half, TankBodySize, TankBodySize);
+                g.Restore(saved);
+                break;
+            }
+
+            case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough:
+            {
+                // A short focused arc + centre beam line extending from the hull in the radar direction,
+                // suggesting concentrated beam energy cutting through jamming.
+                float phase = (float)(DateTime.UtcNow.Ticks % (long)(TimeSpan.TicksPerSecond * 0.6))
+                              / (float)(TimeSpan.TicksPerSecond * 0.6);
+                float pulse = 0.55f + 0.45f * MathF.Sin(phase * MathF.PI * 2f);
+
+                // GDI+ DrawArc: 0° = East, angles clockwise. Tank heading: 0 = North, clockwise.
+                // Radar heading follows same convention. Convert: gdipStart = radarHeading - 90
+                float arcRadius  = half + 11f;
+                float arcStart   = (float)tank.RadarHeading - 90f - 12f;
+                using Pen arcPen = new(Color.FromArgb((int)(200 * pulse), 0, 230, 255), 2f);
+                g.DrawArc(arcPen, x - arcRadius, y - arcRadius,
+                          arcRadius * 2, arcRadius * 2, arcStart, 24f);
+
+                // Beam line from hull edge to arc
+                float radarRad = (float)(tank.RadarHeading * Math.PI / 180.0);
+                float sinR = (float)Math.Sin(radarRad);
+                float cosR = (float)Math.Cos(radarRad);
+                using Pen beamPen = new(Color.FromArgb((int)(160 * pulse), 80, 255, 255), 1.5f);
+                g.DrawLine(beamPen,
+                    x + sinR * (half + 1f), y - cosR * (half + 1f),
+                    x + sinR * (arcRadius), y - cosR * (arcRadius));
+                break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Draws all active ECM ghost echoes as semi-transparent phantom tank silhouettes.
+    /// Ghost echoes are projected by tanks in <see cref="TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof"/>
+    /// mode and injected into enemy radar scans.  Rendering them here gives spectators
+    /// (and players watching via sensor-view) a visual sense of the deception field.
+    /// </summary>
+    private void DrawGhostEchoes(Graphics g)
+    {
+        if (_engine is null) return;
+        if (_engine is not Arena.ArenaEngine engine) return;
+
+        float phase = (float)(DateTime.UtcNow.Ticks % (long)(TimeSpan.TicksPerSecond * 1.1))
+                      / (float)(TimeSpan.TicksPerSecond * 1.1);
+        float flicker = 0.35f + 0.65f * MathF.Abs(MathF.Sin(phase * MathF.PI));
+
+        foreach ((Vector2D pos, int ownerSwarmId) in engine.ActiveGhostEchoes)
+        {
+            float gx = (float)pos.X;
+            float gy = (float)pos.Y;
+
+            Color swarmCol = SwarmColours[Math.Abs(ownerSwarmId) % SwarmColours.Length];
+            Color ghostCol = Color.FromArgb((int)(55 * flicker), swarmCol);
+            Color borderCol = Color.FromArgb((int)(110 * flicker), swarmCol);
+
+            int half = TankBodySize / 2;
+
+            GraphicsState saved = g.Save();
+            g.TranslateTransform(gx, gy);
+
+            // Ghost body (faint, no rotation applied — ghost heading varies)
+            using SolidBrush ghostBrush = new(ghostCol);
+            using Pen        ghostPen   = new(borderCol, 1f);
+            g.FillRectangle(ghostBrush, -half, -half, TankBodySize, TankBodySize);
+            g.DrawRectangle(ghostPen,   -half, -half, TankBodySize, TankBodySize);
+
+            // Dashed corner-cross to mark it as a ghost rather than a real contact
+            using Pen crossPen = new(Color.FromArgb((int)(80 * flicker), Color.White), 1f)
+            { DashStyle = System.Drawing.Drawing2D.DashStyle.Dot };
+            g.DrawLine(crossPen, -half, -half,  half,  half);
+            g.DrawLine(crossPen,  half, -half, -half,  half);
+
+            g.Restore(saved);
+
+            // "?" label above ghost
+            using Font ghostFont = new(Font.FontFamily, 6.5f);
+            using SolidBrush labelBrush = new(Color.FromArgb((int)(140 * flicker), swarmCol));
+            g.DrawString("?", ghostFont, labelBrush, gx - 3f, gy - half - 12f);
+        }
+    }
+
     /// <summary>Lightens a colour by adding <paramref name="amount"/> to each RGB channel.</summary>
+    /// <summary>
+    /// Advances the ECM override through the cycle:
+    /// Auto (null) → Off → Jam → Spoof → Burnthrough → Auto (null).
+    /// </summary>
+    private static TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode? CycleEcmOverride(
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode? current) => current switch
+    {
+        null                                                              => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off             => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam             => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof           => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough     => null,
+        _                                                                 => null,
+    };
+
+    /// <summary>Returns the fractional part of <paramref name="v"/> (v − floor(v)).</summary>
+    private static double Frac(double v) => v - Math.Floor(v);
+
     private static Color LightenColor(Color c, int amount) =>
         Color.FromArgb(
             c.A,
