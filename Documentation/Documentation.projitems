@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>077cdfac-1e54-47ed-87fb-188e5052fbae</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Documentation</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)ch01-overview.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch02-getting-started.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch03-architecture.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch04-physics-engine.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch05-tank-ai-framework.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch06-swarm-communication.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch07-radar-system.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch08-data-models.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch09-builtin-tanks.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch10-custom-tank.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch11-rendering.md" />
+    <None Include="$(MSBuildThisFileDirectory)ch12-configuration.md" />
+    <None Include="$(MSBuildThisFileDirectory)TOC.md" />
+  </ItemGroup>
+</Project>
