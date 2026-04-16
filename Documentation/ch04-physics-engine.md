@@ -19,13 +19,15 @@ Every call to `ArenaEngine.Tick()` executes the following phases in order:
 2.  FlushCommands             — sequential, collect all TankCommands
 3.  ApplyMovement             — sequential, update positions, handle wall & building collisions
 4.  ApplyFiring               — sequential, create new bullets
-5.  MoveBullets               — parallel, advance each bullet position
-6.  CheckBulletTankCollisions — sequential, apply damage & deactivate bullets
+5.  MoveBullets               — parallel, advance each bullet position (decelerate deflected)
+6.  CheckBulletTankCollisions — sequential, apply damage; lethal hits remove bullet,
+                                non-lethal hits deflect bullet (ricochet)
 7.  CheckTankTankCollisions   — sequential, apply damage & push apart
 8.  ProcessRadarScans         — parallel, fire ScannedTank events, build RadarContacts
 9.  DeliverSwarmMessages      — sequential, merge broadcasts into ally RadarMaps
 10. UpdateTankStates          — parallel, push fresh immutable TankState to each tank
-11. RebuildSnapshots          — remove spent bullets, rebuild cached snapshot lists
+11. RebuildSnapshots          — remove spent bullets, rebuild cached snapshot lists;
+                                publish RicochetFlashes and ActiveGhostEchoes for renderer
 12. CheckRoundEnd             — determine if a winner exists; fire OnRoundEnded
 ```
 
@@ -148,9 +150,22 @@ EnergyReturn = 3 × power          (returned to shooter on hit)
 ### Bullet Deactivation
 
 A bullet is deactivated (removed) when it:
-- Hits a tank.
+- Delivers a **lethal** hit to a tank (tank energy drops to ≤ 0).
 - Intersects a building rectangle.
 - Exits the arena boundary.
+
+### Bullet Ricochet (Non-Lethal Hits)
+
+When a bullet hits a tank but the damage is **not** enough to destroy it, the bullet is **deflected** rather than removed immediately:
+
+1. A bounce heading is computed as the bullet's incoming heading reversed (+ 180°), with a ±25° random spread to simulate imperfect reflection.
+2. The bullet's speed is reduced to **40 %** of its original speed.
+3. Each subsequent tick the deflected bullet loses **28 %** of its remaining speed (multiplicative friction).
+4. When speed falls below 0.4 px/tick the bullet is considered stopped and is removed.
+
+Deflected bullets are immune to further tank collisions — they are purely visual once they bounce. They can still vanish into a building or leave the arena boundary.
+
+The impact position of every ricochet this tick is published on `ArenaEngine.RicochetFlashes` for the renderer to draw a brief flash ring.
 
 ---
 

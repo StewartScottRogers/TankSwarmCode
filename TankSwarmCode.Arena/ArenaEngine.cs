@@ -43,6 +43,18 @@ public sealed class ArenaEngine : IArena
 
     public IReadOnlyList<BuildingDefinition> Buildings => _buildings;
 
+    /// <summary>
+    /// Ghost echo positions projected by all currently-spoofing tanks, rebuilt each tick.
+    /// Each entry is (arena position, owner swarm id) for use by the renderer.
+    /// </summary>
+    public IReadOnlyList<(Vector2D Position, int OwnerSwarmId)> ActiveGhostEchoes { get; private set; } = [];
+
+    /// <summary>
+    /// Impact positions of non-lethal bullet ricochets this tick, for the renderer to draw
+    /// a brief flash ring.  Replaced each tick.
+    /// </summary>
+    public IReadOnlyList<Vector2D> RicochetFlashes { get; private set; } = [];
+
     public event EventHandler<TickEventArgs>? TickCompleted;
     public event EventHandler<RoundEndedEventArgs>? RoundEnded;
 
@@ -177,11 +189,15 @@ public sealed class ArenaEngine : IArena
         foreach ((TankRuntimeState rts, TankCommand cmd) in commands)
             ApplyFiring(rts, cmd);
 
+        // 4.5. Apply ECM — drains energy, sets ActiveEcm, updates ghost positions (sequential)
+        foreach ((TankRuntimeState rts, TankCommand cmd) in commands)
+            ApplyEcm(rts, cmd);
+
         // 5. Move bullets — parallel (each bullet is completely independent)
         Parallel.ForEach(RuntimeBullets, b => { if (b.Active) MoveBullet(b); });
 
         // 6. Bullet-tank collisions (sequential — mutates b.Active and tank energy)
-        CheckBulletTankCollisions();
+        var ricochetPositions = CheckBulletTankCollisions();
 
         // 7. Tank-tank collisions (sequential — mutates both tanks)
         CheckTankTankCollisions();
@@ -202,6 +218,19 @@ public sealed class ArenaEngine : IArena
 
         // 11. Remove spent bullets
         RuntimeBullets.RemoveAll(b => !b.Active);
+
+        // 11.5. Rebuild ghost echo list for the renderer
+        var ghosts = new List<(Vector2D, int)>();
+        foreach (TankRuntimeState rts in RuntimeTanks)
+        {
+            if (!rts.IsAlive || rts.ActiveEcm != EcmMode.Spoof) continue;
+            foreach ((double gx, double gy, double _, double _) in rts.GhostPositions)
+                ghosts.Add((new Vector2D(gx, gy), rts.Tank.SwarmId));
+        }
+        ActiveGhostEchoes = ghosts;
+
+        // 11.6. Publish ricochet flash positions gathered during this tick's collision pass
+        RicochetFlashes = ricochetPositions;
 
         // 12. Rebuild cached snapshots once — avoids allocations in properties accessed by UI
         var tanksSnap = new ISwarmTank[RuntimeTanks.Count];
@@ -361,15 +390,35 @@ public sealed class ArenaEngine : IArena
 
     private static void MoveBullet(BulletRuntimeState b)
     {
-        double headingRad = b.Heading * (Math.PI / 180.0);
-        b.X += Math.Sin(headingRad) * b.Speed;
-        b.Y -= Math.Cos(headingRad) * b.Speed;
+        if (b.IsDeflected)
+        {
+            b.DeflectedSpeed *= 0.72;          // friction: loses ~28 % speed per tick
+            if (b.DeflectedSpeed < 0.4)
+            {
+                b.Active = false;              // close enough to stopped — dissipate
+                return;
+            }
+            double dRad = b.DeflectedHeading * (Math.PI / 180.0);
+            b.X += Math.Sin(dRad) * b.DeflectedSpeed;
+            b.Y -= Math.Cos(dRad) * b.DeflectedSpeed;
+        }
+        else
+        {
+            double headingRad = b.Heading * (Math.PI / 180.0);
+            b.X += Math.Sin(headingRad) * b.Speed;
+            b.Y -= Math.Cos(headingRad) * b.Speed;
+        }
     }
 
-    private void CheckBulletTankCollisions()
+    private List<Vector2D> CheckBulletTankCollisions()
     {
+        var ricochets = new List<Vector2D>();
+
         foreach (BulletRuntimeState b in RuntimeBullets.Where(b => b.Active))
         {
+            // Deflected bullets skip all tank collisions — they are pure visual artefacts.
+            if (b.IsDeflected) goto CheckBounds;
+
             foreach (TankRuntimeState rts in RuntimeTanks.Where(t => t.IsAlive))
             {
                 if (rts.Tank.Name == b.OwnerId) continue; // own bullet
@@ -382,8 +431,8 @@ public sealed class ArenaEngine : IArena
                     continue;
 
                 // Hit!
-                b.Active = false;
                 BulletState bs = b.ToBulletState();
+                bool willKill = (rts.Energy - bs.Damage) <= 0;
 
                 rts.Energy -= bs.Damage;
                 double bearing = RelativeBearing(rts.Heading, new Vector2D(rts.X, rts.Y).BearingTo(new Vector2D(b.X, b.Y)));
@@ -398,8 +447,29 @@ public sealed class ArenaEngine : IArena
                 }
 
                 CheckDeath(rts);
+
+                if (willKill)
+                {
+                    // Lethal hit — bullet disappears immediately
+                    b.Active = false;
+                }
+                else
+                {
+                    // Non-lethal hit — deflect the bullet off the tank surface.
+                    // Bounce direction: reflect heading through the impact normal (approx.
+                    // opposite of the bullet's incoming direction, with a small random spread).
+                    double bounceBase = (b.Heading + 180.0) % 360.0;
+                    double spread     = (_rng.NextDouble() - 0.5) * 50.0; // ±25°
+                    b.IsDeflected        = true;
+                    b.DeflectedHeading   = (bounceBase + spread + 360.0) % 360.0;
+                    b.DeflectedSpeed     = b.Speed * 0.40;   // 40 % of original speed
+                    b.DeflectedFromTank  = rts.Tank.Name;
+                    ricochets.Add(new Vector2D(b.X, b.Y));
+                }
                 break;
             }
+
+            CheckBounds:
 
             // Remove bullet if out of bounds
             if (b.X < 0 || b.X > Width || b.Y < 0 || b.Y > Height)
@@ -419,6 +489,7 @@ public sealed class ArenaEngine : IArena
                 }
             }
         }
+        return ricochets;
     }
 
     private void CheckTankTankCollisions()
@@ -519,6 +590,7 @@ public sealed class ArenaEngine : IArena
         // Radar sweeps the arc between PrevRadarHeading and RadarHeading
         double sweepStart = scanner.PrevRadarHeading;
         double sweepEnd = scanner.RadarHeading;
+        bool scannerBurnthrough = scanner.ActiveEcm == EcmMode.Burnthrough;
 
         foreach (TankRuntimeState target in RuntimeTanks.Where(t => t.IsAlive && t != scanner))
         {
@@ -545,17 +617,96 @@ public sealed class ArenaEngine : IArena
 
             ScanResult result = new()
             {
-                Name = target.Tank.Name,
-                SwarmId = target.Tank.SwarmId,
-                Bearing = RelativeBearing(scanner.Heading, bearing),
+                Name     = target.Tank.Name,
+                SwarmId  = target.Tank.SwarmId,
+                Bearing  = RelativeBearing(scanner.Heading, bearing),
                 Distance = distance,
-                Heading = target.Heading,
+                Heading  = target.Heading,
                 Velocity = target.Velocity,
-                Energy = target.Energy,
+                Energy   = target.Energy,
                 Position = new Vector2D(target.X, target.Y)
             };
 
+            // ── ECM: Jam check ──────────────────────────────────────────────
+            if (target.ActiveEcm == EcmMode.Jam)
+            {
+                double dropChance    = scannerBurnthrough ? ArenaConstants.EcmBurnthroughDropChance    : ArenaConstants.EcmJamDropChance;
+                double corruptChance = scannerBurnthrough ? ArenaConstants.EcmBurnthroughCorruptChance : ArenaConstants.EcmJamCorruptChance;
+
+                double roll = _rng.NextDouble();
+                if (roll < dropChance)
+                    continue; // Scan dropped — jammer not detected at all
+
+                if (roll < dropChance + corruptChance)
+                {
+                    // Corrupted scan data — wrong position, heading, velocity, energy
+                    result = result with
+                    {
+                        Position = new Vector2D(
+                            Math.Clamp(result.Position.X + (_rng.NextDouble() - 0.5) * 160, 0, Width),
+                            Math.Clamp(result.Position.Y + (_rng.NextDouble() - 0.5) * 160, 0, Height)),
+                        Heading  = _rng.NextDouble() * 360,
+                        Velocity = (_rng.NextDouble() * 2 - 1) * ArenaConstants.MaxVelocity,
+                        Energy   = _rng.NextDouble() * ArenaConstants.TankStartEnergy
+                    };
+                }
+                // else: scan succeeds normally despite jamming
+            }
+
             SafeCall(() => scanner.Tank.OnScannedTank(new ScannedTankEventArgs(result)));
+        }
+
+        // ── ECM: Spoof ghost injection ──────────────────────────────────────
+        // For each enemy tank running Spoof, check if any of its ghost positions
+        // fall within this scanner's sweep arc and inject fake OnScannedTank events.
+        foreach (TankRuntimeState spoofer in RuntimeTanks)
+        {
+            if (!spoofer.IsAlive) continue;
+            if (spoofer == scanner) continue;
+            if (spoofer.Tank.SwarmId == scanner.Tank.SwarmId) continue; // allies don't spoof allies
+            if (spoofer.ActiveEcm != EcmMode.Spoof) continue;
+
+            foreach ((double gx, double gy, double gh, double gv) in spoofer.GhostPositions)
+            {
+                double ghostBearing = new Vector2D(scanner.X, scanner.Y)
+                                          .BearingTo(new Vector2D(gx, gy));
+                if (!AngleInSweep(ghostBearing, sweepStart, sweepEnd)) continue;
+
+                // Check line-of-sight for the ghost position
+                bool ghostLosBlocked = false;
+                foreach (BuildingDefinition obs in _buildings)
+                {
+                    if (SegmentIntersectsRect(scanner.X, scanner.Y, gx, gy,
+                                              obs.X, obs.Y, obs.Width, obs.Height))
+                    { ghostLosBlocked = true; break; }
+                }
+                if (ghostLosBlocked) continue;
+
+                // Burnthrough has a good chance of recognising and discarding the ghost
+                if (scannerBurnthrough && _rng.NextDouble() < ArenaConstants.EcmBurnthroughGhostFilterChance)
+                    continue;
+
+                double ghostDist = Math.Sqrt((gx - scanner.X) * (gx - scanner.X)
+                                           + (gy - scanner.Y) * (gy - scanner.Y));
+
+                // Clamp ghost name length for display
+                string shortName = spoofer.Tank.Name.Length > 4
+                    ? spoofer.Tank.Name[..4] : spoofer.Tank.Name;
+
+                ScanResult ghostResult = new()
+                {
+                    Name     = $"Ghost-{shortName}",
+                    SwarmId  = spoofer.Tank.SwarmId,
+                    Bearing  = RelativeBearing(scanner.Heading, ghostBearing),
+                    Distance = ghostDist,
+                    Heading  = gh,
+                    Velocity = gv,
+                    Energy   = 45 + _rng.NextDouble() * 35,
+                    Position = new Vector2D(gx, gy)
+                };
+
+                SafeCall(() => scanner.Tank.OnScannedTank(new ScannedTankEventArgs(ghostResult)));
+            }
         }
     }
 
@@ -573,6 +724,86 @@ public sealed class ArenaEngine : IArena
 
             foreach (TankRuntimeState ally in allies)
                 SafeCall(() => ally.Tank.DeliverSwarmMessage(msg));
+        }
+    }
+
+    // ── ECM helpers ───────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Forces the named tank into a specific ECM mode regardless of what its AI requests.
+    /// Pass <c>null</c> to restore AI control.
+    /// </summary>
+    public void SetEcmOverride(string tankName, EcmMode? mode)
+    {
+        var rts = RuntimeTanks.FirstOrDefault(
+            r => string.Equals(r.Tank.Name, tankName, StringComparison.Ordinal));
+        if (rts is not null) rts.EcmModeOverride = mode;
+    }
+
+    private void ApplyEcm(TankRuntimeState rts, TankCommand cmd)
+    {
+        // UI override takes priority over what the tank AI requested
+        EcmMode effectiveMode = rts.EcmModeOverride ?? cmd.EcmMode;
+        rts.ActiveEcm = effectiveMode;
+
+        double cost = effectiveMode switch
+        {
+            EcmMode.Jam         => ArenaConstants.EcmJamCostPerTick,
+            EcmMode.Spoof       => ArenaConstants.EcmSpoofCostPerTick,
+            EcmMode.Burnthrough => ArenaConstants.EcmBurnthroughCostPerTick,
+            _                   => 0.0
+        };
+
+        if (cost > 0)
+        {
+            rts.Energy -= cost;
+            CheckDeath(rts);
+        }
+
+        if (effectiveMode == EcmMode.Spoof && rts.IsAlive)
+            UpdateGhostPositions(rts);
+        else
+            rts.GhostPositions = [];
+    }
+
+    private void UpdateGhostPositions(TankRuntimeState rts)
+    {
+        int count = ArenaConstants.EcmSpoofGhostCount;
+
+        if (rts.GhostPositions.Length != count)
+        {
+            // First time in Spoof mode this session — spawn ghosts at random offsets
+            rts.GhostPositions = new (double X, double Y, double Heading, double Velocity)[count];
+            for (int i = 0; i < count; i++)
+            {
+                double spawnAngle = _rng.NextDouble() * 360;
+                double spawnDist  = 25 + _rng.NextDouble() * ArenaConstants.EcmSpoofRadius;
+                double rad        = spawnAngle * Math.PI / 180;
+                rts.GhostPositions[i] = (
+                    Math.Clamp(rts.X + Math.Sin(rad) * spawnDist, 10, Width  - 10),
+                    Math.Clamp(rts.Y - Math.Cos(rad) * spawnDist, 10, Height - 10),
+                    _rng.NextDouble() * 360,
+                    (_rng.NextDouble() * 2 - 1) * 4.0);
+            }
+            return;
+        }
+
+        // Each ghost drifts independently; 4 % chance per tick to change direction
+        for (int i = 0; i < count; i++)
+        {
+            var (gx, gy, gh, gv) = rts.GhostPositions[i];
+
+            if (_rng.NextDouble() < 0.04)
+            {
+                gh = _rng.NextDouble() * 360;
+                gv = (_rng.NextDouble() * 2 - 1) * 5.0;
+            }
+
+            double rad = gh * Math.PI / 180;
+            gx = Math.Clamp(gx + Math.Sin(rad) * gv, 10, Width  - 10);
+            gy = Math.Clamp(gy - Math.Cos(rad) * gv, 10, Height - 10);
+
+            rts.GhostPositions[i] = (gx, gy, gh, gv);
         }
     }
 

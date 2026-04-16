@@ -780,8 +780,15 @@ public partial class ArenaUserControl : UserControl
                     StringComparer.Ordinal);
 
             if (ShowBullets)
+            {
                 foreach (BulletState bullet in _engine.Bullets)
                     DrawBullet(g, bullet, bulletOwnerColors);
+
+                // Ricochet flash rings at impact points this tick
+                if (_engine is Arena.ArenaEngine eng2)
+                    foreach (Vector2D pos in eng2.RicochetFlashes)
+                        DrawRicochetFlash(g, pos);
+            }
 
             // Layer 3.5 – ECM ghost echoes (semi-transparent phantom tanks)
             if (ShowEcmEffects) DrawGhostEchoes(g);
@@ -1302,6 +1309,12 @@ public partial class ArenaUserControl : UserControl
 
     private static void DrawBullet(Graphics g, BulletState bullet, Dictionary<string, Color> ownerColors)
     {
+        if (bullet.IsDeflected)
+        {
+            DrawDeflectedSpark(g, bullet, ownerColors);
+            return;
+        }
+
         float bx = (float)bullet.Position.X;
         float by = (float)bullet.Position.Y;
 
@@ -1338,6 +1351,68 @@ public partial class ArenaUserControl : UserControl
         using SolidBrush glowBrush = new(Color.FromArgb(60, bulletColor));
         float glow = headLen * 1.4f;
         g.FillEllipse(glowBrush, bx - glow * 0.5f, by - glow * 0.5f, glow, glow);
+    }
+
+    /// <summary>
+    /// Draws a deflected (non-lethal ricochet) bullet as a fading ember spark.
+    /// Fades from bright to transparent as <see cref="BulletState.CurrentSpeed"/> decays to zero.
+    /// </summary>
+    private static void DrawDeflectedSpark(Graphics g, BulletState bullet, Dictionary<string, Color> ownerColors)
+    {
+        float bx = (float)bullet.Position.X;
+        float by = (float)bullet.Position.Y;
+
+        Color bulletColor = ownerColors.TryGetValue(bullet.OwnerName, out Color c)
+            ? LightenColor(c, 60)
+            : Color.Orange;
+
+        // Fade based on how much speed remains (1 = just bounced, 0 = stopped)
+        float fade = (float)Math.Clamp(bullet.CurrentSpeed / (bullet.Speed * 0.40), 0.0, 1.0);
+        int alpha = (int)(220 * fade);
+        if (alpha < 8) return;
+
+        // Outer ember glow
+        float r = 2.5f + (float)(bullet.Power * 1.2f) * fade;
+        using SolidBrush outerBrush = new(Color.FromArgb(Math.Min(alpha, 180), bulletColor));
+        g.FillEllipse(outerBrush, bx - r, by - r, r * 2, r * 2);
+
+        // Hot white core (shrinks faster than the outer glow)
+        float coreR = r * 0.45f * fade;
+        if (coreR > 0.5f)
+        {
+            using SolidBrush coreBrush = new(Color.FromArgb(Math.Min(alpha, 255), Color.White));
+            g.FillEllipse(coreBrush, bx - coreR, by - coreR, coreR * 2, coreR * 2);
+        }
+
+        // Short trailing spark streak in travel direction
+        double rad = (bullet.Heading - 90.0) * Math.PI / 180.0;
+        float dx = (float)Math.Cos(rad);
+        float dy = (float)Math.Sin(rad);
+        float tailLen = (5f + (float)(bullet.Power * 2f)) * fade;
+        if (tailLen > 1f)
+        {
+            using Pen tailPen = new(Color.FromArgb(Math.Min((int)(alpha * 0.65f), 255), bulletColor), 1.2f);
+            g.DrawLine(tailPen, bx, by, bx - dx * tailLen, by - dy * tailLen);
+        }
+    }
+
+    /// <summary>
+    /// Draws a single-tick impact flash ring at a ricochet position.
+    /// </summary>
+    private static void DrawRicochetFlash(Graphics g, Vector2D pos)
+    {
+        float px = (float)pos.X;
+        float py = (float)pos.Y;
+
+        // Bright starburst ring
+        using Pen ringPen = new(Color.FromArgb(200, Color.Orange), 1.5f);
+        const float R = 7f;
+        g.DrawEllipse(ringPen, px - R, py - R, R * 2, R * 2);
+
+        // Inner white flash
+        using SolidBrush flashBrush = new(Color.FromArgb(120, Color.White));
+        const float IR = 3.5f;
+        g.FillEllipse(flashBrush, px - IR, py - IR, IR * 2, IR * 2);
     }
 
     /// <summary>

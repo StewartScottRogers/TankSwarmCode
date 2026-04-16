@@ -33,9 +33,11 @@ Each tank is drawn as a filled square (18 × 18 px by default) rotated to match 
 - SwarmId 2 (Blue Swarm) → blue body
 - SwarmId 0 or other → a neutral colour
 
-### Gun Barrel
+### Cannon Barrel and Turret
 
-A line of 22 px extends from the tank centre in the direction of `GunHeading`. The gun line is drawn on top of the rotated body.
+The gun is rendered as a **filled 4 × 22 px rectangle** rotated to `GunHeading` using a GDI+ coordinate transform (rather than a manually computed line). This keeps the barrel crisp and sharp at every angle under anti-aliasing. The barrel extends from the tank centre outward.
+
+A **10 px-diameter circular turret** is drawn on top of the hull body, anchoring the barrel visually and giving the classic tank silhouette. Both the barrel and turret use dark grey fills with a silver outline.
 
 ### Radar Beam
 
@@ -69,11 +71,50 @@ Multiple simultaneous explosions are each tracked independently.
 
 ### Bullets
 
-Each active bullet is rendered as a small filled circle (radius ~3 px) at `BulletState.Position`. A short tail in the direction opposite to travel gives a visual velocity cue.
+Active bullets are drawn as arrowhead projectiles:
+
+- **Arrowhead triangle** pointing in the travel direction, sized proportionally to power.
+- **Tail shaft** extending behind the arrowhead for a velocity cue.
+- **Glow halo** — a soft transparent ellipse behind the tip.
+- Colour is the swarm colour of the firing tank, lightened for visibility.
+
+#### Deflected (Ricochet) Bullets
+
+When a bullet hits a tank without killing it, it enters a deflected state and is rendered differently for its remaining lifespan:
+
+- Drawn as a **fading ember spark** (filled ellipse) instead of an arrowhead.
+- A smaller **white hot core** overlays the ember; both shrink as speed decays.
+- A short **trailing streak** shows the direction of travel, also fading.
+- All elements fade to transparent as `CurrentSpeed` decays toward zero, then the bullet disappears.
+
+#### Ricochet Flash
+
+At the exact tick a non-lethal hit occurs, a single-frame **impact flash** is drawn at the collision point: an orange ring (~7 px radius) with a white filled centre. This is rendered from `ArenaEngine.RicochetFlashes` and lasts exactly one paint cycle.
 
 ### Buildings
 
 Buildings are filled rectangles drawn in a muted grey/brown colour with a darker border. They are painted before tanks and bullets so they appear as background obstacles.
+
+### ECM Auras
+
+When a tank has an active ECM mode, a distinctive animated aura is drawn **on top of** the hull and radar trails each frame (toggle: **ECM effects**):
+
+| Mode | Visual |
+|------|--------|
+| **Jam** | 24 small (3 × 3 px) orange and yellow dots scattered randomly in a ~14 px band around the hull. The entire cluster repositions ~16 times per second using a seeded hash, creating an analog-static interference look. |
+| **Spoof** | A faint purple ghost copy of the tank hull that slowly orbits the tank on a tight circular path (one full orbit every 3 seconds), pulsing in opacity as it moves. Suggests the tank is projecting a decoy echo. |
+| **Burnthrough** | A short bright cyan arc centred on the **radar heading direction**, with a thin beam line extending from the hull edge to the arc. Both pulse in brightness on a 0.6-second cycle and rotate as the radar turns. |
+
+### ECM Ghost Echoes
+
+While a Spoof tank is active, translucent phantom tank silhouettes appear at each ghost echo position (Layer 3.5 in the paint order, between bullets and live tanks). Each ghost is drawn:
+
+- As a semi-transparent square in the spoofing swarm's colour.
+- With a dashed X cross-hatch to distinguish it from real hulks.
+- With a `?` label above it.
+- With a flicker animation that prevents them from looking static.
+
+Ghost echoes are rendered regardless of whether any enemy tank is actually being fooled — they show the deception field from a spectator's omniscient viewpoint.
 
 ---
 
@@ -84,13 +125,27 @@ Buildings are filled rectangles drawn in a muted grey/brown colour with a darker
 **Left-click** on any tank body to open the **info panel**, which displays:
 
 - Tank name and swarm
+- Role and ECM mode (Off / JAM ⚡ / SPOOF 👻 / ECCM 📶)
 - Current energy
 - Position (X, Y)
 - Headings (body, gun, radar)
 - Velocity
-- Role
+- Alive / Dead status
 
 The panel updates live every tick while the tank is selected.
+
+#### ECM Override Button
+
+At the bottom of every attached panel is an **ECM cycle button**. Clicking it steps through:
+
+```
+Auto (AI)  →  OFF  →  JAM  →  SPOOF  →  ECCM  →  Auto (AI)  →  …
+```
+
+- **Auto (AI)** — the tank's own `OnTick` logic controls ECM (default).
+- Any other value forces that mode regardless of what the tank AI requests, deducting the appropriate energy cost each tick.
+- When an override is active the button is highlighted in purple with bold text.
+- The override **persists** when the panel is closed — the tank keeps the forced mode until you cycle back to Auto or the arena is reset.
 
 ### Right-click to Pin
 
@@ -150,10 +205,16 @@ The following rendering options can be adjusted at runtime (via properties on `A
 | Setting | Default | Description |
 |---------|---------|-------------|
 | Antialiasing | On | Smooths tank and bullet edges |
-| Radar trails | On | Show the radar sweep arc trail |
-| Explosion animations | On | Burn/smoke sequences on destruction |
-| Energy bars | On | Show energy bars above tanks |
-| Info panel | Off | Show live state panel (enabled on click) |
+| Radar reflections | On | Expanding wavefront arcs from scanner to contact |
+| Radar sweep trails | On | Phosphor-decay arc history behind the radar beam |
+| Scan halos | On | Point-flash at the moment radar contact is made |
+| **ECM effects** | **On** | **Jam/Spoof/Burnthrough auras and ghost echo silhouettes** |
+| Bullets | On | Arrowhead projectiles with colour-coded tails |
+| Explosions & flames | On | Burn/smoke sequences on destruction |
+| Energy bars | On | Proportional health bar above each tank |
+| Tank labels | On | Tank name above energy bar |
+| HUD | On | Tick counter and swarm scoreboard |
+| Info panels | On | Live state panel (attach via right-click context menu) |
 
 ---
 
@@ -163,22 +224,31 @@ The following rendering options can be adjusted at runtime (via properties on `A
 Timer fires
     │
     ▼
-ArenaEngine.Tick()          — one physics step; publishes new TankState snapshots
+ArenaEngine.Tick()               — one physics step; publishes new TankState snapshots
     │
     ▼
 ArenaUserControl.Invalidate()    — marks control dirty
     │
     ▼
 OnPaint(PaintEventArgs e)
-    ├─ FillBackground()
-    ├─ DrawBuildings()           — muted rectangles
-    ├─ DrawBullets()             — small circles with tails
-    ├─ DrawRadarHalos()          — expanding/fading pulses
-    ├─ DrawTanks()               — body, gun, radar beam, energy bar
-    │     ├─ Alive tanks:        — full colour, rotating body
-    │     └─ Destroyed hulls:    — dark greyscale
-    ├─ DrawExplosions()          — per-tank animation state machine
-    └─ DrawInfoPanel()           — (if a tank is selected)
+    ├─ DrawBackground()          — black fill + border
+    ├─ DrawAllRadarHalos()       — expanding wavefront arcs (if ShowRadarReflections)
+    ├─ DrawHulkBodies()          — charred hulks (destroyed tanks)
+    ├─ DrawBullets()             — arrowhead projectiles (live) or fading sparks (deflected)
+    │     └─ DrawRicochetFlash() — one-tick impact ring at each non-lethal hit (if ShowBullets)
+    ├─ DrawGhostEchoes()         — ECM Spoof phantoms (if ShowEcmEffects)
+    ├─ DrawTanks()               — for each alive tank:
+    │     ├─ DrawScanHalo()      — point-flash at contact (if ShowScanHalos)
+    │     ├─ Body + treads       — filled square rotated to Heading
+    │     ├─ Cannon barrel       — 4×22 px filled rectangle at GunHeading (GDI+ rotated)
+    │     ├─ Turret circle       — 10 px circle centred on hull, on top of barrel
+    │     ├─ DrawRadarSweepTrail()  — phosphor decay + scan-arc flash (if ShowRadarSweepTrails)
+    │     ├─ DrawEcmAura()       — Jam/Spoof/Burnthrough aura drawn last, on top (if ShowEcmEffects)
+    │     └─ Energy bar + label  — (if ShowEnergyBars / ShowTankLabels)
+    ├─ DrawBuildings()           — concrete-textured rectangles with windows
+    ├─ DrawExplosions()          — blast flash, fireball, shockwave, debris, smoke
+    ├─ DrawHud()                 — tick counter, swarm scoreboard (if ShowHud)
+    └─ DrawAttachedPanels()      — live state info panels (if ShowInfoPanels)
 ```
 
 All GDI+ objects (`Pen`, `Brush`, `SolidBrush`) are cached or created once per render settings change to avoid per-frame allocation.

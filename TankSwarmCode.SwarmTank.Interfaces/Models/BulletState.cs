@@ -19,6 +19,18 @@ public record BulletState
     /// <summary>Bullet speed in pixels/tick (Robocode formula: 20 - 3 * power).</summary>
     public double Speed => 20.0 - 3.0 * Power;
 
+    /// <summary>
+    /// True when the bullet has been deflected by a non-lethal tank hit and is
+    /// decelerating to a stop.  The renderer draws these as fading sparks.
+    /// </summary>
+    public bool IsDeflected { get; init; }
+
+    /// <summary>
+    /// Current travel speed this tick.  Equals <see cref="Speed"/> for live bullets;
+    /// decays toward zero for deflected bullets so the renderer can fade them out.
+    /// </summary>
+    public double CurrentSpeed { get; init; }
+
     /// <summary>Damage inflicted on a direct hit (Robocode formula).</summary>
     public double Damage => 4.0 * Power + (Power > 1.0 ? 2.0 * (Power - 1.0) : 0.0);
 
