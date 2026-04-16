@@ -27,5 +27,5 @@ internal sealed class ArenaContext : IArenaContext
                .Select(b => b.ToBulletState())
                .ToList();
 
-    public IReadOnlyList<ObstacleDefinition> Obstacles => _engine.Obstacles;
+    public IReadOnlyList<BuildingDefinition> Buildings => _engine.Buildings;
 }

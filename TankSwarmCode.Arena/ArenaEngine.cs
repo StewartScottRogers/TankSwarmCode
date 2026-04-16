@@ -16,7 +16,7 @@ public sealed class ArenaEngine : IArena
 
     internal readonly List<TankRuntimeState> RuntimeTanks = [];
     internal readonly List<BulletRuntimeState> RuntimeBullets = [];
-    private readonly List<ObstacleDefinition> _obstacles = [];
+    private readonly List<BuildingDefinition> _buildings = [];
 
     private readonly ArenaContext _context;
     private readonly Random _rng = new();
@@ -41,7 +41,7 @@ public sealed class ArenaEngine : IArena
 
     public IReadOnlyList<BulletState> Bullets => _bulletsSnapshot;
 
-    public IReadOnlyList<ObstacleDefinition> Obstacles => _obstacles;
+    public IReadOnlyList<BuildingDefinition> Buildings => _buildings;
 
     public event EventHandler<TickEventArgs>? TickCompleted;
     public event EventHandler<RoundEndedEventArgs>? RoundEnded;
@@ -93,7 +93,7 @@ public sealed class ArenaEngine : IArena
         if (RuntimeTanks.Count == 0)
             throw new InvalidOperationException("Add at least one tank before starting.");
 
-        GenerateObstacles();
+        GenerateBuildings();
         SpawnTanks();
 
         foreach (TankRuntimeState rts in RuntimeTanks)
@@ -142,7 +142,7 @@ public sealed class ArenaEngine : IArena
         TickNumber = 0;
         RuntimeTanks.Clear();
         RuntimeBullets.Clear();
-        _obstacles.Clear();
+        _buildings.Clear();
     }
 
     // ── Main tick ─────────────────────────────────────────────────────────────
@@ -292,22 +292,22 @@ public sealed class ArenaEngine : IArena
         rts.X = nx;
         rts.Y = ny;
 
-        // --- Obstacle collision ---
-        PushTankFromObstacles(rts);
+        // --- Building collision ---
+        PushTankFromBuildings(rts);
     }
 
     /// <summary>
-    /// Pushes <paramref name="rts"/> out of any obstacle it currently overlaps.
+    /// Pushes <paramref name="rts"/> out of any building it currently overlaps.
     /// Uses the tank body's half-diagonal as the clearance radius so that square
-    /// body corners never visually penetrate an obstacle face.
+    /// body corners never visually penetrate an building face.
     /// Safe to call after any position change (movement, tank-tank separation, etc.).
     /// </summary>
-    private void PushTankFromObstacles(TankRuntimeState rts)
+    private void PushTankFromBuildings(TankRuntimeState rts)
     {
         const double obsHalf = ArenaConstants.TankHalfSize * 1.415 + 0.5; // ≈ TankHalfSize*√2 + margin
         double half = ArenaConstants.TankHalfSize;
 
-        foreach (ObstacleDefinition obs in _obstacles)
+        foreach (BuildingDefinition obs in _buildings)
         {
             double cx = Math.Clamp(rts.X, obs.X, obs.X + obs.Width);
             double cy = Math.Clamp(rts.Y, obs.Y, obs.Y + obs.Height);
@@ -405,10 +405,10 @@ public sealed class ArenaEngine : IArena
             if (b.X < 0 || b.X > Width || b.Y < 0 || b.Y > Height)
                 b.Active = false;
 
-            // Remove bullet if it hit an obstacle
+            // Remove bullet if it hit an building
             if (b.Active)
             {
-                foreach (ObstacleDefinition obs in _obstacles)
+                foreach (BuildingDefinition obs in _buildings)
                 {
                     if (b.X >= obs.X && b.X <= obs.X + obs.Width &&
                         b.Y >= obs.Y && b.Y <= obs.Y + obs.Height)
@@ -466,14 +466,14 @@ public sealed class ArenaEngine : IArena
                 {
                     a.X = Math.Clamp(a.X + nx * push, ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                     a.Y = Math.Clamp(a.Y + ny * push, ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
-                    PushTankFromObstacles(a); // tank-tank push may have sent a into an obstacle
+                    PushTankFromBuildings(a); // tank-tank push may have sent a into an building
                 }
 
                 if (b.IsAlive)
                 {
                     b.X = Math.Clamp(b.X - nx * push, ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                     b.Y = Math.Clamp(b.Y - ny * push, ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
-                    PushTankFromObstacles(b);
+                    PushTankFromBuildings(b);
                 }
             }
         }
@@ -509,7 +509,7 @@ public sealed class ArenaEngine : IArena
 
                 live.X = Math.Clamp(live.X + nx * (overlap + 0.5), ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                 live.Y = Math.Clamp(live.Y + ny * (overlap + 0.5), ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
-                PushTankFromObstacles(live);
+                PushTankFromBuildings(live);
             }
         }
     }
@@ -527,9 +527,9 @@ public sealed class ArenaEngine : IArena
 
             if (!AngleInSweep(bearing, sweepStart, sweepEnd)) continue;
 
-            // Check line-of-sight — obstacles block radar
+            // Check line-of-sight — buildings block radar
             bool losBlocked = false;
-            foreach (ObstacleDefinition obs in _obstacles)
+            foreach (BuildingDefinition obs in _buildings)
             {
                 if (SegmentIntersectsRect(scanner.X, scanner.Y, target.X, target.Y,
                                           obs.X, obs.Y, obs.Width, obs.Height))
@@ -607,21 +607,21 @@ public sealed class ArenaEngine : IArena
         RoundEnded?.Invoke(this, new RoundEndedEventArgs(true, TickNumber));
     }
 
-    // ── Spawning & obstacle generation ────────────────────────────────────────
+    // ── Spawning & building generation ────────────────────────────────────────
 
     /// <summary>
-    /// Randomly places rectangular obstacles in the arena for the upcoming round.
-    /// Count scales with arena area; each obstacle is kept away from the walls and
-    /// from other obstacles so tanks have room to navigate.
+    /// Randomly places rectangular buildings in the arena for the upcoming round.
+    /// Count scales with arena area; each building is kept away from the walls and
+    /// from other buildings so tanks have room to navigate.
     /// </summary>
-    private void GenerateObstacles()
+    private void GenerateBuildings()
     {
-        _obstacles.Clear();
+        _buildings.Clear();
 
         double arenaArea  = Width * Height;
         int    count      = Math.Clamp((int)(arenaArea / 45_000), 4, 14);
-        double wallMargin = ArenaConstants.TankHalfSize * 6; // keep obstacles clear of walls
-        double obsGap     = ArenaConstants.TankHalfSize * 2; // minimum gap between obstacles
+        double wallMargin = ArenaConstants.TankHalfSize * 6; // keep buildings clear of walls
+        double buildingGap     = ArenaConstants.TankHalfSize * 2; // minimum gap between buildings
 
         for (int i = 0; i < count; i++)
         {
@@ -632,15 +632,15 @@ public sealed class ArenaEngine : IArena
                 double x = _rng.NextDouble() * (Width  - wallMargin * 2 - w) + wallMargin;
                 double y = _rng.NextDouble() * (Height - wallMargin * 2 - h) + wallMargin;
 
-                bool overlaps = _obstacles.Any(obs =>
-                    x < obs.X + obs.Width  + obsGap &&
-                    x + w > obs.X          - obsGap &&
-                    y < obs.Y + obs.Height + obsGap &&
-                    y + h > obs.Y          - obsGap);
+                bool overlaps = _buildings.Any(obs =>
+                    x < obs.X + obs.Width  + buildingGap &&
+                    x + w > obs.X          - buildingGap &&
+                    y < obs.Y + obs.Height + buildingGap &&
+                    y + h > obs.Y          - buildingGap);
 
                 if (!overlaps)
                 {
-                    _obstacles.Add(new ObstacleDefinition(x, y, w, h));
+                    _buildings.Add(new BuildingDefinition(x, y, w, h));
                     break;
                 }
             }
@@ -669,17 +669,17 @@ public sealed class ArenaEngine : IArena
                         return Math.Sqrt(dx * dx + dy * dy) < minSep;
                     });
 
-                double spawnObsHalf = ArenaConstants.TankHalfSize * Math.Sqrt(2.0) + 4.0; // visual clearance at spawn
-                bool insideObstacle = !tooClose && _obstacles.Any(obs =>
+                double spawnBuildingHalf = ArenaConstants.TankHalfSize * Math.Sqrt(2.0) + 4.0; // visual clearance at spawn
+                bool insideBuilding = !tooClose && _buildings.Any(obs =>
                 {
                     double closestX = Math.Clamp(candidateX, obs.X, obs.X + obs.Width);
                     double closestY = Math.Clamp(candidateY, obs.Y, obs.Y + obs.Height);
                     double dx = candidateX - closestX;
                     double dy = candidateY - closestY;
-                    return Math.Sqrt(dx * dx + dy * dy) < spawnObsHalf;
+                    return Math.Sqrt(dx * dx + dy * dy) < spawnBuildingHalf;
                 });
 
-                if ((!tooClose && !insideObstacle) || attempt == 199)
+                if ((!tooClose && !insideBuilding) || attempt == 199)
                 {
                     rts.X = candidateX;
                     rts.Y = candidateY;

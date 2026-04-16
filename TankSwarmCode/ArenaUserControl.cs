@@ -710,8 +710,8 @@ public partial class ArenaUserControl : UserControl
         if (_focusedTank is not null)
         {
             DrawSensorView(g);
-            // Obstacles on top of sensor-view ghosts so walls look solid
-            DrawObstacles(g);
+            // Buildings on top of sensor-view ghosts so walls look solid
+            DrawBuildings(g);
         }
         else
         {
@@ -750,9 +750,9 @@ public partial class ArenaUserControl : UserControl
                     DrawTank(g, tank.State);
             }
 
-            // Layer 4.5 – Obstacles (after tanks/hulks/bullets so walls are always solid;
+            // Layer 4.5 – Buildings (after tanks/hulks/bullets so walls are always solid;
             // any residual visual overlap from physics transitions is covered here)
-            DrawObstacles(g);
+            DrawBuildings(g);
 
             // Layer 5 – Explosion blasts and burning flames (on top of everything for impact)
             foreach (ISwarmTank tank in _engine.Tanks)
@@ -941,23 +941,23 @@ public partial class ArenaUserControl : UserControl
         }
     }
 
-    // ── Obstacle shadow geometry helpers ─────────────────────────────────────
+    // ── Building shadow geometry helpers ─────────────────────────────────────
 
     /// <summary>
     /// Returns the GDI+ start angle and sweep span (degrees) of the angular shadow an
-    /// obstacle casts from position (<paramref name="scanX"/>, <paramref name="scanY"/>).
-    /// Returns span = 0 when the scanner is inside or touching the obstacle.
+    /// building casts from position (<paramref name="scanX"/>, <paramref name="scanY"/>).
+    /// Returns span = 0 when the scanner is inside or touching the building.
     /// Angles are in GDI+ convention (0 = east, clockwise).
     /// </summary>
-    private static (float startDeg, float spanDeg) GetObstacleShadowArc(
-        float scanX, float scanY, ObstacleDefinition obs)
+    private static (float startDeg, float spanDeg) GetBuildingShadowArc(
+        float scanX, float scanY, BuildingDefinition obs)
     {
         float ox = (float)obs.X - scanX;
         float oy = (float)obs.Y - scanY;
         float ow = (float)obs.Width;
         float oh = (float)obs.Height;
 
-        // Bail if scanner is on or inside the obstacle
+        // Bail if scanner is on or inside the building
         float cx = Math.Clamp(0f, ox, ox + ow);
         float cy = Math.Clamp(0f, oy, oy + oh);
         if (cx * cx + cy * cy < 0.01f) return (0f, 0f);
@@ -979,17 +979,17 @@ public partial class ArenaUserControl : UserControl
     /// <summary>
     /// Computes the world-space shadow trapezoid cast by <paramref name="obs"/> as seen
     /// from (<paramref name="scanX"/>, <paramref name="scanY"/>), extending to
-    /// <paramref name="farDist"/> pixels.  Returns null if the obstacle is out of range
+    /// <paramref name="farDist"/> pixels.  Returns null if the building is out of range
     /// or the scanner is inside it.
     /// <para>
-    /// The polygon's inner edge is the obstacle's silhouette (near face); the outer edges
+    /// The polygon's inner edge is the building's silhouette (near face); the outer edges
     /// extend along the two tangent rays to <paramref name="farDist"/>.  Using this as a
     /// <see cref="System.Drawing.Drawing2D.CombineMode.Exclude"/> clip region causes GDI+
-    /// to skip drawing anything in the occluded zone beyond the obstacle.
+    /// to skip drawing anything in the occluded zone beyond the building.
     /// </para>
     /// </summary>
-    private static PointF[]? ComputeObstacleShadowPolygon(
-        float scanX, float scanY, ObstacleDefinition obs, float farDist)
+    private static PointF[]? ComputeBuildingShadowPolygon(
+        float scanX, float scanY, BuildingDefinition obs, float farDist)
     {
         float ox = (float)obs.X - scanX;
         float oy = (float)obs.Y - scanY;
@@ -1018,7 +1018,7 @@ public partial class ArenaUserControl : UserControl
         float minA = angles[minIdx];
         float maxA = angles[maxIdx];
 
-        // Trapezoid in world space: obstacle near-face corners → far tangent points
+        // Trapezoid in world space: building near-face corners → far tangent points
         return
         [
             new(scanX + corners[minIdx].X, scanY + corners[minIdx].Y),
@@ -1035,26 +1035,68 @@ public partial class ArenaUserControl : UserControl
         g.DrawRectangle(borderPen, 1, 1, ClientSize.Width - 2, ClientSize.Height - 2);
     }
 
-    private void DrawObstacles(Graphics g)
+    private void DrawBuildings(Graphics g)
     {
         if (_engine is null) return;
-        using SolidBrush fill    = new(Color.FromArgb(85, 68, 50));
-        using Pen         border = new(Color.FromArgb(130, 105, 72), 1);
-        using Pen         hilite = new(Color.FromArgb(160, 130, 90), 1);
 
-        foreach (ObstacleDefinition obs in _engine.Obstacles)
+        // Shared brushes/pens — created once, reused for every building
+        using SolidBrush dropShadow    = new(Color.FromArgb(110, 0,   0,   0  ));
+        using SolidBrush roofFill      = new(Color.FromArgb(58,  65,  72       ));  // dark concrete
+        using SolidBrush wallNorthWest = new(Color.FromArgb(90,  100, 108      ));  // lit face
+        using SolidBrush wallSouthEast = new(Color.FromArgb(32,  36,  40       ));  // shadow face
+        using Pen        roofEdge      = new(Color.FromArgb(100, 110, 120      ), 1f);
+        using Pen        roofDetail    = new(Color.FromArgb(45,  76,  85,  94  ), 1f);
+        using Pen        windowPen     = new(Color.FromArgb(140, 160, 200, 220 ), 1f); // pale blue windows
+
+        const float wallDepth    = 4f;   // visible wall-face thickness (px)
+        const float shadowOffset = 4f;   // drop-shadow offset
+
+        foreach (BuildingDefinition b in _engine.Buildings)
         {
-            float ox = (float)obs.X;
-            float oy = (float)obs.Y;
-            float ow = (float)obs.Width;
-            float oh = (float)obs.Height;
+            float bx = (float)b.X;
+            float by = (float)b.Y;
+            float bw = (float)b.Width;
+            float bh = (float)b.Height;
 
-            g.FillRectangle(fill, ox, oy, ow, oh);
-            g.DrawRectangle(border, ox, oy, ow, oh);
+            // ── 1. Drop shadow ────────────────────────────────────────────────
+            g.FillRectangle(dropShadow,
+                bx + shadowOffset, by + shadowOffset, bw, bh);
 
-            // Subtle top-left highlight to give a stone/block feel
-            g.DrawLine(hilite, ox + 1, oy + 1, ox + ow - 2, oy + 1);
-            g.DrawLine(hilite, ox + 1, oy + 1, ox + 1,      oy + oh - 2);
+            // ── 2. Roof (main flat top) ───────────────────────────────────────
+            g.FillRectangle(roofFill, bx, by, bw, bh);
+
+            // ── 3. Wall faces (top-down perspective: NW faces lit, SE in shade) ──
+            g.FillRectangle(wallNorthWest, bx,              by, bw,         wallDepth); // north wall
+            g.FillRectangle(wallNorthWest, bx,              by, wallDepth,  bh);        // west wall
+            g.FillRectangle(wallSouthEast, bx,              by + bh - wallDepth, bw, wallDepth); // south
+            g.FillRectangle(wallSouthEast, bx + bw - wallDepth, by,         wallDepth,  bh);     // east
+
+            // ── 4. Outer edge ─────────────────────────────────────────────────
+            g.DrawRectangle(roofEdge, bx, by, bw, bh);
+
+            // ── 5. Inset roof detail rectangle ───────────────────────────────
+            float inset = Math.Clamp(Math.Min(bw, bh) * 0.18f, 3f, 7f);
+            if (bw > inset * 3.5f && bh > inset * 3.5f)
+                g.DrawRectangle(roofDetail,
+                    bx + inset, by + inset,
+                    bw - inset * 2, bh - inset * 2);
+
+            // ── 6. Windows along each wall face ──────────────────────────────
+            const float winW = 4f, winH = 3f, winSpacing = 9f, winMargin = 8f;
+
+            // North & south faces (horizontal rows)
+            for (float wx = bx + winMargin; wx + winW <= bx + bw - winMargin; wx += winW + winSpacing)
+            {
+                g.DrawRectangle(windowPen, wx, by + 0.5f,       winW, winH); // north
+                g.DrawRectangle(windowPen, wx, by + bh - winH - 0.5f, winW, winH); // south
+            }
+
+            // West & east faces (vertical columns)
+            for (float wy = by + winMargin; wy + winH <= by + bh - winMargin; wy += winH + winSpacing)
+            {
+                g.DrawRectangle(windowPen, bx + 0.5f,       wy, winH, winW); // west (rotated)
+                g.DrawRectangle(windowPen, bx + bw - winH - 0.5f, wy, winH, winW); // east
+            }
         }
     }
 
@@ -1225,9 +1267,9 @@ public partial class ArenaUserControl : UserControl
                 flashStart, flashSpan);
         }
 
-        // ── Obstacle shadow sectors ───────────────────────────────────────────
-        // Dark filled pie slices show the angular zones blocked by obstacles, painted
-        // on top of the trail so the sweep visually "stops" at each obstacle.
+        // ── Building shadow sectors ───────────────────────────────────────────
+        // Dark filled pie slices show the angular zones blocked by buildings, painted
+        // on top of the trail so the sweep visually "stops" at each building.
         if (_engine is not null)
         {
             float tx      = (float)tank.Position.X;
@@ -1238,9 +1280,9 @@ public partial class ArenaUserControl : UserControl
 
             using Pen shadowEdgePen = new(Color.FromArgb(110, Color.LightGray), 0.9f);
 
-            foreach (ObstacleDefinition obs in _engine.Obstacles)
+            foreach (BuildingDefinition obs in _engine.Buildings)
             {
-                (float startDeg, float spanDeg) = GetObstacleShadowArc(tx, ty, obs);
+                (float startDeg, float spanDeg) = GetBuildingShadowArc(tx, ty, obs);
                 if (spanDeg <= 0f) continue;
 
                 g.FillPie(shadowBrush,
@@ -1870,17 +1912,17 @@ public partial class ArenaUserControl : UserControl
             float fade   = t;                                         // linear: dim at origin, full brightness at contact
             if (radius > 1f && fade > 0.01f)
             {
-                // Build an exclusion clip from obstacle shadow polygons so the outbound
-                // arc and edge lines are invisible where obstacles block line-of-sight.
-                // The shadow trapezoid starts at each obstacle's near face, so only the
-                // portion of the wavefront that has already passed an obstacle is hidden.
+                // Build an exclusion clip from building shadow polygons so the outbound
+                // arc and edge lines are invisible where buildings block line-of-sight.
+                // The shadow trapezoid starts at each building's near face, so only the
+                // portion of the wavefront that has already passed an building is hidden.
                 GraphicsState? preClip = null;
-                if (_engine is not null && _engine.Obstacles.Count > 0)
+                if (_engine is not null && _engine.Buildings.Count > 0)
                 {
                     using GraphicsPath shadowPath = new();
-                    foreach (ObstacleDefinition obs in _engine.Obstacles)
+                    foreach (BuildingDefinition obs in _engine.Buildings)
                     {
-                        PointF[]? poly = ComputeObstacleShadowPolygon(
+                        PointF[]? poly = ComputeBuildingShadowPolygon(
                             sx, sy, obs, radius + 60f);
                         if (poly is not null)
                         {
@@ -1921,9 +1963,9 @@ public partial class ArenaUserControl : UserControl
                 if (_engine is not null && radius > 5f)
                 {
                     using Pen edgePen = new(Color.FromArgb((int)(70 * fade), spotterColor), 0.7f);
-                    foreach (ObstacleDefinition obs in _engine.Obstacles)
+                    foreach (BuildingDefinition obs in _engine.Buildings)
                     {
-                        PointF[]? poly = ComputeObstacleShadowPolygon(
+                        PointF[]? poly = ComputeBuildingShadowPolygon(
                             sx, sy, obs, radius + 60f);
                         if (poly is null) continue;
                         // poly[0]/[3] = left silhouette edge, poly[1]/[2] = right silhouette edge

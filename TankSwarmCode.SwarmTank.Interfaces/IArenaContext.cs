@@ -30,9 +30,9 @@ public interface IArenaContext
     IReadOnlyList<BulletState> GetActiveBullets();
 
     /// <summary>
-    /// Returns the list of rectangular obstacles placed in the arena for this round.
-    /// Obstacles block movement, bullets, and radar line-of-sight.
+    /// Returns the list of buildings placed in the arena for this round.
+    /// Buildings block movement, bullets, and radar line-of-sight.
     /// Use this for navigation and firing-angle calculations.
     /// </summary>
-    IReadOnlyList<ObstacleDefinition> Obstacles { get; }
+    IReadOnlyList<BuildingDefinition> Buildings { get; }
 }
