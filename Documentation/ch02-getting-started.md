@@ -10,7 +10,7 @@
 |-------------|----------------|
 | .NET SDK | 10.0 |
 | Windows | Windows 10 or later (WinForms host) |
-| Visual Studio / Rider | Any version that supports .NET 10 and `.slnx` solution files |
+| Visual Studio / Rider | Any version supporting .NET 10 and `.slnx` solution files |
 
 ---
 
@@ -29,11 +29,11 @@
 # Debug run
 dotnet run --project TankSwarmCode/TankSwarmCode.csproj
 
-# Release build (produces a single-file executable)
+# Release build (single-file executable)
 dotnet publish TankSwarmCode/TankSwarmCode.csproj -c Release
 ```
 
-The Release publish target is configured to produce a self-contained, single-file `win-x64` executable. The output lands in the standard `publish/` directory under the project.
+The Release publish target produces a self-contained, single-file `win-x64` executable in the standard `publish/` directory under the project.
 
 ---
 
@@ -45,10 +45,10 @@ When the application starts you will see an empty arena and a toolbar/menu acros
 
 Use the **Add Tanks** menu to select one or both pre-built swarms:
 
-- **Red Swarm** — adds RedScout, RedAlpha, RedBravo, RedWolf, RedFox (5 tanks)
-- **Blue Swarm** — adds BlueCommander, BluePatrol × 2, BlueSniper × 2, BlueWarden (6 tanks)
+- **Red Swarm** — adds 6 tanks: RedScout, RedAlpha, RedBravo (RedAttacker × 2), RedWolf, RedFox (RedFlank × 2), and ECM-Jammer
+- **Blue Swarm** — adds 7 tanks: BlueCommand, BluePatrol × 2, BlueSniper × 2, BlueWarden, and ECM-Operator
 
-You can add both swarms for a full Red vs Blue battle, or add the same swarm twice for same-team mirror matches.
+You can add both swarms for a full Red vs Blue battle, or add the same swarm twice for mirror matches.
 
 ### Step 2 — Configure the Arena (optional)
 
@@ -58,16 +58,16 @@ The **Arena Configuration** panel lets you set the width and height of the arena
 
 Click **Start**. The engine will:
 
-1. Randomly place buildings (4–14 scaled to arena area).
+1. Randomly place buildings scaled to the arena area.
 2. Spawn each tank at a random, collision-free position.
 3. Call each tank's `OnStart()` hook.
 4. Begin the tick loop.
 
 ### Step 4 — Watch and Interact
 
-- **Click a tank** to attach the info panel and monitor its state.
-- **Right-click a tank** to pin/unpin focus.
-- **Double-click** to lock the camera on a tank.
+- **Left-click a tank** to attach the live info panel and monitor its state.
+- **Right-click a tank** to pin/unpin focus on that tank.
+- The **info panel** includes an **ECM override button** to force any ECM mode on a tank without editing AI code.
 - The **Radio Log** panel scrolls swarm messages in real time, colour-coded by swarm.
 
 ### Step 5 — End of Round
@@ -82,7 +82,7 @@ Click **Reset** to clear the arena and prepare for a new round, or **Start** aga
 
 | Control | Effect |
 |---------|--------|
-| Ticks/sec slider | Sets the simulation rate (1 to unlimited) |
+| Ticks/sec slider | Sets the simulation rate |
 | **Stop** button | Pauses the simulation without resetting |
 | **Step** button | Advances exactly one tick — useful for debugging AI logic |
 
@@ -96,26 +96,27 @@ TankSwarmCode/                    WinForms host
   TankSwarmArena.cs               Main form (menus, controls, radio log)
   ArenaUserControl.cs             GDI+ renderer + engine host
   ArenaConfigurationUserControl   Arena dimension settings panel
+  ScreenWakeLock.cs               Prevents display sleep during simulation
 
 TankSwarmCode.Arena/
   ArenaEngine.cs                  Tick loop, physics, collision detection
-  TankRuntimeState.cs             Mutable per-tank state
-  BulletRuntimeState.cs           Mutable per-bullet state
-  ArenaContext.cs                 Read-only arena view exposed to tanks
+  TankRuntimeState.cs             Mutable per-tank state (engine-internal)
+  BulletRuntimeState.cs           Mutable per-bullet state (engine-internal)
+  ArenaContext.cs                 IArenaContext implementation
 
 TankSwarmCode.SwarmTank/
   SwarmTank.cs                    SwarmTankBase — subclass this to write AI
 
 TankSwarmCode.SwarmTank.Interfaces/
-  ISwarmTank.cs                   Tank contract
-  IArenaContext.cs                Arena read-only interface
+  ISwarmTank.cs                   Tank contract (engine ↔ AI boundary)
+  IArenaContext.cs                Arena read-only interface exposed to tanks
   ArenaConstants.cs               All physics constants
-  Models/                         TankState, TankCommand, RadarContact, …
-  Events/                         Event arg types
-  Enums/                          TankRole, SwarmMessageType
+  Models/                         TankState, TankCommand, RadarContact, BulletState, …
+  Events/                         Event arg types for every lifecycle hook
+  Enums/                          TankRole, EcmMode, SwarmMessageType
 
-TankSwarmCode.SwarmTanks.Red/     Red Swarm AI
-TankSwarmCode.SwarmTanks.Blue/    Blue Swarm AI
+TankSwarmCode.SwarmTanks.Red/     Red Swarm AI (6 tanks)
+TankSwarmCode.SwarmTanks.Blue/    Blue Swarm AI (7 tanks)
 Documentation/                    This documentation
 ```
 

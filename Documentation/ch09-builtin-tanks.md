@@ -10,80 +10,78 @@ Two fully implemented swarms ship with the project. They demonstrate different c
 
 ## Red Swarm (SwarmId = 1) — Aggressive Assault
 
-The Red Swarm is built around a fast-moving scout that floods the team with radar data, and two types of attacker that close in from different angles.
+The Red Swarm is built around a fast-moving scout that floods the team with radar data, two attacker pairs that close in from different angles, and an ECM jammer that corrupts the enemy's picture.
+
+**Roster (6 tanks total)**
+
+| Tank | File | Role |
+|------|------|------|
+| RedScout | `RedScout.cs` | Scout |
+| RedAlpha, RedBravo | `RedAttacker.cs` (×2) | Attacker |
+| RedWolf, RedFox | `RedFlank.cs` (×2) | Attacker |
+| ECM-Jammer | `RedEcmJammer.cs` | EcmSpecialist |
+
+---
 
 ### RedScout
 
-**File**: `TankSwarmCode.SwarmTanks.Red/RedScout.cs` (~102 lines)  
-**Role**: Scout
-
 **Strategy**:
 - Spins the radar continuously at maximum rate (45°/tick), relying on automatic `RadarShare` to keep all allies informed.
-- Moves in an S-curve pattern to avoid becoming an easy static target.
-- Fires **low-power harassing shots** (0.5 power) — this is intentional; the scout's job is intelligence, not kill shots.
-- Has no dedicated target-priority logic; fires at whatever its gun happens to face.
+- Moves in an S-curve pattern — oscillates turn direction every 35 ticks — to avoid becoming an easy static target.
+- Fires **low-power harassing shots** (0.5 power); the scout's job is intelligence, not kill shots.
+- On bullet hit: perpendicular jink (±90° turn) + retreat 80 px.
+- On wall hit: reverses oscillation direction and backs off 40 px.
 
-**Swarm contribution**: By keeping the radar sweeping at all times, `RedScout` ensures the attacker tanks always have a fresh target picture, even when their own radars are locked onto a specific target.
+**Swarm contribution**: By keeping the radar sweeping at all times, `RedScout` ensures the attacker tanks always have a fresh enemy picture even when their own radars are locked onto a specific target.
 
 ---
 
 ### RedAttacker (RedAlpha & RedBravo)
 
-**File**: `TankSwarmCode.SwarmTanks.Red/RedAttacker.cs` (~169 lines)  
-**Role**: Attacker  
-**Instances**: Two tanks — `RedAlpha` and `RedBravo`
-
 **Strategy**:
 - Selects the freshest enemy contact from `RadarMap` (via `GetFreshestEnemy()`).
-- Uses **linear prediction** to lead moving targets: calculates where the target will be when the bullet arrives, based on `VelocityVector` and bullet travel time.
-- Fires at **2.5 power** — high damage, slower bullet; only fires when gun alignment is within 5°.
-- Advances toward the target while tracking, closing the engagement distance.
-- Broadcasts **`RequestBackup`** when energy drops below 25, allowing a more sophisticated swarm to converge on a low-health attacker.
-- Shares its own `RadarMap` entries with allies each tick.
+- Uses **linear prediction** to lead moving targets: projects the target's current `VelocityVector` by the bullet travel time to estimate where it will be.
+- Fires at **2.5 power** — high damage, slower bullet — only when gun alignment is within 5°.
+- Closes when target > 200 px away, backs off if < 100 px, holds position in between.
+- Broadcasts `RequestBackup` when energy drops below 25.
+- Retreats toward arena centre and keeps radar spinning when energy < 25; resumes attacking when energy recovers above 35.
 
 **Key technique — linear prediction**:
 
 ```
-travelTime = distance / bulletSpeed
-predictedPosition = target.Position + target.VelocityVector × travelTime
-aimAngle = bearing to predictedPosition
+travelTime       = distance / bulletSpeed
+predictedPos     = target.Position + target.VelocityVector × travelTime
+absoluteBearing  = Atan2(predictedPos.X - myX, predictedPos.Y - myY)
+gunTurn          = NormalizeTo180(absoluteBearing - State.GunHeading)
+fire if |gunTurn| < 5°
 ```
-
-The gun fires only when `|gunBearing - aimAngle| < 5°`.
-
----
-
-### RedEcmJammer
-
-**File**: `TankSwarmCode.SwarmTanks.Red/RedEcmJammer.cs`  
-**Role**: EcmSpecialist  
-**Cannon**: None
-
-**Strategy**:
-- Carries no cannon — all energy is reserved for electronic warfare.
-- Default mode: **Spoof** — projects two ghost-tank echoes that drift around the arena, polluting every enemy's `RadarMap` with phantom contacts. Enemies who don't run Burnthrough will waste fire on these ghosts and misread the battlefield.
-- Threat response: switches to **Jam** for 25 ticks when hit by a bullet, making it very difficult for the shooter to re-acquire it. Reverts to Spoof automatically.
-- Orbits the arena centre so its ghost projections land in the contested mid-arena space where enemies are most active.
-- Broadcasts `EcmAlert` when it takes fire, alerting allies that the enemy has located it.
-- Broadcasts `EnemySpotted` for every radar contact so the swarm retains a common picture even though the jammer never fires.
-
-**Key interaction**: If the enemy swarm does not include a Burnthrough-capable tank, `RedEcmJammer`'s ghosts will contaminate the entire enemy `RadarMap` indefinitely. Adding a `BlueEcmOperator` to the Blue side is the primary counter.
 
 ---
 
 ### RedFlank (RedWolf & RedFox)
 
-**File**: `TankSwarmCode.SwarmTanks.Red/RedFlank.cs` (~135 lines)  
-**Role**: Attacker  
-**Instances**: Two tanks — `RedWolf` (+90° offset) and `RedFox` (−90° offset)
+**Strategy**:
+- Uses the same target-acquisition logic as `RedAttacker` but approaches from a fixed **bearing offset** (±90°) relative to the attacker–target axis.
+- `RedWolf` circles to the target's right; `RedFox` circles to the left, creating a **pincer manoeuvre**.
+- Fires at **2.0 power** when aligned within 15° and within 300 px.
+- Orbit distance: ~180 px from the target.
+
+The flanking offset is computed by projecting the desired position perpendicular to the attacker–target line, then steering toward that position while maintaining radar lock.
+
+---
+
+### RedEcmJammer
+
+**Role**: EcmSpecialist — **no cannon**
 
 **Strategy**:
-- Uses the same target-acquisition logic as `RedAttacker` but approaches from a fixed **bearing offset** relative to the straight line between the flanker and the target.
-- `RedWolf` circles to the target's right (relative to the attacker-target axis); `RedFox` circles to the left.
-- Together they create a **pincer manoeuvre**: the enemy faces fire from three directions simultaneously.
-- Fires at **2.0 power** when aligned within 12° and within 300 px.
+- Default mode: **Spoof** — projects two ghost-tank echoes that drift around the arena, polluting enemy `RadarMap` entries with phantom contacts.
+- Threat response: switches to **Jam** for 25 ticks when hit by a bullet, making it very difficult for the shooter to re-acquire the jammer. Reverts to Spoof automatically.
+- Orbits the arena centre at ~22 % of the arena's smaller dimension, placing ghosts in the contested mid-arena space.
+- Broadcasts `EcmAlert` when it takes fire.
+- Broadcasts `EnemySpotted` for every radar contact so the swarm retains a common picture even though the jammer never fires.
 
-The flanking offset is applied by computing the desired position perpendicular to the attacker–target line, then steering toward that position while maintaining radar lock.
+**Key interaction**: If the enemy swarm does not include a Burnthrough-capable tank, `RedEcmJammer`'s ghosts contaminate the entire enemy `RadarMap` indefinitely. `BlueEcmOperator` is the intended counter.
 
 ---
 
@@ -91,34 +89,41 @@ The flanking offset is applied by computing the desired position perpendicular t
 
 The Blue Swarm has a clear command hierarchy: `BlueCommander` designates targets and issues positional orders, while specialist tanks execute their roles based on received messages.
 
+**Roster (7 tanks total)**
+
+| Tank | File | Role |
+|------|------|------|
+| BlueCommand | `BlueCommander.cs` | Attacker |
+| BluePatrol × 2 | `BluePatrol.cs` (×2) | Defender |
+| BlueSniper × 2 | `BlueSniper.cs` (×2) | Support |
+| BlueWarden | `BlueWarden.cs` | Defender |
+| ECM-Operator | `BlueEcmOperator.cs` | EcmSpecialist |
+
+---
+
 ### BlueCommander
 
-**File**: `TankSwarmCode.SwarmTanks.Blue/BlueCommander.cs` (~220 lines)  
-**Role**: Attacker
-
 **Strategy**:
-- Holds a position near the arena centre.
-- Scans the entire `RadarMap` each tick and selects the **lowest-energy enemy** as the priority target.
-- Broadcasts `TargetLocked` with the chosen target name, causing the whole swarm to refocus.
-- Broadcasts `FormationMove` with rally positions to reposition `BluePatrol` and `BlueWarden`.
-- Fires adaptively: **2.0–3.0 power** depending on distance and target energy.
-- Retreats toward a safe corner when energy drops below 28; resumes attacking when energy recovers above 55.
+- Holds a position near the arena centre (within 70 px).
+- Scans `RadarMap` each tick and selects the **lowest-energy enemy** as the priority target (score = energy + distance × 0.1, lower is better).
+- Broadcasts `TargetLocked` every 20 ticks with the chosen target name, causing the whole swarm to refocus.
+- Broadcasts `FormationMove` with a rally position when a `RequestBackup` message is received.
+- Fires adaptively: **3.0 power** when the target is within 150 px, **2.0 power** otherwise.
+- Retreats toward a safe corner when energy < 28; resumes attacking when energy recovers above 55.
 
 **Command flow**:
 
 ```
-BlueCommander scans RadarMap
-    → selects lowest-energy enemy
+BlueCommander scans RadarMap → selects lowest-energy enemy
     → broadcasts TargetLocked("RedAlpha")
 
-BluePatrol receives TargetLocked("RedAlpha")
-    → updates _priorityTargetName = "RedAlpha"
-    → steers toward RedAlpha's last-known position
+BluePatrol receives TargetLocked
+    → updates _priorityTargetName; steers toward last-known position
 
-BlueSniper receives TargetLocked("RedAlpha")
-    → only acts if TargetLocked; otherwise holds corner position
+BlueSniper receives TargetLocked
+    → only fires if TargetLocked is set; otherwise holds corner position
 
-BlueWarden receives TargetLocked("RedAlpha")
+BlueWarden receives TargetLocked
     → adjusts oscillation centre toward the designated target
 ```
 
@@ -126,74 +131,61 @@ BlueWarden receives TargetLocked("RedAlpha")
 
 ### BluePatrol (two instances)
 
-**File**: `TankSwarmCode.SwarmTanks.Blue/BluePatrol.cs` (~215 lines)  
-**Role**: Defender  
-**Instances**: Two tanks patrolling the left and right halves of the arena
-
 **Strategy**:
-- Patrols between two waypoints in its assigned arena half when no commander order is active.
-- On `TargetLocked` message: abandons patrol route and steers toward the designated enemy.
-- On `FormationMove` message: moves to the specified rally position.
-- Fires **1.5–2.5 power** adaptively based on distance (closer = higher power).
-- Maintains its own radar scan to supplement the team picture.
+- Patrols a 4-point rectangle in its assigned arena half (left or right) when no commander order is active.
+- On `TargetLocked`: abandons patrol and steers toward the designated enemy.
+- On `FormationMove`: moves to the specified rally position for 60 ticks.
+- Fires **2.5 power** at close range (< 150 px) and **1.5 power** at longer range.
+- Retreats when energy < 20; resumes when energy > 30.
 
 ---
 
 ### BlueSniper (two instances)
 
-**File**: `TankSwarmCode.SwarmTanks.Blue/BlueSniper.cs` (~217 lines)  
-**Role**: Support  
-**Instances**: Two tanks camped in opposite corners
-
 **Strategy**:
-- Camps in a designated corner and only moves when forced out.
+- Camps in a designated corner (90 px from walls) and holds position.
 - Only responds to `TargetLocked` orders from `BlueCommander` — ignores general radar contacts.
-- Fires at **maximum power (3.0)** with strict alignment tolerance (3°).
-- Performs **inbound bullet evasion**: detects bullets in `Arena.Bullets` aimed at its current position and sidesteps.
-- Relocates to a new corner position if an enemy closes within 80 px.
+- Fires at **3.0 power** with tight alignment tolerance (5°).
+- Performs **inbound bullet evasion**: scans `Arena.GetActiveBullets()` each tick; if a bullet is heading toward this tank (dot product check) and within 200 px, sidesteps perpendicular.
+- Relocates to the opposite corner if an enemy closes within 80 px.
 
 **Bullet evasion logic**:
 
 ```
-For each bullet in Arena.Bullets:
-    if bullet heading points within 15° toward this tank's position
-    and bullet is within 150 px:
-        SetTurnRight(90)   // sidestep perpendicular to bullet travel
+For each bullet in Arena.GetActiveBullets():
+    project bullet velocity vector toward this tank's position
+    if dot product > 0 AND distance < 200 px:
+        SetTurnRight(90)
         SetAhead(40)
 ```
 
 ---
 
-### BlueEcmOperator
-
-**File**: `TankSwarmCode.SwarmTanks.Blue/BlueEcmOperator.cs`  
-**Role**: EcmSpecialist  
-**Cannon**: Light (max 2.0 power)
+### BlueWarden
 
 **Strategy**:
-- Primary mission: **Burnthrough** — keeps its radar cleared of enemy jamming and ghost echoes, protecting the Blue swarm's radar picture.
-- Detects `"Ghost-*"` contacts in `OnScannedTank`, broadcasts `EcmAlert`, and forces itself into Burnthrough mode for 40 ticks — ensuring it sees through the active spoof field.
-- **Responds to ally `EcmAlert` messages**: immediately activates Burnthrough, coordinating ECCM coverage across the swarm.
-- **Offensive Jam window**: when energy exceeds 70 and an enemy ECM tank has been confirmed, switches to Jam for 20 ticks, disrupting the enemy's Spoof pipeline and forcing them defensive.
-- Falls back to `Off` when energy drops below 25, preserving survival.
-- Patrols a figure-8 path to maintain arena coverage.
-- Fires opportunistically at confirmed enemy contacts (not ghosts) at up to 2.0 power.
-
-**Key interaction**: `BlueEcmOperator` directly counters `RedEcmJammer`. Its Burnthrough reduces ghost filter chance to ~70 % per sweep, and its `EcmAlert` broadcasts can trigger Burnthrough across the whole Blue swarm if other tanks implement `OnSwarmMessage`.
+- Anchors near the arena centre and oscillates back and forth every 25 ticks (±35 px) to be an unpredictable target.
+- Performs a full radar sweep to ensure the team always has central-area coverage.
+- Broadcasts `EnemySpotted` for every new radar contact.
+- Fires **adaptively**: 3.0 power when target < 150 px, 2.0 power < 300 px, 1.0 power beyond.
+- Responds to `TargetLocked` and `FormationMove` orders from `BlueCommander` — adjusts oscillation centre and rallies for up to 60 ticks.
 
 ---
 
-### BlueWarden
+### BlueEcmOperator
 
-**File**: `TankSwarmCode.SwarmTanks.Blue/BlueWarden.cs` (~165 lines)  
-**Role**: Defender
+**Role**: EcmSpecialist — **light cannon (max 2.0 power)**
 
 **Strategy**:
-- Anchors near the arena centre and oscillates back and forth (like a pendulum) to be an unpredictable target.
-- Performs a full radar sweep to ensure the team always has central-area coverage.
-- Broadcasts `EnemySpotted` for every new radar contact.
-- Fires **adaptively** (1.0–3.0 power based on distance and target energy).
-- Responds to `Commander` orders: adjusts oscillation centre toward the designated target.
+- Default mode: **Burnthrough** — protects the Blue swarm's radar picture from enemy Spoof fields.
+- Inspects every `OnScannedTank` contact name. If it starts with `"Ghost-"`, broadcasts `EcmAlert` and forces Burnthrough for 40 ticks — ensuring it sees through the active Spoof field.
+- **Responds to ally `EcmAlert` messages**: immediately activates Burnthrough, coordinating ECCM across the swarm.
+- **Offensive Jam window**: when energy > 70 and an enemy ECM tank has been confirmed, switches to Jam for 20 ticks to disrupt the enemy's Spoof pipeline.
+- Falls back to `Off` when energy < 25 to preserve survival.
+- Patrols a figure-8 path to maintain arena coverage.
+- Fires at confirmed enemy contacts (non-Ghost) when gun is within 6° and energy > 40.
+
+**Key interaction**: `BlueEcmOperator` directly counters `RedEcmJammer`. Its Burnthrough filters ~70 % of ghosts per sweep, and its `EcmAlert` broadcasts can trigger Burnthrough across the whole Blue swarm.
 
 ---
 
@@ -202,12 +194,12 @@ For each bullet in Arena.Bullets:
 | | Red Swarm | Blue Swarm |
 |---|-----------|------------|
 | **Philosophy** | Aggressive, fast, offensive + EM deception | Coordinated, defensive, ECCM-protected |
-| **Radar coverage** | Scout-driven + ECM ghost injection | Commander-driven + Operator Burnthrough |
+| **Radar coverage** | Scout-driven; ECM ghost injection pollutes enemy picture | Commander-driven; Operator Burnthrough clears own picture |
 | **Engagement range** | Close-to-medium | Medium-to-long |
-| **Coordination type** | Loose (auto RadarShare, backup request, EcmAlert) | Tight (TargetLocked, FormationMove, EcmAlert response) |
+| **Coordination type** | Loose (auto RadarShare, backup requests, EcmAlert) | Tight (TargetLocked, FormationMove, EcmAlert response) |
 | **Special tactics** | Flanking pincer, linear prediction, ghost spoofing | Corner camping, bullet evasion, priority targeting, ECCM |
-| **ECM capability** | Jammer (Spoof → Jam on threat) | Operator (Burnthrough → Jam offensive) |
-| **Tank count** | 6 (inc. ECM-Jammer) | 7 (inc. ECM-Operator) |
+| **ECM capability** | Jammer: Spoof by default → Jam on threat | Operator: Burnthrough by default → Jam offensive |
+| **Tank count** | 6 (incl. ECM-Jammer) | 7 (incl. ECM-Operator) |
 
 ---
 

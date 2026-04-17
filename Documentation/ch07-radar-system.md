@@ -16,99 +16,64 @@ The radar is the primary sense organ of every tank. It sweeps an arc each tick a
 
 Each tick the radar rotates by up to **45°** in the commanded direction. The engine records:
 
-- `PrevRadarHeading` — the radar's heading at the start of the tick
-- `RadarHeading` — the radar's heading at the end of the tick (after the turn is applied)
+- `PrevRadarHeading` — the radar's heading at the **start** of the tick (before the turn)
+- `RadarHeading` — the radar's heading at the **end** of the tick (after the turn)
 
-The sweep arc is the angular region between these two headings. Any tank whose absolute bearing from the scanning tank falls within this arc is a potential radar contact (subject to line-of-sight checks).
+The sweep arc is the angular region between these two headings, traversed in the commanded direction. Any tank whose absolute bearing from the scanning tank falls within this arc is a potential radar contact, subject to line-of-sight.
 
 ### Wraparound Handling
 
-The arc correctly handles the 0°/360° wraparound. For example, a sweep from 350° to 10° (a 20° clockwise arc) detects targets at 355° and 5° without special-casing.
+The arc correctly handles the 0°/360° wraparound. A sweep from 350° to 10° (a 20° clockwise arc) correctly detects targets at 355° and 5°.
 
 ---
 
 ## Line-of-Sight Check
 
-After the arc test, the engine performs a segment-rectangle intersection test (Liang–Barsky algorithm) between:
+After the arc test, the engine performs a segment-rectangle intersection test (Liang–Barsky algorithm) from the scanning tank's centre to the target's centre against every building in the arena. If any building intersects this segment, the target is **not detected**.
 
-- The scanning tank's centre position
-- The target tank's centre position
-
-...against every building in the arena. If any building intersects this segment, the target is **not detected**.
-
-This creates realistic occlusion: tanks can hide behind buildings, and scouting manoeuvres around buildings are meaningful.
+This creates realistic occlusion: tanks can hide behind buildings, and scouting manoeuvres around obstacles are tactically meaningful.
 
 ---
 
-## RadarContact
+## Scan Events
 
-When a tank is detected, a `RadarContact` is created or updated:
+A successful scan fires events on both participants:
 
-```csharp
-public class RadarContact
-{
-    public string   Name          { get; init; }  // target's Name
-    public int      EnemySwarmId  { get; init; }  // target's SwarmId
-    public bool     IsAlly        { get; init; }  // same SwarmId as scanner
-    public Vector2D Position      { get; init; }  // last-known position
-    public double   Heading       { get; init; }  // last-known body heading
-    public double   Velocity      { get; init; }  // last-known speed
-    public double   Energy        { get; init; }  // last-known energy
-    public long     Timestamp     { get; init; }  // tick when last updated
-    public string   SpottedBy     { get; init; }  // scanner's Name
-    public Vector2D VelocityVector { get; }       // derived from Heading × Velocity
-}
-```
+- **Scanner** receives `OnScannedTank(ScannedTankEventArgs e)` with `e.Result` (`ScanResult`).
+- **Target** receives `OnPainted(PaintedEventArgs e)` with the painter's name and position.
 
-`VelocityVector` is computed from `Heading` and `Velocity` and is used for **linear prediction** (leading the target when firing).
+Scans are filtered for ECM effects before either event fires. A dropped scan fires neither event. A corrupted scan fires `OnScannedTank` with false data on the scanner and **does** fire `OnPainted` on the target (the beam still reached it physically).
+
+---
+
+## ScanResult vs RadarContact
+
+| | `ScanResult` | `RadarContact` |
+|---|---|---|
+| **Delivered by** | `OnScannedTank` — instantaneous scan event | `RadarMap` — persistent record |
+| **Key fields** | `Name`, `SwarmId`, `Bearing`, `Distance`, `Heading`, `Velocity`, `Energy`, `Position` | same state fields + `IsAlly`, `Timestamp`, `SpottedBy`, `VelocityVector` |
+| **Ally flag** | Check `SwarmId == this.SwarmId` manually | `IsAlly` property |
+| **Freshness** | Always current (just scanned) | Compare `Timestamp` to `Arena.TickNumber` |
+| **Source** | Only this tank's own radar | Own scans merged with ally `RadarShare` broadcasts |
 
 ---
 
 ## RadarMap
 
-`SwarmTankBase` maintains a `Dictionary<string, RadarContact>` called `RadarMap`. Entries are added or refreshed whenever:
+`SwarmTankBase` maintains `IReadOnlyDictionary<string, RadarContact>` called `RadarMap`, keyed by tank name. Entries are added or refreshed whenever:
 
 1. This tank's own radar arc detects a target.
 2. An ally broadcasts a `RadarShare` message containing a newer contact (higher `Timestamp`).
-3. An ally broadcasts a `Painted` message with an enemy scanner's position — that position can be used for targeting even without a direct radar lock.
 
-The merge rule: **the newer timestamp wins**. If an ally spotted a target 2 ticks ago and your own radar spotted it 5 ticks ago, the ally's data replaces yours.
+**Merge rule**: the newer `Timestamp` wins. An ally's fresher data always replaces a stale own observation.
 
 ### Staleness
 
-`RadarMap` entries are never automatically removed. An entry for a destroyed tank will remain with its last-known data. Always check `Timestamp` against `Arena.CurrentTick` to assess how stale a contact is. The helper `GetFreshestEnemy()` returns the entry with the highest `Timestamp` among non-ally contacts.
+`RadarMap` entries are never automatically removed — an entry for a destroyed tank persists with its last-known data. Always compare `contact.Timestamp` to `Arena.TickNumber` to assess freshness. The helper `GetFreshestEnemy()` filters by both staleness and ally status.
 
 ### Radar offline (jamming)
 
-When a tank is jamming, no new contacts are added to its `RadarMap` from its own radar. Contacts already in the map become progressively stale. Because jamming also blocks incoming radio, no `RadarShare` or `Painted` messages from allies reach the jammer either. A tank that jams for many ticks will have an entirely stale intelligence picture when it comes back online.
-
----
-
-## Firing Restriction
-
-A tank whose radar is offline (due to `Jam` or `JamAndSpoof`) **cannot fire**. The engine suppresses the shot regardless of what `SetFire()` was called with. The only way for a jamming tank to have valid targeting data is through contacts that were acquired *before* jamming started — but those contacts age out quickly in a fast-moving battle.
-
----
-
-## The `OnPainted` Event
-
-Every successful (non-dropped) scan fires a callback on the **target** — the tank being swept over:
-
-```csharp
-protected virtual void OnPainted(PaintedEventArgs e)
-```
-
-| Field | Description |
-|-------|-------------|
-| `PainterName` | Name of the tank whose radar painted this tank |
-| `PainterSwarmId` | Swarm the painter belongs to |
-| `PainterPosition` | Arena position of the painter at the moment of the scan |
-
-The base class implementation auto-broadcasts a `[PAINTED]` (`SwarmMessageType.Painted`) message to all swarm allies. This gives the entire swarm the scanner's position at no extra coding cost.
-
-**Key implication**: aggressive radar use is a double-edged sword. Every scan that connects reveals your own position to the target and, through the `[PAINTED]` broadcast, to the target's entire swarm.
-
-See [Chapter 6: Swarm Communication](ch06-swarm-communication.md) for the `[PAINTED]` message type and [Chapter 13: ECM System](ch13-ecm-system.md) for the full `OnPainted` API.
+While jamming, no new contacts are added from this tank's own radar. Because jamming also blocks incoming radio, no `RadarShare` or `Painted` messages from allies arrive either. A tank that jams for many ticks will have an entirely stale intelligence picture when it comes back online.
 
 ---
 
@@ -123,12 +88,19 @@ RelativeBearing = NormalizeTo180(absoluteAngleToTarget − State.Heading)
 - **Positive** values are to the right (clockwise).
 - **Negative** values are to the left (counter-clockwise).
 
-`OnScannedTank(e)` provides `e.BearingDegrees` in this relative form. To aim the gun at a scanned target:
+`OnScannedTank` provides `e.Result.Bearing` in this relative form. To aim the gun at a scanned target:
 
 ```csharp
-double gunTurn = e.BearingDegrees                   // bearing to target
-               + State.GunHeading - State.Heading;  // offset: gun relative to body
-SetTurnGunRight(gunTurn);
+public override void OnScannedTank(ScannedTankEventArgs e)
+{
+    base.OnScannedTank(e);   // record in RadarMap
+
+    // Gun offset: gun heading relative to body heading
+    double gunOffset = State.GunHeading - State.Heading;
+    double gunTurn   = NormalizeAngle(e.Result.Bearing - gunOffset);
+    SetTurnGunRight(gunTurn);
+    SetFire(2.0);
+}
 ```
 
 Normalise all angular differences to (−180, +180] before using them in turn commands to avoid spinning the wrong way around.
@@ -142,81 +114,87 @@ Normalise all angular differences to (−180, +180] before using them in turn co
 The simplest strategy: keep the radar spinning at maximum speed.
 
 ```csharp
-// OnTick
-SetTurnRadarRight(double.MaxValue);   // engine clamps to 45°/tick
+public override void OnTick(TickEventArgs e)
+{
+    SetTurnRadarRight(double.MaxValue);   // engine clamps to 45°/tick
+}
 ```
 
-Guarantees every tank in the arena will be scanned within 8 ticks.
+Guarantees every tank in the arena will be scanned within 8 ticks. Used by `RedScout`.
 
 ### Lock-on Tracking
 
 Narrow the radar to stay on a known target, refreshing the contact every tick:
 
 ```csharp
-// OnTick
-var target = _myTarget;
-if (target != null)
+public override void OnTick(TickEventArgs e)
 {
-    double absoluteBearingToTarget = Math.Atan2(
-        target.Position.X - State.Position.X,
-        target.Position.Y - State.Position.Y) * (180 / Math.PI);
+    var target = GetFreshestEnemy();
+    if (target != null)
+    {
+        double absoluteBearing = Math.Atan2(
+            target.Position.X - State.Position.X,
+            target.Position.Y - State.Position.Y) * (180.0 / Math.PI);
 
-    double radarTurn = NormalizeTo180(absoluteBearingToTarget - State.RadarHeading);
-    SetTurnRadarRight(radarTurn * 2);  // × 2 to ensure the sweep crosses the target
+        double radarTurn = NormalizeAngle(absoluteBearing - State.RadarHeading);
+        SetTurnRadarRight(radarTurn * 2);   // ×2 keeps arc sweeping across the target
+    }
 }
 ```
 
-Multiplying by 2 creates a small oscillation that keeps the arc sweeping across the target even if it moves.
+Multiplying by 2 creates a small oscillation that keeps the arc crossing the target even as it moves.
 
 ### Wide-Sweep Scout
 
-Set the radar turn to a large fixed value each tick to maintain a consistent wide arc:
+Fixed large radar turn every tick maintains a consistent wide arc:
 
 ```csharp
-SetTurnRadarRight(180);   // sweeps 45° per tick, effectively spinning
+SetTurnRadarRight(180);   // sweeps 45°/tick, effectively a full spin
 ```
-
-Used by `RedScout`, which pairs this with `RadarShare` broadcasts to keep the whole swarm informed.
 
 ---
 
-## Rendering
+## Firing Restriction while Jamming
 
-The renderer displays radar information in two ways:
-
-1. **Radar beam** — a short line from the tank centre in the direction of the current `RadarHeading`. **Hidden when the tank is jamming** (`Jam` or `JamAndSpoof`), since the radar is physically offline.
-2. **Radar halo** — when a scan detects a target, an expanding/fading sonar-like pulse is rendered at the scanner's position. The halo has a lifetime of 10 ticks. Not rendered for jamming tanks (no scan is performed).
-
-The radar sweep trail (phosphor-decay arc history) is also suppressed while jamming and its history is cleared, so the trail restarts cleanly when jamming ends.
-
-See [Chapter 11: Arena Rendering & UI](ch11-rendering.md) for visual details.
+A tank whose radar is offline (`Jam` or `JamAndSpoof`) **cannot fire**. The engine suppresses the shot regardless of what `SetFire()` was called with. The only valid targeting data available to a jammer is whatever was in `RadarMap` before jamming started — but those contacts age out quickly in a fast-moving battle.
 
 ---
 
 ## Electronic Counter-Measures (ECM)
 
-ECM is a per-tick energy expenditure that interferes with the radar pipeline described above. It is activated by calling `SetEcm(EcmMode)` from `OnTick`. Full details are in [Chapter 13: ECM System](ch13-ecm-system.md).
+ECM is a per-tick energy expenditure that interferes with the radar pipeline. It is activated by calling `SetEcm(EcmMode)` from `OnTick`. Full details are in [Chapter 13: ECM System](ch13-ecm-system.md).
 
 ### How jamming intercepts the radar pipeline
 
-The engine normally calls `OnScannedTank` for every target whose bearing falls in the sweep arc. When the **target** is running `EcmMode.Jam` or `EcmMode.JamAndSpoof`, the engine rolls a random number before delivering the event:
+When the **target** is running `EcmMode.Jam` or `EcmMode.JamAndSpoof`, the engine rolls a random number before delivering `OnScannedTank`:
 
 | Scanner ECM | Drop chance | Corrupt chance | Normal chance |
 |-------------|-------------|----------------|---------------|
 | Off | 50 % | 30 % | 20 % |
 | Burnthrough | 8 % | 8 % | 84 % |
 
-- **Dropped** — `OnScannedTank` is never called; the target is invisible this tick. `OnPainted` is also not fired on the target.
-- **Corrupted** — `OnScannedTank` is called with randomised position, heading, velocity, and energy; the contact looks plausible but is entirely fabricated. `OnPainted` **is** fired on the target (the radar beam still reached it).
-- **Normal** — the scan proceeds exactly as without ECM. `OnPainted` fires on the target.
+- **Dropped** — `OnScannedTank` is never called; the target is invisible this tick. `OnPainted` is also not fired.
+- **Corrupted** — `OnScannedTank` fires with randomised position, heading, velocity, and energy. `OnPainted` **is** fired on the target.
+- **Normal** — the scan proceeds unmodified. `OnPainted` fires on the target.
 
-### Ghost echoes (Spoof and JamAndSpoof modes)
+### Ghost echoes (Spoof and JamAndSpoof)
 
-When a tank runs `EcmMode.Spoof` or `EcmMode.JamAndSpoof`, the engine maintains two "ghost" positions that drift independently around the spoofing tank. For each ghost that falls within any enemy's sweep arc (and has clear LOS), the engine injects a fake `OnScannedTank` event with a name like `"Ghost-XXXX"`. Ghost contacts do **not** trigger `OnPainted` — only a real radar hit on a real tank does.
+When a tank runs `EcmMode.Spoof` or `EcmMode.JamAndSpoof`, the engine maintains two drifting "ghost" positions near the spoofing tank. For each ghost whose position falls within an enemy's sweep arc (and has clear line-of-sight), the engine injects a fake `OnScannedTank` with a name like `"Ghost-XXXX"`. Ghost contacts do **not** trigger `OnPainted` — only real tanks do.
 
-### ECCM: Burnthrough
+A scanner running Burnthrough has a 70 % chance of recognising and discarding each ghost before it reaches `OnScannedTank`.
 
-`EcmMode.Burnthrough` is the defensive counter: it suppresses both jam and spoof effects for a cost of 0.3 energy/tick. When an ally broadcasts `SwarmMessageType.EcmAlert`, a well-designed ECCM tank can react by activating Burnthrough.
+---
+
+## Rendering
+
+The renderer shows radar information in two ways:
+
+1. **Radar beam** — a short line (16 px) from the tank centre in the direction of `RadarHeading`. **Hidden when jamming** (`Jam` or `JamAndSpoof`).
+2. **Radar halo** — when a scan detects a target, an expanding/fading sonar-like pulse is rendered at the scanner's position, lasting 10 ticks.
+
+The phosphor-decay sweep trail (last 12 ticks of radar heading history) is also suppressed while jamming and cleared when jamming begins, so the trail restarts cleanly.
+
+See [Chapter 11: Arena Rendering & UI](ch11-rendering.md) for visual details.
 
 ---
 

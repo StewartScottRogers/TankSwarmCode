@@ -26,7 +26,7 @@ Add a new C# class library project to the solution. Reference the base class pac
 
 ## Step 2 — Subclass SwarmTankBase
 
-Every tank is a class that inherits from `SwarmTankBase`:
+Every tank is a class that inherits from `SwarmTankBase`. Set identity in the constructor — `SwarmId` and `Role` are regular properties, not virtual:
 
 ```csharp
 using TankSwarmCode.SwarmTank;
@@ -36,12 +36,18 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 public class MyTank : SwarmTankBase
 {
-    // Declare the swarm this tank belongs to
-    public override int  SwarmId => 3;
-    public override TankRole Role => TankRole.Attacker;
+    public MyTank(string name)
+    {
+        _name    = name;
+        SwarmId  = 3;
+        Role     = TankRole.Attacker;
+    }
 
-    // Fields for AI state
-    private string? _targetName;
+    private readonly string _name;
+    public override string Name => _name;
+
+    // AI state fields
+    private string? _priorityTarget;
     private bool    _retreating;
 }
 ```
@@ -55,28 +61,25 @@ public class MyTank : SwarmTankBase
 `OnStart` is called once when the arena is ready. Initialise anything that depends on arena dimensions here:
 
 ```csharp
-protected override void OnStart()
+public override void OnStart()
 {
     // Start the radar spinning immediately
     SetTurnRadarRight(double.MaxValue);
-
-    // Any position-based initialisation
-    _homeX = Arena.Width  / 2;
-    _homeY = Arena.Height / 2;
 }
 ```
+
+Use `Arena.ArenaWidth` and `Arena.ArenaHeight` (not `Width`/`Height`) to read the arena size.
 
 ---
 
 ## Step 4 — Implement OnTick
 
-`OnTick` is called every simulation tick while the tank is alive. This is your main loop:
+`OnTick(TickEventArgs e)` is called every tick while the tank is alive. This is your main loop:
 
 ```csharp
-protected override void OnTick()
+public override void OnTick(TickEventArgs e)
 {
-    // Always spin the radar (45°/tick)
-    SetTurnRadarRight(45);
+    SetTurnRadarRight(45);   // keep radar spinning
 
     if (_retreating)
     {
@@ -86,15 +89,13 @@ protected override void OnTick()
 
     var target = GetFreshestEnemy();
     if (target != null)
-    {
         ChaseAndFire(target);
-    }
     else
-    {
         Patrol();
-    }
 }
 ```
+
+`e.TickNumber` and `e.LivingTankCount` are available if needed.
 
 ---
 
@@ -103,43 +104,39 @@ protected override void OnTick()
 ```csharp
 private void ChaseAndFire(RadarContact target)
 {
-    // --- Aim the gun using linear prediction ---
-    const double firePower   = 2.0;
-    double bulletSpeed       = 20 - 3 * firePower;
+    const double firePower = 2.0;
+    double bulletSpeed     = 20.0 - 3.0 * firePower;
 
-    double dx = target.Position.X - State.Position.X;
-    double dy = target.Position.Y - State.Position.Y;
-    double distance          = Math.Sqrt(dx * dx + dy * dy);
-    double travelTime        = distance / bulletSpeed;
+    double dx       = target.Position.X - State.Position.X;
+    double dy       = target.Position.Y - State.Position.Y;
+    double distance = Math.Sqrt(dx * dx + dy * dy);
+    double travelTime = distance / bulletSpeed;
 
-    // Predict where the target will be
+    // Predict where the target will be when the bullet arrives
     double predictedX = target.Position.X + target.VelocityVector.X * travelTime;
     double predictedY = target.Position.Y + target.VelocityVector.Y * travelTime;
 
-    // Bearing to predicted position (0 = North, clockwise)
     double absoluteBearing = Math.Atan2(predictedX - State.Position.X,
                                         predictedY - State.Position.Y)
                              * (180.0 / Math.PI);
 
-    double gunTurn = NormalizeTo180(absoluteBearing - State.GunHeading);
+    double gunTurn = NormalizeAngle(absoluteBearing - State.GunHeading);
     SetTurnGunRight(gunTurn);
 
-    // Fire when gun is aligned within 8 degrees
     if (Math.Abs(gunTurn) < 8)
         SetFire(firePower);
 
-    // --- Steer toward the target ---
-    double bodyTurn = NormalizeTo180(absoluteBearing - State.Heading);
+    // Steer toward the target
+    double bodyTurn = NormalizeAngle(absoluteBearing - State.Heading);
     SetTurnRight(bodyTurn);
-    SetAhead(distance > 80 ? 150 : 0);   // stop when close
+    SetAhead(distance > 80 ? 150 : 0);
 }
 
-// Normalise angle to (-180, +180]
-private static double NormalizeTo180(double angle)
+private static double NormalizeAngle(double a)
 {
-    while (angle >  180) angle -= 360;
-    while (angle < -180) angle += 360;
-    return angle;
+    while (a >  180) a -= 360;
+    while (a < -180) a += 360;
+    return a;
 }
 ```
 
@@ -147,38 +144,26 @@ private static double NormalizeTo180(double angle)
 
 ## Step 6 — Implement Patrol
 
-When no target is known, keep moving to avoid being a stationary target:
+When no enemy is known, keep moving to avoid being a stationary target:
 
 ```csharp
-private Vector2D _patrolPoint = new(0, 0);
-private bool     _patrolPointSet;
+private Vector2D _patrolTarget;
+private bool     _hasPatrolTarget;
 
 private void Patrol()
 {
-    if (!_patrolPointSet || IsNear(_patrolPoint, 30))
+    if (!_hasPatrolTarget || State.Position.DistanceTo(_patrolTarget) < 30)
     {
-        // Pick a random point in the arena
         var rng = Random.Shared;
-        _patrolPoint    = new Vector2D(
-            rng.NextDouble() * (Arena.Width  - 100) + 50,
-            rng.NextDouble() * (Arena.Height - 100) + 50);
-        _patrolPointSet = true;
+        _patrolTarget = new Vector2D(
+            rng.NextDouble() * (Arena.ArenaWidth  - 100) + 50,
+            rng.NextDouble() * (Arena.ArenaHeight - 100) + 50);
+        _hasPatrolTarget = true;
     }
 
-    double bearing = Math.Atan2(
-        _patrolPoint.X - State.Position.X,
-        _patrolPoint.Y - State.Position.Y) * (180.0 / Math.PI);
-
-    double turn = NormalizeTo180(bearing - State.Heading);
-    SetTurnRight(turn);
+    double bearing = State.Position.BearingTo(_patrolTarget);
+    SetTurnRight(NormalizeAngle(bearing - State.Heading));
     SetAhead(200);
-}
-
-private bool IsNear(Vector2D point, double radius)
-{
-    double dx = point.X - State.Position.X;
-    double dy = point.Y - State.Position.Y;
-    return Math.Sqrt(dx * dx + dy * dy) < radius;
 }
 ```
 
@@ -189,32 +174,47 @@ private bool IsNear(Vector2D point, double radius)
 Override the relevant event methods:
 
 ```csharp
-protected override void OnScannedTank(ScannedTankEventArgs e)
+public override void OnScannedTank(ScannedTankEventArgs e)
 {
-    // Track the target name for future ticks
-    if (!e.Contact.IsAlly)
-        _targetName = e.Contact.Name;
+    base.OnScannedTank(e);   // records contact in RadarMap; RadarShare to allies
+
+    // Track the last scanned enemy
+    if (e.Result.SwarmId != SwarmId)
+        _priorityTarget = e.Result.Name;
 }
 
-protected override void OnHitByBullet(HitByBulletEventArgs e)
+public override void OnHitByBullet(HitByBulletEventArgs e)
 {
-    // Evade: turn perpendicular to the incoming bullet
-    double evasionTurn = e.BearingDegrees > 0 ? -90 : 90;
+    // e.Bearing is relative: negative = came from left, positive = from right
+    double evasionTurn = e.Bearing > 0 ? -90 : 90;
     SetTurnRight(evasionTurn);
     SetAhead(60);
 }
 
-protected override void OnHitWall(HitWallEventArgs e)
+public override void OnHitWall(HitWallEventArgs e)
 {
-    // Turn away from the wall and reverse briefly
-    SetTurnRight(45);
+    // e.Bearing tells us which wall; turn away and reverse
+    SetTurnRight(90);
     SetBack(40);
 }
 
-protected override void OnSwarmMessage(SwarmMessageEventArgs e)
+public override void OnPainted(PaintedEventArgs e)
 {
+    base.OnPainted(e);   // auto-broadcast [PAINTED] to allies
+    SetTurnRight(20);    // evasive twitch
+}
+
+public override void OnSwarmMessage(SwarmMessageEventArgs e)
+{
+    base.OnSwarmMessage(e);   // merge RadarShare contacts
+
     if (e.Message.Type == SwarmMessageType.TargetLocked)
-        _targetName = e.Message.TargetName;
+        _priorityTarget = e.Message.TargetName;
+}
+
+public override void OnRoundEnded(RoundEndedEventArgs e)
+{
+    // e.Won and e.TotalTicks available for statistics
 }
 ```
 
@@ -222,17 +222,15 @@ protected override void OnSwarmMessage(SwarmMessageEventArgs e)
 
 ## Step 8 — Register the Tank
 
-In `TankSwarmArena.cs`, add your tank to the list that the menu populates. Look for the existing `AddRedSwarm()` / `AddBlueSwarm()` methods and add a similar method:
+In `TankSwarmArena.cs`, add a method to register your swarm and wire it to a menu item:
 
 ```csharp
 private void AddMySwarm()
 {
-    _engine.AddTank(new MyTank { Name = "MyTank1" });
-    _engine.AddTank(new MyTank2 { Name = "MyTank2" });
+    _engine.AddTank(new MyTank("MyTank1"));
+    _engine.AddTank(new MyTank("MyTank2"));
 }
 ```
-
-Then wire it to a menu item in the designer or in the form's constructor.
 
 ---
 
@@ -240,21 +238,25 @@ Then wire it to a menu item in the designer or in the form's constructor.
 
 | Mistake | Effect | Fix |
 |---------|--------|-----|
-| Not normalising angle differences | Gun spins the wrong way around, oscillates | Always use `NormalizeTo180()` before `SetTurnGunRight` |
-| Setting `SetAhead` to a fixed large value without checking distance | Runs into the target and loses energy | Reduce distance when close |
-| Firing at full power from long range | Slow bullets easy to dodge | Lower power at range: faster bullet, lower damage |
-| Ignoring `RadarMap` staleness | Firing at positions the enemy left 20 ticks ago | Check `Timestamp` vs `Arena.CurrentTick`; discard if > 5 ticks old |
-| Calling `SetFire` every tick regardless of alignment | Wastes energy and flags misfires | Gate `SetFire` on gun alignment tolerance |
-| Not handling `OnHitWall` | Tank gets trapped against a wall and takes damage per tick | Always add a wall-escape routine |
+| Not normalising angle differences | Gun spins the wrong way; oscillates | Always use `NormalizeAngle()` before any `SetTurnGunRight` call |
+| Using `Arena.Width` / `Arena.Height` | Compile error; these properties don't exist | Use `Arena.ArenaWidth` / `Arena.ArenaHeight` |
+| Calling `SetAhead` to a fixed large value without checking distance | Runs into the target; collision damage | Reduce move distance when close |
+| Firing at full power from long range | Slow bullets are easy to dodge | Lower power at range for faster bullets |
+| Ignoring `RadarMap` staleness | Firing at positions the enemy vacated ticks ago | Compare `Timestamp` to `Arena.TickNumber`; discard contacts older than ~5 ticks |
+| Calling `SetFire` every tick regardless of alignment | Wastes energy | Gate `SetFire` on gun alignment tolerance |
+| Not calling `base.OnScannedTank(e)` | `RadarMap` never updates; no `RadarShare` to allies | Always call base first |
+| Not calling `base.OnSwarmMessage(e)` | `RadarShare` contacts are never merged | Always call base first |
+| Not handling `OnHitWall` | Tank gets trapped; takes damage each tick | Add a wall-escape routine |
 
 ---
 
 ## Tips
 
-- **Radar first**: start the radar spinning in `OnStart`; you cannot shoot what you cannot see.
+- **Radar first**: start the radar spinning in `OnStart` — you cannot shoot what you cannot see.
 - **Keep moving**: a stationary tank is easy to hit and takes wall damage if cornered.
-- **Use RadarMap, not OnScannedTank alone**: `RadarMap` is updated by allies too; your tank may know about enemies it has never directly scanned.
+- **Use RadarMap, not `OnScannedTank` alone**: `RadarMap` is updated by allies too; your tank may know about enemies it has never directly scanned.
 - **Energy management**: check `State.Energy` before firing at high power; a dead tank contributes nothing.
+- **ECM awareness**: if `Arena.GetActiveBullets()` shows a bullet heading your way, consider `SetEcm(EcmMode.Jam)` as a momentary defensive measure.
 - **Role as a contract**: set `Role` honestly — swarm-wide coordination logic (like `BlueCommander`'s orders) may key off `Role` values.
 
 ---
