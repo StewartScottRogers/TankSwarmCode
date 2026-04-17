@@ -21,3 +21,4 @@ A Robocode-inspired 2D tank battle simulator built with C# and .NET 10.
 | [11](ch11-rendering.md) | [Arena Rendering & UI](ch11-rendering.md) | GDI+ renderer, interactive features, and the main form |
 | [12](ch12-configuration.md) | [Configuration & Constants](ch12-configuration.md) | All physics constants, rendering parameters, and tunable values |
 | [13](ch13-ecm-system.md) | [ECM System](ch13-ecm-system.md) | Electronic Counter-Measures: jamming, spoofing, burnthrough, and the built-in ECM tanks |
+| [14](ch14-tank-energy.md) | [Tank Energy](ch14-tank-energy.md) | Energy as a resource: starting value, all drains and gains, death condition, and power/speed trade-offs |
