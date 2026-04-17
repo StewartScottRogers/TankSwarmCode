@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ECM Jam Visual Options</title>
+<style>
+  body { background: #0a0a0f; color: #ccc; font-family: monospace; margin: 0; padding: 20px; }
+  h1   { color: #ff8c00; font-size: 16px; margin-bottom: 16px; letter-spacing: 2px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 20px; }
+  .card { background: #12141a; border: 1px solid #2a2d38; padding: 12px;
+          display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .card canvas { display: block; }
+  .label { font-size: 12px; color: #ff8c00; letter-spacing: 1px; }
+  .desc  { font-size: 10px; color: #666; max-width: 130px; text-align: center; line-height: 1.4; }
+</style>
+</head>
+<body>
+<h1>ECM JAM — Visual Options</h1>
+<div class="grid" id="grid"></div>
+
+<script>
+const W = 130, H = 130, CX = 65, CY = 65, HALF = 9;
+
+function makeTank(ctx) {
+  ctx.save();
+  ctx.translate(CX, CY);
+  ctx.fillStyle = '#cc2222';
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 1;
+  ctx.fillRect(-HALF, -HALF, HALF*2, HALF*2);
+  ctx.strokeRect(-HALF, -HALF, HALF*2, HALF*2);
+  // tread marks
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(-HALF, -HALF+2); ctx.lineTo(-HALF, HALF-2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo( HALF, -HALF+2); ctx.lineTo( HALF, HALF-2); ctx.stroke();
+  // gun
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-22); ctx.stroke();
+  ctx.restore();
+}
+
+// ── Option 1: Zigzag lightning bolts ─────────────────────────────────────────
+function draw1(ctx, t) {
+  ctx.clearRect(0, 0, W, H);
+  makeTank(ctx);
+  const count = 6;
+  const seed = Math.floor(t / 100); // changes ~10/s
+  function seededRand(n) {
+    let x = Math.sin(seed * 9301 + n * 49297) * 233280;
+    return x - Math.floor(x);
+  }
+  for (let i = 0; i < count; i++) {
+    const on = seededRand(i * 3 + 0) > 0.35;
+    if (!on) continue;
+    const baseAngle = (i / count) * Math.PI * 2;
+    const jitter = (seededRand(i * 3 + 1) - 0.5) * 0.4;
+    const angle = baseAngle + jitter;
+    const startR = HALF + 2;
+    const len = 8 + seededRand(i * 3 + 2) * 8;
+    // zigzag: 3 segments
+    const sx = CX + Math.cos(angle) * startR;
+    const sy = CY + Math.sin(angle) * startR;
+    const alpha = 0.6 + seededRand(i) * 0.4;
+    ctx.strokeStyle = `rgba(255,140,0,${alpha})`;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy);
+    const perp = angle + Math.PI / 2;
+    const m1x = CX + Math.cos(angle) * (startR + len*0.33) + Math.cos(perp) * 3;
+    const m1y = CY + Math.sin(angle) * (startR + len*0.33) + Math.sin(perp) * 3;
+    const m2x = CX + Math.cos(angle) * (startR + len*0.66) - Math.cos(perp) * 3;
+    const m2y = CY + Math.sin(angle) * (startR + len*0.66) - Math.sin(perp) * 3;
+    const ex  = CX + Math.cos(angle) * (startR + len);
+    const ey  = CY + Math.sin(angle) * (startR + len);
+    ctx.lineTo(m1x, m1y);
+    ctx.lineTo(m2x, m2y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    // bright root
+    ctx.strokeStyle = `rgba(255,230,100,0.7)`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(CX + Math.cos(angle)*(HALF-1), CY + Math.sin(angle)*(HALF-1));
+    ctx.lineTo(sx, sy);
+    ctx.stroke();
+  }
+}
+
+// ── Option 2: Rotating interference bars ─────────────────────────────────────
+function draw2(ctx, t) {
+  ctx.clearRect(0, 0, W, H);
+  makeTank(ctx);
+  const rotation = (t / 2000) * Math.PI * 2; // 1 rev / 2s
+  const barCount = 3;
+  for (let i = 0; i < barCount; i++) {
+    const angle = rotation + (i / barCount) * Math.PI * 2;
+    const startR = HALF + 3;
+    const endR   = HALF + 18;
+    const fade = 0.5 + 0.5 * Math.sin(t / 300 + i * 2.1);
+    ctx.save();
+    ctx.translate(CX, CY);
+    ctx.rotate(angle);
+    const grad = ctx.createLinearGradient(0, -startR, 0, -endR);
+    grad.addColorStop(0, `rgba(255,120,0,${0.85 * fade})`);
+    grad.addColorStop(1, `rgba(255,60,0,0)`);
+    ctx.strokeStyle = grad;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(0, -startR);
+    ctx.lineTo(0, -endR);
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+// ── Option 3: Static pixel burst ─────────────────────────────────────────────
+function draw3(ctx, t) {
+  ctx.clearRect(0, 0, W, H);
+  makeTank(ctx);
+  const seed = Math.floor(t / 60); // ~16 fps change
+  const dotCount = 18;
+  for (let i = 0; i < dotCount; i++) {
+    function r(n) {
+      let x = Math.sin(seed * 127 + i * 31 + n * 7919) * 99991;
+      return x - Math.floor(x);
+    }
+    const angle = r(0) * Math.PI * 2;
+    const dist  = HALF + 2 + r(1) * 14;
+    const px    = CX + Math.cos(angle) * dist;
+    const py    = CY + Math.sin(angle) * dist;
+    const bright = r(2) > 0.5;
+    ctx.fillStyle = bright ? `rgba(255,220,80,0.9)` : `rgba(255,90,0,0.75)`;
+    ctx.fillRect(px, py, 2, 2);
+  }
+}
+
+// ── Option 4: Outward wave pulse ──────────────────────────────────────────────
+function draw4(ctx, t) {
+  ctx.clearRect(0, 0, W, H);
+  makeTank(ctx);
+  // 1.5 pulses per second
+  const cycle = (t % 667) / 667; // 0→1 per pulse
+  const r     = (HALF + 2) + cycle * 22;
+  const alpha = (1 - cycle) * 0.85;
+  // ~120° arc facing "forward" (up)
+  const arcStart = -Math.PI / 2 - Math.PI / 3;
+  const arcEnd   = -Math.PI / 2 + Math.PI / 3;
+  ctx.strokeStyle = `rgba(255,120,0,${alpha})`;
+  ctx.lineWidth = 2.5 - cycle * 1.5;
+  ctx.beginPath();
+  ctx.arc(CX, CY, r, arcStart, arcEnd);
+  ctx.stroke();
+  // second arc, half phase behind
+  const cycle2 = ((t + 333) % 667) / 667;
+  const r2     = (HALF + 2) + cycle2 * 22;
+  const alpha2 = (1 - cycle2) * 0.5;
+  ctx.strokeStyle = `rgba(255,80,0,${alpha2})`;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(CX, CY, r2, arcStart, arcEnd);
+  ctx.stroke();
+}
+
+// ── Option 5: Shaking hull outline ───────────────────────────────────────────
+function draw5(ctx, t) {
+  ctx.clearRect(0, 0, W, H);
+  // Draw jittered hull outline first (behind real hull)
+  const seed = Math.floor(t / 50);
+  function jr(n) {
+    let x = Math.sin(seed * 443 + n * 1301) * 9999;
+    return x - Math.floor(x);
+  }
+  const layers = 3;
+  for (let l = 0; l < layers; l++) {
+    const ox = (jr(l*2)   - 0.5) * 4;
+    const oy = (jr(l*2+1) - 0.5) * 4;
+    const a  = 0.15 + jr(l*2+2) * 0.2;
+    ctx.strokeStyle = `rgba(255,100,0,${a})`;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(CX - HALF + ox, CY - HALF + oy, HALF*2, HALF*2);
+  }
+  makeTank(ctx);
+}
+
+// ── Option 6: Rotating hash tick marks ───────────────────────────────────────
+function draw6(ctx, t) {
+  ctx.clearRect(0, 0, W, H);
+  makeTank(ctx);
+  const waveAngle = (t / 800) * Math.PI * 2; // wave rotates
+  const tickCount = 8;
+  const tickR = HALF + 12;
+  const tickLen = 5;
+  for (let i = 0; i < tickCount; i++) {
+    const angle = (i / tickCount) * Math.PI * 2;
+    // brightness wave that travels around
+    const diff  = ((angle - waveAngle) % (Math.PI*2) + Math.PI*2) % (Math.PI*2);
+    const bright = Math.max(0, 1 - diff / (Math.PI * 0.8));
+    const alpha  = 0.15 + bright * 0.8;
+    // tangential tick (perpendicular to radial)
+    const tx = CX + Math.cos(angle) * tickR;
+    const ty = CY + Math.sin(angle) * tickR;
+    const perp = angle + Math.PI / 2;
+    ctx.strokeStyle = `rgba(255,120,0,${alpha})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tx - Math.cos(perp) * tickLen / 2, ty - Math.sin(perp) * tickLen / 2);
+    ctx.lineTo(tx + Math.cos(perp) * tickLen / 2, ty + Math.sin(perp) * tickLen / 2);
+    ctx.stroke();
+  }
+}
+
+const options = [
+  { fn: draw1, label: '1 — Zigzag lightning',    desc: 'jagged bolts flicker on/off independently' },
+  { fn: draw2, label: '2 — Spinning bars',        desc: 'slow-rotating thick bars, fade at tip' },
+  { fn: draw3, label: '3 — Static pixel burst',   desc: 'random dots scatter and reposition fast' },
+  { fn: draw4, label: '4 — Wave pulse arc',        desc: '120° arc expands outward from front, repeating' },
+  { fn: draw5, label: '5 — Jitter hull outline',  desc: 'hull silhouette shakes with offset ghost copies' },
+  { fn: draw6, label: '6 — Hash tick wave',        desc: '8 tangential ticks, brightness wave rotates around' },
+];
+
+const grid = document.getElementById('grid');
+const canvases = options.map(opt => {
+  const card   = document.createElement('div');
+  card.className = 'card';
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const lbl  = document.createElement('div');
+  lbl.className = 'label';
+  lbl.textContent = opt.label;
+  const desc = document.createElement('div');
+  desc.className = 'desc';
+  desc.textContent = opt.desc;
+  card.appendChild(canvas);
+  card.appendChild(lbl);
+  card.appendChild(desc);
+  grid.appendChild(card);
+  return { canvas, fn: opt.fn };
+});
+
+function loop(t) {
+  for (const { canvas, fn } of canvases) {
+    fn(canvas.getContext('2d'), t);
+  }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
