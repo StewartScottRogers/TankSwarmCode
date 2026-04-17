@@ -39,5 +39,13 @@ public enum SwarmMessageType
     /// received contacts are merged into the recipient's <c>RadarMap</c>
     /// without any user code required.
     /// </summary>
-    RadarShare
+    RadarShare,
+
+    /// <summary>
+    /// [PAINTED] — this tank was swept by an enemy radar beam.
+    /// <c>TargetName</c> is the painter's tank name; <c>Position</c> is the painter's
+    /// arena position at the moment of the scan.
+    /// Emitted automatically by the base class on <see cref="ISwarmTank.OnPainted"/>.
+    /// </summary>
+    Painted
 }

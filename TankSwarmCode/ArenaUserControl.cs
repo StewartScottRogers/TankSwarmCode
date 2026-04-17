@@ -1165,8 +1165,9 @@ public partial class ArenaUserControl : UserControl
         g.FillEllipse(turretBrush, -TurretR, -TurretR, TurretR * 2, TurretR * 2);
         g.DrawEllipse(turretPen,   -TurretR, -TurretR, TurretR * 2, TurretR * 2);
 
-        // --- Radar sweep trail ---
-        if (ShowRadarSweepTrails) DrawRadarSweepTrail(g, tank, tankColor);
+        // --- Radar sweep trail --- (suppressed while jamming: radar is offline)
+        if (ShowRadarSweepTrails && tank.ActiveEcm != EcmMode.Jam && tank.ActiveEcm != EcmMode.JamAndSpoof)
+            DrawRadarSweepTrail(g, tank, tankColor);
 
         g.Restore(saved);
 
@@ -1220,6 +1221,14 @@ public partial class ArenaUserControl : UserControl
         {
             trail = new LinkedList<double>();
             _radarTrails[tank.Name] = trail;
+        }
+
+        // Purge stale history when the tank was jamming so the trail starts
+        // clean the moment the radar comes back online.
+        if (trail.Count > 0 && (tank.ActiveEcm == EcmMode.Jam || tank.ActiveEcm == EcmMode.JamAndSpoof))
+        {
+            trail.Clear();
+            return;
         }
 
         trail.AddLast(tank.RadarHeading);
@@ -1683,6 +1692,7 @@ public partial class ArenaUserControl : UserControl
         {
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam         => "JAM \u26a1",
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof       => "SPOOF \ud83d\udc7b",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof => "JAM+SPOOF \u26a1\ud83d\udc7b",
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough => "ECCM \ud83d\udcf6",
             _                                                             => "Off"
         };
@@ -1783,6 +1793,7 @@ public partial class ArenaUserControl : UserControl
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off         => "ECM: OFF",
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam         => "ECM: JAM \u26a1",
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof       => "ECM: SPOOF \ud83d\udc7b",
+            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof => "ECM: JAM+SPOOF \u26a1\ud83d\udc7b",
             TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough => "ECM: ECCM \ud83d\udcf6",
             _                                                             => "ECM: Auto (AI)"
         };
@@ -2218,6 +2229,43 @@ public partial class ArenaUserControl : UserControl
                 break;
             }
 
+            case EcmMode.JamAndSpoof:
+            {
+                // Jam layer: static dot burst
+                int seed = (int)(DateTime.UtcNow.Ticks / (TimeSpan.TicksPerMillisecond * 60L));
+                const int dotCount = 24;
+                using SolidBrush dotYellow = new(Color.FromArgb(230, 255, 230, 80));
+                using SolidBrush dotOrange = new(Color.FromArgb(230, 255, 80, 0));
+                for (int i = 0; i < dotCount; i++)
+                {
+                    double r0 = Frac(Math.Sin(seed * 443.0 + i * 31.0 + 0) * 9999.0);
+                    double r1 = Frac(Math.Sin(seed * 443.0 + i * 31.0 + 1) * 9999.0);
+                    double r2 = Frac(Math.Sin(seed * 443.0 + i * 31.0 + 2) * 9999.0);
+                    double angle = r0 * Math.PI * 2.0;
+                    double dist  = half + 2.0 + r1 * 14.0;
+                    float  dx    = x + (float)(Math.Cos(angle) * dist);
+                    float  dy    = y + (float)(Math.Sin(angle) * dist);
+                    g.FillRectangle(r2 > 0.5 ? dotYellow : dotOrange, dx, dy, 3, 3);
+                }
+
+                // Spoof layer: orbiting ghost hull
+                float phase = (float)(DateTime.UtcNow.Ticks % (long)(TimeSpan.TicksPerSecond * 3.0))
+                              / (float)(TimeSpan.TicksPerSecond * 3.0);
+                float pulse = 0.3f + 0.4f * MathF.Abs(MathF.Sin(phase * MathF.PI * 2f));
+                float orbitAngle = phase * MathF.PI * 2f;
+                float ox = x + MathF.Cos(orbitAngle) * (half + 7f);
+                float oy = y + MathF.Sin(orbitAngle) * (half + 7f);
+                GraphicsState savedJs = g.Save();
+                g.TranslateTransform(ox, oy);
+                g.RotateTransform((float)tank.Heading);
+                using SolidBrush ghostFill   = new(Color.FromArgb((int)(55 * pulse), 190, 80, 255));
+                using Pen        ghostBorder = new(Color.FromArgb((int)(90 * pulse), 210, 120, 255), 1f);
+                g.FillRectangle(ghostFill,   -half, -half, TankBodySize, TankBodySize);
+                g.DrawRectangle(ghostBorder, -half, -half, TankBodySize, TankBodySize);
+                g.Restore(savedJs);
+                break;
+            }
+
             case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough:
             {
                 // A short focused arc + centre beam line extending from the hull in the radar direction,
@@ -2305,12 +2353,13 @@ public partial class ArenaUserControl : UserControl
     private static TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode? CycleEcmOverride(
         TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode? current) => current switch
     {
-        null                                                              => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off             => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam             => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof           => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough     => null,
-        _                                                                 => null,
+        null                                                                  => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off               => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam               => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof             => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof       => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough,
+        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough       => null,
+        _                                                                   => null,
     };
 
     /// <summary>Returns the fractional part of <paramref name="v"/> (v − floor(v)).</summary>

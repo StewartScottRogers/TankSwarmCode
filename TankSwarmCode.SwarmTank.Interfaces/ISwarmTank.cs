@@ -99,6 +99,13 @@ public interface ISwarmTank
     /// <summary>Called when the radar sweeps over an enemy tank.</summary>
     void OnScannedTank(ScannedTankEventArgs e);
 
+    /// <summary>
+    /// Called when an enemy radar beam sweeps over this tank.
+    /// The base implementation automatically broadcasts a <see cref="SwarmMessageType.Painted"/>
+    /// message so allies know the painter's position.
+    /// </summary>
+    void OnPainted(PaintedEventArgs e);
+
     /// <summary>Called when this tank is hit by a bullet.</summary>
     void OnHitByBullet(HitByBulletEventArgs e);
 
@@ -133,4 +140,7 @@ public interface ISwarmTank
 
     /// <summary>Delivers a swarm message from an ally, triggering <see cref="OnSwarmMessage"/>.</summary>
     void DeliverSwarmMessage(SwarmMessage message);
+
+    /// <summary>Delivers a painted event from the engine, triggering <see cref="OnPainted"/>. Engine-internal.</summary>
+    void DeliverPaintedEvent(PaintedEventArgs e);
 }

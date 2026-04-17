@@ -12,7 +12,21 @@ ECM creates a new strategic layer on top of raw firepower: a tank that cannot be
 
 ---
 
-## The Four Modes
+## ECM and Radar: Core Rules
+
+Jamming has three hard consequences that apply to **both `Jam` and `JamAndSpoof`**:
+
+| Rule | Detail |
+|------|--------|
+| **Own radar is offline** | `ProcessRadarScan` skips the jammer entirely — no `OnScannedTank` fires, no `RadarMap` updates |
+| **Cannot fire** | Firing is suppressed; no valid radar data means no valid targeting |
+| **Radio blocked (both directions)** | The jammer cannot send or receive swarm messages; `RadarShare`, `[PAINTED]`, and all other message types are silently dropped |
+
+When jamming is turned off, the radar resumes automatically on the next tick with no state to restore.
+
+---
+
+## The Five Modes
 
 ### Off (default)
 
@@ -26,7 +40,12 @@ No ECM active. No energy cost. This is the default state — tanks that never ca
 SetEcm(EcmMode.Jam);   // 0.5 energy/tick
 ```
 
-**What it does**: Floods the local EM spectrum with noise. When an enemy radar sweep detects the jamming tank, the engine rolls a random number before delivering the `OnScannedTank` event:
+**What it does**: Floods the local EM spectrum with noise.
+
+- **Own radar**: offline this tick.
+- **Firing**: blocked (no radar data).
+- **Radio**: blocked in both directions.
+- **Enemy scans of this tank**: when an enemy radar sweeps over the jammer, the engine rolls before delivering `OnScannedTank`:
 
 | Outcome | Probability (no counter) | Probability (enemy has Burnthrough) |
 |---------|--------------------------|--------------------------------------|
@@ -34,9 +53,9 @@ SetEcm(EcmMode.Jam);   // 0.5 energy/tick
 | **Scan corrupted** — event fires with randomised position, heading, velocity, energy | 30 % | 8 % |
 | **Scan normal** — event fires with accurate data | 20 % | 84 % |
 
-A dropped scan means the jamming tank is completely invisible that tick. A corrupted scan is worse than nothing — the scanner receives plausible-looking data pointing to the wrong place, and if it fires on it the shot is guaranteed to miss.
+A dropped scan makes the jamming tank completely invisible that tick. A corrupted scan is worse than nothing — the scanner fires on a false position.
 
-**Tradeoff**: Jam is the most powerful single-tick disruption, but it costs 0.5 energy/tick and is largely neutralised by Burnthrough. Against a Burnthrough-equipped enemy, switching to Spoof may be more efficient.
+**Tradeoff**: Jam is the most powerful single-tick disruption, but disabling your own radar and radio is a significant tactical cost. Use it when you are being actively hunted, not as a default posture.
 
 ---
 
@@ -52,6 +71,8 @@ Ghost contacts look identical to real scans except:
 
 - The `Name` field is `"Ghost-XXXX"` (first four characters of the spoofing tank's name).
 - The `Energy` value is randomised in the range 45–80.
+
+Unlike `Jam`, Spoof does **not** disable the tank's own radar or radio. The tank can continue scanning, shooting, and communicating normally while projecting deception.
 
 **Ghost drift behaviour**: Each ghost starts at a random offset (20–130 px) from the spoofer and moves at a random velocity (up to ±5 px/tick). Every tick there is a 4 % chance each ghost changes direction and speed independently, keeping the motion convincingly organic.
 
@@ -81,6 +102,96 @@ Burnthrough does **not** affect allies — each tank must activate its own Burnt
 
 ---
 
+### JamAndSpoof
+
+```csharp
+SetEcm(EcmMode.JamAndSpoof);   // 1.3 energy/tick (0.5 Jam + 0.8 Spoof)
+```
+
+**What it does**: Simultaneously runs both `Jam` and `Spoof` at full effect.
+
+- **Own radar**: offline (same as `Jam`).
+- **Firing**: blocked (same as `Jam`).
+- **Radio**: blocked in both directions (same as `Jam`).
+- **Enemy scans of this tank**: jam drop/corrupt chances applied (same as `Jam`).
+- **Ghost projections**: two drifting ghost echoes injected into enemy sweeps (same as `Spoof`).
+
+The combined mode is the highest-cost ECM option and is intended for dedicated electronic-warfare tanks with no cannon, or for emergency total blackout scenarios. A `JamAndSpoof` tank consumes 130 energy per 100 ticks — more than any other single mode.
+
+**Aura**: The renderer draws both the static-dot Jam burst and the orbiting ghost-hull Spoof indicator simultaneously.
+
+---
+
+## The `OnPainted` Event
+
+When any tank's radar successfully sweeps over another tank (non-dropped scan), the **scanned tank** receives an `OnPainted` callback:
+
+```csharp
+protected virtual void OnPainted(PaintedEventArgs e)
+```
+
+`PaintedEventArgs` fields:
+
+| Field | Description |
+|-------|-------------|
+| `PainterName` | Name of the tank whose radar painted this tank |
+| `PainterSwarmId` | Swarm the painter belongs to |
+| `PainterPosition` | Arena position of the painter at the moment of the scan |
+
+### Default behaviour
+
+The base class implementation automatically broadcasts a `[PAINTED]` swarm message to all allies:
+
+```csharp
+Broadcast(new SwarmMessage
+{
+    SenderName = Name,
+    Type       = SwarmMessageType.Painted,
+    TargetName = e.PainterName,
+    Position   = e.PainterPosition,
+    Timestamp  = Arena.TickNumber
+});
+```
+
+This means the entire swarm instantly learns the painter's position whenever any member is swept by enemy radar — at no cost to the AI author.
+
+### Jamming interaction
+
+If the painted tank is currently jamming (`Jam` or `JamAndSpoof`), the `OnPainted` callback still fires (the radar beam hits regardless of your own ECM mode), but the auto-broadcast is silently dropped by the engine because jamming blocks outgoing radio.
+
+### Override example
+
+```csharp
+public override void OnPainted(PaintedEventArgs e)
+{
+    base.OnPainted(e);   // auto-broadcasts [PAINTED] to allies
+
+    // Additional reaction: evasive manoeuvre
+    SetTurnRight(45);
+    SetBack(30);
+}
+```
+
+To suppress the auto-broadcast and handle manually:
+
+```csharp
+public override void OnPainted(PaintedEventArgs e)
+{
+    // Don't call base — handle the [PAINTED] broadcast yourself with custom data
+    Broadcast(new SwarmMessage
+    {
+        SenderName = Name,
+        Type       = SwarmMessageType.Painted,
+        TargetName = e.PainterName,
+        Position   = e.PainterPosition,
+        CustomData = $"range:{(int)State.Position.DistanceTo(e.PainterPosition)}",
+        Timestamp  = Arena.TickNumber
+    });
+}
+```
+
+---
+
 ## ECM as a Countermeasure Chain
 
 ```
@@ -96,15 +207,30 @@ Red jammer runs Spoof
         → RedEcmJammer is forced to switch from Spoof to Jam
         → ghost projection stops
         → Red swarm loses deception advantage
+
+Additionally, every time an enemy radar paints a Blue tank:
+    → OnPainted fires on the painted Blue tank
+    → [PAINTED] message auto-broadcast to Blue swarm
+    → All Blue tanks now know the enemy scanner's position
+    → Blue attacker can fire on the scanner even without its own radar lock
 ```
 
-This chain — Spoof → alert → Burnthrough → offensive Jam → force mode change — is the intended ECM meta-game.
+This chain — Spoof → alert → Burnthrough → offensive Jam → force mode change — is the intended ECM meta-game. The `[PAINTED]` mechanic adds a reciprocal intelligence layer: aggressive radar use reveals the scanner's own position.
 
 ---
 
 ## Energy Budget Considerations
 
-ECM competes directly with firing for energy. Running Jam continuously at 0.5/tick costs 50 energy over 100 ticks — enough to fire ten 5-power-equivalent shots. The ECM specialist (`RedEcmJammer`) handles this by carrying no cannon: all energy that would be spent on ammo goes into electronic warfare.
+ECM competes directly with firing for energy.
+
+| Mode | Cost/100 ticks | Approximate equivalent shots |
+|------|---------------|-------------------------------|
+| Burnthrough | 30 | ~6 power-1 shots |
+| Jam | 50 | ~10 power-1 shots |
+| Spoof | 80 | ~16 power-1 shots |
+| JamAndSpoof | 130 | ~26 power-1 shots |
+
+Running `Jam` or `JamAndSpoof` continuously is extremely expensive and also disables your radar and radio, making you dependent entirely on pre-jam intelligence. Use these modes in bursts.
 
 For mixed tanks (`BlueEcmOperator`), the recommended pattern is:
 - Default to Burnthrough at 0.3/tick to protect the team's radar picture.
@@ -179,6 +305,18 @@ public override void OnSwarmMessage(SwarmMessageEventArgs e)
 }
 ```
 
+To react to being painted (and retaliate):
+
+```csharp
+public override void OnPainted(PaintedEventArgs e)
+{
+    base.OnPainted(e);   // auto-broadcast [PAINTED] to allies
+
+    // The painter's position is now known — record it as a fire target
+    _knownThreat = e.PainterPosition;
+}
+```
+
 To detect spoofing and avoid wasting fire on ghosts:
 
 ```csharp
@@ -208,7 +346,7 @@ public override void OnScannedTank(ScannedTankEventArgs e)
 Any tank's ECM mode can be forced from the UI without modifying its AI code. Right-click a tank and choose **Attach Info Panel**, then use the **ECM cycle button** at the bottom of the panel:
 
 ```
-Auto (AI)  →  OFF  →  JAM  →  SPOOF  →  ECCM  →  Auto (AI)  →  …
+Auto (AI)  →  OFF  →  JAM  →  SPOOF  →  JAM+SPOOF  →  ECCM  →  Auto (AI)  →  …
 ```
 
 Each click cycles to the next mode. When an override is active:
@@ -230,13 +368,14 @@ All ECM constants are in `ArenaConstants` (`TankSwarmCode.SwarmTank.Interfaces/A
 | `EcmJamCostPerTick` | 0.5 | Energy/tick for Jam |
 | `EcmSpoofCostPerTick` | 0.8 | Energy/tick for Spoof |
 | `EcmBurnthroughCostPerTick` | 0.3 | Energy/tick for Burnthrough |
+| `EcmJamAndSpoofCostPerTick` | 1.3 | Energy/tick for JamAndSpoof (Jam + Spoof combined) |
 | `EcmJamDropChance` | 0.50 | Jam scan-drop probability (no counter) |
 | `EcmJamCorruptChance` | 0.30 | Jam scan-corrupt probability (no counter) |
 | `EcmBurnthroughDropChance` | 0.08 | Jam scan-drop with Burnthrough active |
 | `EcmBurnthroughCorruptChance` | 0.08 | Jam scan-corrupt with Burnthrough active |
 | `EcmBurnthroughGhostFilterChance` | 0.70 | Ghost discard probability with Burnthrough |
 | `EcmSpoofRadius` | 130.0 px | Maximum initial ghost offset from spoofer |
-| `EcmSpoofGhostCount` | 2 | Ghost contacts per Spoof tank |
+| `EcmSpoofGhostCount` | 2 | Ghost contacts per Spoof/JamAndSpoof tank |
 
 ---
 

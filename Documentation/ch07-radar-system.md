@@ -8,6 +8,8 @@
 
 The radar is the primary sense organ of every tank. It sweeps an arc each tick and detects other tanks whose centre point falls within that arc **and** who are not occluded by a building.
 
+**Important**: A tank's radar is offline whenever it is running `EcmMode.Jam` or `EcmMode.JamAndSpoof`. No scans are performed and no `OnScannedTank` events fire for that tank while jamming. See [Chapter 13: ECM System](ch13-ecm-system.md) for full details.
+
 ---
 
 ## Sweep Arc
@@ -68,12 +70,45 @@ public class RadarContact
 
 1. This tank's own radar arc detects a target.
 2. An ally broadcasts a `RadarShare` message containing a newer contact (higher `Timestamp`).
+3. An ally broadcasts a `Painted` message with an enemy scanner's position — that position can be used for targeting even without a direct radar lock.
 
 The merge rule: **the newer timestamp wins**. If an ally spotted a target 2 ticks ago and your own radar spotted it 5 ticks ago, the ally's data replaces yours.
 
 ### Staleness
 
 `RadarMap` entries are never automatically removed. An entry for a destroyed tank will remain with its last-known data. Always check `Timestamp` against `Arena.CurrentTick` to assess how stale a contact is. The helper `GetFreshestEnemy()` returns the entry with the highest `Timestamp` among non-ally contacts.
+
+### Radar offline (jamming)
+
+When a tank is jamming, no new contacts are added to its `RadarMap` from its own radar. Contacts already in the map become progressively stale. Because jamming also blocks incoming radio, no `RadarShare` or `Painted` messages from allies reach the jammer either. A tank that jams for many ticks will have an entirely stale intelligence picture when it comes back online.
+
+---
+
+## Firing Restriction
+
+A tank whose radar is offline (due to `Jam` or `JamAndSpoof`) **cannot fire**. The engine suppresses the shot regardless of what `SetFire()` was called with. The only way for a jamming tank to have valid targeting data is through contacts that were acquired *before* jamming started — but those contacts age out quickly in a fast-moving battle.
+
+---
+
+## The `OnPainted` Event
+
+Every successful (non-dropped) scan fires a callback on the **target** — the tank being swept over:
+
+```csharp
+protected virtual void OnPainted(PaintedEventArgs e)
+```
+
+| Field | Description |
+|-------|-------------|
+| `PainterName` | Name of the tank whose radar painted this tank |
+| `PainterSwarmId` | Swarm the painter belongs to |
+| `PainterPosition` | Arena position of the painter at the moment of the scan |
+
+The base class implementation auto-broadcasts a `[PAINTED]` (`SwarmMessageType.Painted`) message to all swarm allies. This gives the entire swarm the scanner's position at no extra coding cost.
+
+**Key implication**: aggressive radar use is a double-edged sword. Every scan that connects reveals your own position to the target and, through the `[PAINTED]` broadcast, to the target's entire swarm.
+
+See [Chapter 6: Swarm Communication](ch06-swarm-communication.md) for the `[PAINTED]` message type and [Chapter 13: ECM System](ch13-ecm-system.md) for the full `OnPainted` API.
 
 ---
 
@@ -149,8 +184,10 @@ Used by `RedScout`, which pairs this with `RadarShare` broadcasts to keep the wh
 
 The renderer displays radar information in two ways:
 
-1. **Radar beam** — a short line from the tank centre in the direction of the current `RadarHeading`.
-2. **Radar halo** — when a scan detects a target, an expanding/fading sonar-like pulse is rendered at the scanner's position. The halo has a lifetime of 10 ticks.
+1. **Radar beam** — a short line from the tank centre in the direction of the current `RadarHeading`. **Hidden when the tank is jamming** (`Jam` or `JamAndSpoof`), since the radar is physically offline.
+2. **Radar halo** — when a scan detects a target, an expanding/fading sonar-like pulse is rendered at the scanner's position. The halo has a lifetime of 10 ticks. Not rendered for jamming tanks (no scan is performed).
+
+The radar sweep trail (phosphor-decay arc history) is also suppressed while jamming and its history is cleared, so the trail restarts cleanly when jamming ends.
 
 See [Chapter 11: Arena Rendering & UI](ch11-rendering.md) for visual details.
 
@@ -162,20 +199,20 @@ ECM is a per-tick energy expenditure that interferes with the radar pipeline des
 
 ### How jamming intercepts the radar pipeline
 
-The engine normally calls `OnScannedTank` for every target whose bearing falls in the sweep arc. When the **target** is running `EcmMode.Jam`, the engine rolls a random number before delivering the event:
+The engine normally calls `OnScannedTank` for every target whose bearing falls in the sweep arc. When the **target** is running `EcmMode.Jam` or `EcmMode.JamAndSpoof`, the engine rolls a random number before delivering the event:
 
 | Scanner ECM | Drop chance | Corrupt chance | Normal chance |
 |-------------|-------------|----------------|---------------|
 | Off | 50 % | 30 % | 20 % |
 | Burnthrough | 8 % | 8 % | 84 % |
 
-- **Dropped** — `OnScannedTank` is never called; the target is invisible this tick.
-- **Corrupted** — `OnScannedTank` is called with randomised position, heading, velocity, and energy; the contact looks plausible but is entirely fabricated.
-- **Normal** — the scan proceeds exactly as without ECM.
+- **Dropped** — `OnScannedTank` is never called; the target is invisible this tick. `OnPainted` is also not fired on the target.
+- **Corrupted** — `OnScannedTank` is called with randomised position, heading, velocity, and energy; the contact looks plausible but is entirely fabricated. `OnPainted` **is** fired on the target (the radar beam still reached it).
+- **Normal** — the scan proceeds exactly as without ECM. `OnPainted` fires on the target.
 
-### Ghost echoes (Spoof mode)
+### Ghost echoes (Spoof and JamAndSpoof modes)
 
-When a tank runs `EcmMode.Spoof`, the engine maintains two "ghost" positions that drift independently around the spoofing tank. For each ghost that falls within any enemy's sweep arc (and has clear LOS), the engine injects a fake `OnScannedTank` event with a name like `"Ghost-XXXX"`. The ghost contact is indistinguishable from a real tank unless the receiver is running Burnthrough (which filters ~70 % of ghosts) or explicitly checks for the `"Ghost-"` name prefix.
+When a tank runs `EcmMode.Spoof` or `EcmMode.JamAndSpoof`, the engine maintains two "ghost" positions that drift independently around the spoofing tank. For each ghost that falls within any enemy's sweep arc (and has clear LOS), the engine injects a fake `OnScannedTank` event with a name like `"Ghost-XXXX"`. Ghost contacts do **not** trigger `OnPainted` — only a real radar hit on a real tank does.
 
 ### ECCM: Burnthrough
 

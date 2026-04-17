@@ -152,6 +152,20 @@ public abstract class SwarmTankBase : ISwarmTank
     }
 
     /// <inheritdoc/>
+    public virtual void OnPainted(PaintedEventArgs e)
+    {
+        // Auto-broadcast so allies know an enemy has revealed their position by painting us
+        Broadcast(new SwarmMessage
+        {
+            SenderName = Name,
+            Type = SwarmMessageType.Painted,
+            TargetName = e.PainterName,
+            Position = e.PainterPosition,
+            Timestamp = Arena.TickNumber
+        });
+    }
+
+    /// <inheritdoc/>
     public virtual void OnHitByBullet(HitByBulletEventArgs e) { }
 
     /// <inheritdoc/>
@@ -268,4 +282,7 @@ public abstract class SwarmTankBase : ISwarmTank
     {
         OnSwarmMessage(new SwarmMessageEventArgs(message));
     }
+
+    /// <inheritdoc/>
+    public void DeliverPaintedEvent(PaintedEventArgs e) => OnPainted(e);
 }

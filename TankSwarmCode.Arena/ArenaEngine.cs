@@ -223,7 +223,7 @@ public sealed class ArenaEngine : IArena
         var ghosts = new List<(Vector2D, int)>();
         foreach (TankRuntimeState rts in RuntimeTanks)
         {
-            if (!rts.IsAlive || rts.ActiveEcm != EcmMode.Spoof) continue;
+            if (!rts.IsAlive || (rts.ActiveEcm != EcmMode.Spoof && rts.ActiveEcm != EcmMode.JamAndSpoof)) continue;
             foreach ((double gx, double gy, double _, double _) in rts.GhostPositions)
                 ghosts.Add((new Vector2D(gx, gy), rts.Tank.SwarmId));
         }
@@ -375,6 +375,11 @@ public sealed class ArenaEngine : IArena
     private void ApplyFiring(TankRuntimeState rts, TankCommand cmd)
     {
         if (cmd.FirePower <= 0) return;
+
+        // Jamming disables own radar and blocks radio — no valid target data, cannot fire
+        EcmMode thisTickEcm = rts.EcmModeOverride ?? cmd.EcmMode;
+        if (thisTickEcm == EcmMode.Jam || thisTickEcm == EcmMode.JamAndSpoof) return;
+
         double power = Math.Clamp(cmd.FirePower, ArenaConstants.BulletMinPower, ArenaConstants.BulletMaxPower);
         if (rts.Energy < power) return; // not enough energy
 
@@ -587,6 +592,9 @@ public sealed class ArenaEngine : IArena
 
     private void ProcessRadarScan(TankRuntimeState scanner)
     {
+        // Jamming floods the EM spectrum — the jammer's own radar is blinded
+        if (scanner.ActiveEcm == EcmMode.Jam || scanner.ActiveEcm == EcmMode.JamAndSpoof) return;
+
         // Radar sweeps the arc between PrevRadarHeading and RadarHeading
         double sweepStart = scanner.PrevRadarHeading;
         double sweepEnd = scanner.RadarHeading;
@@ -628,7 +636,7 @@ public sealed class ArenaEngine : IArena
             };
 
             // ── ECM: Jam check ──────────────────────────────────────────────
-            if (target.ActiveEcm == EcmMode.Jam)
+            if (target.ActiveEcm == EcmMode.Jam || target.ActiveEcm == EcmMode.JamAndSpoof)
             {
                 double dropChance    = scannerBurnthrough ? ArenaConstants.EcmBurnthroughDropChance    : ArenaConstants.EcmJamDropChance;
                 double corruptChance = scannerBurnthrough ? ArenaConstants.EcmBurnthroughCorruptChance : ArenaConstants.EcmJamCorruptChance;
@@ -654,6 +662,11 @@ public sealed class ArenaEngine : IArena
             }
 
             SafeCall(() => scanner.Tank.OnScannedTank(new ScannedTankEventArgs(result)));
+
+            // Target detects the radar beam and learns the painter's position
+            var paintArgs = new PaintedEventArgs(scanner.Tank.Name, scanner.Tank.SwarmId,
+                                                 new Vector2D(scanner.X, scanner.Y));
+            SafeCall(() => target.Tank.DeliverPaintedEvent(paintArgs));
         }
 
         // ── ECM: Spoof ghost injection ──────────────────────────────────────
@@ -664,7 +677,7 @@ public sealed class ArenaEngine : IArena
             if (!spoofer.IsAlive) continue;
             if (spoofer == scanner) continue;
             if (spoofer.Tank.SwarmId == scanner.Tank.SwarmId) continue; // allies don't spoof allies
-            if (spoofer.ActiveEcm != EcmMode.Spoof) continue;
+            if (spoofer.ActiveEcm != EcmMode.Spoof && spoofer.ActiveEcm != EcmMode.JamAndSpoof) continue;
 
             foreach ((double gx, double gy, double gh, double gv) in spoofer.GhostPositions)
             {
@@ -714,8 +727,12 @@ public sealed class ArenaEngine : IArena
     {
         if (cmd.BroadcastMessages.Count == 0) return;
 
+        // A jamming tank cannot send radio comms — EM spectrum is flooded
+        if (sender.ActiveEcm == EcmMode.Jam || sender.ActiveEcm == EcmMode.JamAndSpoof) return;
+
         List<TankRuntimeState> allies = RuntimeTanks
-            .Where(t => t.IsAlive && t != sender && t.Tank.SwarmId == sender.Tank.SwarmId)
+            .Where(t => t.IsAlive && t != sender && t.Tank.SwarmId == sender.Tank.SwarmId
+                        && t.ActiveEcm != EcmMode.Jam && t.ActiveEcm != EcmMode.JamAndSpoof) // jamming tanks cannot receive radio comms
             .ToList();
 
         foreach (SwarmMessage msg in cmd.BroadcastMessages)
@@ -751,6 +768,7 @@ public sealed class ArenaEngine : IArena
             EcmMode.Jam         => ArenaConstants.EcmJamCostPerTick,
             EcmMode.Spoof       => ArenaConstants.EcmSpoofCostPerTick,
             EcmMode.Burnthrough => ArenaConstants.EcmBurnthroughCostPerTick,
+            EcmMode.JamAndSpoof => ArenaConstants.EcmJamCostPerTick + ArenaConstants.EcmSpoofCostPerTick,
             _                   => 0.0
         };
 
@@ -760,7 +778,7 @@ public sealed class ArenaEngine : IArena
             CheckDeath(rts);
         }
 
-        if (effectiveMode == EcmMode.Spoof && rts.IsAlive)
+        if ((effectiveMode == EcmMode.Spoof || effectiveMode == EcmMode.JamAndSpoof) && rts.IsAlive)
             UpdateGhostPositions(rts);
         else
             rts.GhostPositions = [];

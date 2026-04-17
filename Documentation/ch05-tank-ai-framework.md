@@ -22,6 +22,7 @@ Arena starts
     ┌── tick N ──────────────────────────────────────────
     │   OnTick()               — main AI logic, runs every tick
     │   (if radar contact)  ─► OnScannedTank()
+    │   (if painted by enemy radar) ─► OnPainted()
     │   (if hit by bullet)  ─► OnHitByBullet()
     │   (if hit wall)       ─► OnHitWall()
     │   (if hit tank)       ─► OnHitTank()
@@ -64,7 +65,7 @@ These read-only properties are always current (updated each tick by the engine):
 | `Name` | `string` | Unique tank name |
 | `SwarmId` | `int` | Swarm group (0 = solo) |
 | `Role` | `TankRole` | Scout, Attacker, Defender, Support, or EcmSpecialist |
-| `ActiveEcm` | `EcmMode` | ECM mode active this tick (Off / Jam / Spoof / Burnthrough) |
+| `ActiveEcm` | `EcmMode` | ECM mode active this tick (Off / Jam / Spoof / Burnthrough / JamAndSpoof) |
 
 ---
 
@@ -91,6 +92,8 @@ SetTurnGunLeft(double degrees)
 SetFire(double power)            // power in [0.1, 3.0]
 ```
 
+Note: `SetFire` is silently ignored when the tank is jamming (`Jam` or `JamAndSpoof`) — the radar is offline and no valid targeting data exists.
+
 ### Radar
 
 ```csharp
@@ -100,10 +103,12 @@ SetTurnRadarLeft(double degrees)
 
 To keep the radar locked on a target, recalculate and set the radar turn every tick. A common pattern is to spin the radar continuously by calling `SetTurnRadarRight(double.MaxValue)` (clamped to 45°/tick by the engine).
 
+Note: Radar commands are accepted but have no effect while jamming — the radar is physically offline.
+
 ### ECM (Electronic Counter-Measures)
 
 ```csharp
-SetEcm(EcmMode mode)   // Off / Jam / Spoof / Burnthrough
+SetEcm(EcmMode mode)   // Off / Jam / Spoof / Burnthrough / JamAndSpoof
 ```
 
 Activates an ECM mode for the current tick. The engine deducts the energy cost and applies the effect during radar processing. See [Chapter 13: ECM System](ch13-ecm-system.md) for full details.
@@ -111,9 +116,10 @@ Activates an ECM mode for the current tick. The engine deducts the energy cost a
 | Mode | Effect | Energy/tick |
 |------|--------|-------------|
 | `Off` | No effect | 0 |
-| `Jam` | Corrupts / drops enemy radar scans of this tank | 0.5 |
-| `Spoof` | Projects ghost contacts into enemy radar sweeps | 0.8 |
+| `Jam` | Corrupts/drops enemy scans; disables own radar, firing, and radio | 0.5 |
+| `Spoof` | Projects ghost contacts into enemy radar sweeps; radar and radio remain active | 0.8 |
 | `Burnthrough` | Pierces enemy jamming; filters ghost contacts | 0.3 |
+| `JamAndSpoof` | Full Jam + full Spoof simultaneously; radar, firing, and radio all offline | 1.3 |
 
 ---
 
@@ -145,7 +151,7 @@ The primary AI method. Called every tick while the tank is alive. Issue movement
 protected virtual void OnScannedTank(ScannedTankEventArgs e) { }
 ```
 
-Fired when the radar arc sweeps across another tank during this tick (line-of-sight to the target must be clear of buildings).
+Fired when the radar arc sweeps across another tank during this tick (line-of-sight to the target must be clear of buildings). Not fired while the tank is jamming.
 
 `ScannedTankEventArgs` fields:
 
@@ -156,6 +162,26 @@ Fired when the radar arc sweeps across another tank during this tick (line-of-si
 | `Distance` | Euclidean distance to the scanned tank |
 
 The engine automatically adds the contact to `RadarMap` and broadcasts a `RadarShare` message to allies before this event is raised.
+
+---
+
+### `OnPainted(PaintedEventArgs e)`
+
+```csharp
+protected virtual void OnPainted(PaintedEventArgs e) { }
+```
+
+Fired when an **enemy** radar beam sweeps over this tank. The base class implementation automatically broadcasts a `[PAINTED]` (`SwarmMessageType.Painted`) message to all swarm allies, so the whole swarm learns the painter's position.
+
+`PaintedEventArgs` fields:
+
+| Field | Description |
+|-------|-------------|
+| `PainterName` | Name of the tank whose radar painted this tank |
+| `PainterSwarmId` | Swarm the painter belongs to |
+| `PainterPosition` | Arena position of the painter at the moment of the scan |
+
+Always call `base.OnPainted(e)` to preserve the auto-broadcast, unless you intend to replace it with a custom message. If the tank is currently jamming, the auto-broadcast will be silently suppressed by the engine regardless.
 
 ---
 
@@ -228,7 +254,7 @@ Fired on the **shooter** when one of their bullets hits an enemy.
 protected virtual void OnSwarmMessage(SwarmMessageEventArgs e) { }
 ```
 
-Fired for each message delivered from an ally this tick. See [Chapter 6: Swarm Communication](ch06-swarm-communication.md) for the full message model.
+Fired for each message delivered from an ally this tick. Not fired while the tank is jamming (radio is blocked). See [Chapter 6: Swarm Communication](ch06-swarm-communication.md) for the full message model.
 
 ---
 
@@ -273,7 +299,7 @@ Scans the `RadarMap` and returns the enemy contact with the most recent timestam
 protected void Broadcast(SwarmMessage message)
 ```
 
-Queues a message for delivery to all living allies before their next tick. See [Chapter 6](ch06-swarm-communication.md).
+Queues a message for delivery to all living, non-jamming allies before their next tick. See [Chapter 6](ch06-swarm-communication.md).
 
 ---
 
@@ -308,6 +334,14 @@ public class SimpleTank : SwarmTankBase
             SetTurnGunRight(angleToTarget);
             SetFire(1.5);
         }
+    }
+
+    protected override void OnPainted(PaintedEventArgs e)
+    {
+        base.OnPainted(e);   // auto-broadcasts [PAINTED] to allies
+
+        // Evasive manoeuvre when painted
+        SetTurnRight(30);
     }
 
     protected override void OnHitWall(HitWallEventArgs e)

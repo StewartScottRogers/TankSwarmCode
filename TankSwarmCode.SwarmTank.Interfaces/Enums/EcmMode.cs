@@ -36,5 +36,13 @@ public enum EcmMode
     /// recognising and discarding ghost echoes.
     /// Energy cost: <see cref="ArenaConstants.EcmBurnthroughCostPerTick"/> per tick.
     /// </summary>
-    Burnthrough
+    Burnthrough,
+
+    /// <summary>
+    /// Combined jamming + spoofing mode. Simultaneously floods the EM spectrum with
+    /// noise (like <see cref="Jam"/>) and projects ghost radar echoes (like <see cref="Spoof"/>).
+    /// Own radar is offline; radio comms are blocked in both directions.
+    /// Energy cost: <see cref="ArenaConstants.EcmJamCostPerTick"/> + <see cref="ArenaConstants.EcmSpoofCostPerTick"/> per tick.
+    /// </summary>
+    JamAndSpoof
 }

@@ -39,9 +39,11 @@ The gun is rendered as a **filled 4 × 22 px rectangle** rotated to `GunHeading`
 
 A **10 px-diameter circular turret** is drawn on top of the hull body, anchoring the barrel visually and giving the classic tank silhouette. Both the barrel and turret use dark grey fills with a silver outline.
 
-### Radar Beam
+### Radar Beam and Sweep Trail
 
-A shorter line (16 px) in the direction of `RadarHeading` represents the current radar pointing angle. It is rendered in a lighter tint to distinguish it from the gun.
+A short line (16 px) in the direction of `RadarHeading` represents the current radar pointing angle. A phosphor-decay sweep trail (arc history from the last 12 ticks) fans out behind it.
+
+**Both the beam and trail are hidden when the tank is jamming** (`EcmMode.Jam` or `EcmMode.JamAndSpoof`). Since the radar is physically offline, no visual is shown. The trail history is also cleared when jamming begins, so the trail starts cleanly from zero when jamming ends — no ghost arc from before the jam.
 
 ### Energy Bar
 
@@ -54,6 +56,8 @@ A horizontal bar (36 × 4 px) above each tank shows current energy as a proporti
 ### Radar Halo
 
 When a scan detects a target, an expanding/fading circular pulse (sonar halo) is rendered at the scanning tank's position. Each halo lives for **10 ticks** (~1.7 s at the default speed), expanding outward and becoming more transparent as it ages. Multiple halos can be active simultaneously.
+
+Not rendered for jamming tanks — since no scan is performed, no halo event is ever generated.
 
 ### Destroyed Tank Hull
 
@@ -103,11 +107,12 @@ When a tank has an active ECM mode, a distinctive animated aura is drawn **on to
 |------|--------|
 | **Jam** | 24 small (3 × 3 px) orange and yellow dots scattered randomly in a ~14 px band around the hull. The entire cluster repositions ~16 times per second using a seeded hash, creating an analog-static interference look. |
 | **Spoof** | A faint purple ghost copy of the tank hull that slowly orbits the tank on a tight circular path (one full orbit every 3 seconds), pulsing in opacity as it moves. Suggests the tank is projecting a decoy echo. |
+| **JamAndSpoof** | Both the Jam static-dot burst **and** the Spoof orbiting ghost hull are drawn simultaneously, reflecting the combined nature of the mode. |
 | **Burnthrough** | A short bright cyan arc centred on the **radar heading direction**, with a thin beam line extending from the hull edge to the arc. Both pulse in brightness on a 0.6-second cycle and rotate as the radar turns. |
 
 ### ECM Ghost Echoes
 
-While a Spoof tank is active, translucent phantom tank silhouettes appear at each ghost echo position (Layer 3.5 in the paint order, between bullets and live tanks). Each ghost is drawn:
+While a Spoof or JamAndSpoof tank is active, translucent phantom tank silhouettes appear at each ghost echo position (Layer 3.5 in the paint order, between bullets and live tanks). Each ghost is drawn:
 
 - As a semi-transparent square in the spoofing swarm's colour.
 - With a dashed X cross-hatch to distinguish it from real hulks.
@@ -125,7 +130,7 @@ Ghost echoes are rendered regardless of whether any enemy tank is actually being
 **Left-click** on any tank body to open the **info panel**, which displays:
 
 - Tank name and swarm
-- Role and ECM mode (Off / JAM ⚡ / SPOOF 👻 / ECCM 📶)
+- Role and ECM mode (Off / JAM ⚡ / SPOOF 👻 / JAM+SPOOF / ECCM 📶)
 - Current energy
 - Position (X, Y)
 - Headings (body, gun, radar)
@@ -139,7 +144,7 @@ The panel updates live every tick while the tank is selected.
 At the bottom of every attached panel is an **ECM cycle button**. Clicking it steps through:
 
 ```
-Auto (AI)  →  OFF  →  JAM  →  SPOOF  →  ECCM  →  Auto (AI)  →  …
+Auto (AI)  →  OFF  →  JAM  →  SPOOF  →  JAM+SPOOF  →  ECCM  →  Auto (AI)  →  …
 ```
 
 - **Auto (AI)** — the tank's own `OnTick` logic controls ECM (default).
@@ -206,9 +211,9 @@ The following rendering options can be adjusted at runtime (via properties on `A
 |---------|---------|-------------|
 | Antialiasing | On | Smooths tank and bullet edges |
 | Radar reflections | On | Expanding wavefront arcs from scanner to contact |
-| Radar sweep trails | On | Phosphor-decay arc history behind the radar beam |
+| Radar sweep trails | On | Phosphor-decay arc history behind the radar beam (hidden while tank is jamming) |
 | Scan halos | On | Point-flash at the moment radar contact is made |
-| **ECM effects** | **On** | **Jam/Spoof/Burnthrough auras and ghost echo silhouettes** |
+| **ECM effects** | **On** | **Jam/Spoof/JamAndSpoof/Burnthrough auras and ghost echo silhouettes** |
 | Bullets | On | Arrowhead projectiles with colour-coded tails |
 | Explosions & flames | On | Burn/smoke sequences on destruction |
 | Energy bars | On | Proportional health bar above each tank |
@@ -236,14 +241,14 @@ OnPaint(PaintEventArgs e)
     ├─ DrawHulkBodies()          — charred hulks (destroyed tanks)
     ├─ DrawBullets()             — arrowhead projectiles (live) or fading sparks (deflected)
     │     └─ DrawRicochetFlash() — one-tick impact ring at each non-lethal hit (if ShowBullets)
-    ├─ DrawGhostEchoes()         — ECM Spoof phantoms (if ShowEcmEffects)
+    ├─ DrawGhostEchoes()         — ECM Spoof/JamAndSpoof phantoms (if ShowEcmEffects)
     ├─ DrawTanks()               — for each alive tank:
     │     ├─ DrawScanHalo()      — point-flash at contact (if ShowScanHalos)
     │     ├─ Body + treads       — filled square rotated to Heading
     │     ├─ Cannon barrel       — 4×22 px filled rectangle at GunHeading (GDI+ rotated)
     │     ├─ Turret circle       — 10 px circle centred on hull, on top of barrel
-    │     ├─ DrawRadarSweepTrail()  — phosphor decay + scan-arc flash (if ShowRadarSweepTrails)
-    │     ├─ DrawEcmAura()       — Jam/Spoof/Burnthrough aura drawn last, on top (if ShowEcmEffects)
+    │     ├─ DrawRadarSweepTrail()  — phosphor decay + scan-arc flash (if ShowRadarSweepTrails AND not jamming)
+    │     ├─ DrawEcmAura()       — Jam/Spoof/JamAndSpoof/Burnthrough aura (if ShowEcmEffects)
     │     └─ Energy bar + label  — (if ShowEnergyBars / ShowTankLabels)
     ├─ DrawBuildings()           — concrete-textured rectangles with windows
     ├─ DrawExplosions()          — blast flash, fireball, shockwave, debris, smoke
