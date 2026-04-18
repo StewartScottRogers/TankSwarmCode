@@ -1,19 +1,41 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 4 complete
+2026-04-18 — Iteration 5 complete
 
 ## Current Iteration
-**5** — pending
+**6** — pending
 
 ## Next Hypothesis
-Ghost's carry is purely structural (hider/survivor role), not ECM. Setting Ghost's `HasEcm = false` will leave its solo carry rate and WinSurv unchanged (25–35% carry, MVP or near-MVP), while Red's win rate holds near 56%. If confirmed: ECM on Ghost is cosmetic and the real driver of Red's 56% is compositional.
+Red's 56% compositional advantage comes from BlueEcm being a single point of failure (Linchpin: alive→87% Blue wins, dead→25%). Buffing BlueEcm's combat ability (MaxFirePower 1.5→2.5, RetreatEnergyThreshold 35.0→25.0) should close the gap toward 45–52% Red wins, while BlueEcm retains Linchpin/MVP and Red's Ghost still solo-carries.
 
-**Branch:** `research/iter-5-ghost-no-ecm`
+**Branch:** `research/iter-6-blueecm-combat-buff`
 
 ---
 
 ## Iteration Log
+
+### Iter 5 — `research/iter-5-ghost-no-ecm`
+**Date:** 2026-04-18
+**Status:** Confirmed — Ghost's carry is structural, ECM is cosmetic
+
+**Hypothesis:** HasEcm=false leaves Ghost's carry rate and WinSurv unchanged (25–35% carry, MVP), Red holds ~56%.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), Ghost HasEcm=false
+
+**Results:**
+- Red 112 (56%) / Blue 88 (44%) — unchanged
+- RedGhost WinSurv: 68/112 = **61%** (baseline 58% — INCREASED)
+- RedGhost solo carry: 37/112 = **33%** (baseline 30% — INCREASED)
+- RedGhost Rate/100t: **2.08** (near 0 — unchanged)
+- RedGhost loss-survivals: **5** (unchanged)
+- BlueEcm: NEW **Linchpin** insight (alive: 87%, dead: 25%) — freed from Ghost's jam suppression
+
+**Confirmed:** Ghost is a passive hider (MaxFirePower=0.1, RetreatEnergyThreshold=40). Blue ignores non-threatening Ghost while fighting real Red combatants and eliminating itself. ECM hardware contributed nothing — removing it improved Ghost's metrics slightly.
+**Key finding:** Red's 56% is compositional (not ECM). BlueEcm is Blue's Linchpin — and Ghost's ECM was masking this by suppressing BlueEcm's burnthrough.
+**Code:** Reverted — observational test only. Ghost restored to HasEcm=true.
+
+---
 
 ### Iter 4 — `research/iter-4-jam-drop-nerf`
 **Date:** 2026-04-18
