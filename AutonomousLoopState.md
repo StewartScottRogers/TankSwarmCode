@@ -1,19 +1,40 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 2 complete
+2026-04-18 — Iteration 3 complete
 
 ## Current Iteration
-**3** — pending
+**4** — pending
 
 ## Next Hypothesis
-Reducing RedGhost's jamming radius by 25% (ECM nerf) in the default arena (800×600) brings Red's win rate from 56% toward 45–52%, drops Ghost's solo carry rate from 30% to ≤20%, while Ghost retains MVP status.
+Reducing EcmJamDropChance from 0.50 → 0.30 and EcmJamCorruptChance from 0.30 → 0.15 (jam effectiveness nerf) reduces Ghost's scan-corruption advantage, dropping its solo carry rate from 32% to ≤20% and Red's win rate from 56% toward 45–52%. BlueEcm (MaxFirePower=1.5) survives the nerf better than Ghost (Rate/100t ≈ 2) since BlueEcm has real combat ability.
 
-**Branch:** `research/iter-3-ghost-ecm-nerf`
+**Branch:** `research/iter-4-jam-drop-nerf`
 
 ---
 
 ## Iteration Log
+
+### Iter 3 — `research/iter-3-ghost-ecm-nerf`
+**Date:** 2026-04-18
+**Status:** Refuted — parameter is not the binding constraint
+
+**Hypothesis:** Reducing EcmSpoofRadius by 25% (130.0 → 97.5) drops Red's win rate from 56% toward 45–52% and Ghost's solo carry from 30% to ≤20%.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), EcmSpoofRadius=97.5
+
+**Results:**
+- Red 111 (56%) / Blue 89 (44%) — identical to baseline
+- RedGhost WinSurv: 66/111 = **59%** (baseline 58%)
+- RedGhost solo carry: 36/111 = **32%** (baseline 30% — slight increase)
+- RedGhost Rate/100t: **2.24** (near 0 — unchanged)
+- RedGhost loss-survivals: **5** (same as baseline)
+
+**Refuted:** Zero effect in either direction. Win rate unchanged; solo carry slightly increased.
+**Key finding:** Ghost's carry is via the Jam mechanism (scan drop/corrupt), not spoof radius. Ghost solos decisively (69% decisive), meaning Blue self-eliminates from scan corruption — not from chasing distant ghost echoes. The spoof geometry is irrelevant to Ghost's effectiveness.
+**Code:** Reverted — EcmSpoofRadius restored to 130.0.
+
+---
 
 ### Iter 2 — `research/iter-2-ghost-cramped-arena`
 **Date:** 2026-04-18
