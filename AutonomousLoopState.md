@@ -1,19 +1,40 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 5 complete
+2026-04-18 — Iteration 6 complete
 
 ## Current Iteration
-**6** — pending
+**7** — pending
 
 ## Next Hypothesis
-Red's 56% compositional advantage comes from BlueEcm being a single point of failure (Linchpin: alive→87% Blue wins, dead→25%). Buffing BlueEcm's combat ability (MaxFirePower 1.5→2.5, RetreatEnergyThreshold 35.0→25.0) should close the gap toward 45–52% Red wins, while BlueEcm retains Linchpin/MVP and Red's Ghost still solo-carries.
+Red's 56% advantage is driven by RedArrow's extreme first-kill aggression (RetreatEnergyThreshold=20). Arrow gets first blood in 60% of matches consistently. Raising RedArrow's RetreatEnergyThreshold from 20 → 35 reduces Arrow's first-kill frequency, keeps matches numerically even longer, and drops Red's win rate from 56% toward 45–52%.
 
-**Branch:** `research/iter-6-blueecm-combat-buff`
+**Branch:** `research/iter-7-arrow-retreat-nerf`
 
 ---
 
 ## Iteration Log
+
+### Iter 6 — `research/iter-6-blueecm-combat-buff`
+**Date:** 2026-04-18
+**Status:** Refuted — combat buff backfired, Red climbed to 62%
+
+**Hypothesis:** Buffing BlueEcm (MaxFirePower 1.5→2.5, RetreatEnergyThreshold 35→25) makes BlueEcm harder to kill and raises Blue's win rate.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600)
+
+**Results:**
+- Red 124 (62%) / Blue 76 (38%) — Red INCREASED from 56%
+- BlueEcm WinSurv: 33/76 = **43%** (baseline ~60%, collapsed)
+- BlueEcm loss-survivals: **17** (baseline 8–9, nearly doubled)
+- RedGhost: **All-in** (0 loss-survivals, gained All-in status vs baseline's 5)
+- Blue top solo carrier shifted to Guard (14x) from BlueEcm (9x)
+
+**Refuted:** Combat buff caused BlueEcm to over-commit and die frequently. BlueEcm loses ECM energy to combat, can't sustain its survival-carry role.
+**Key finding:** ECM tanks (both BlueEcm and Ghost) derive value from surviving, not fighting. Higher firepower = faster energy drain = more deaths in Red wins. Same lesson as Ghost's structural carry: ECM role tanks should NOT be combat-buffed.
+**Code:** Reverted — BlueEcm restored to MaxFirePower=1.5, RetreatEnergyThreshold=35.
+
+---
 
 ### Iter 5 — `research/iter-5-ghost-no-ecm`
 **Date:** 2026-04-18
