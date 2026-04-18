@@ -69,6 +69,11 @@ public partial class ArenaUserControl : UserControl
     private readonly Dictionary<string, RectangleF> _ecmBtnBounds   = new(StringComparer.Ordinal);
     // ECM mode currently forced via the panel button (null = let tank AI decide)
     private readonly Dictionary<string, TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode?> _ecmOverrides = new(StringComparer.Ordinal);
+
+    // Per-tank combat stats accumulated each tick (same logic as CLI)
+    private readonly Dictionary<string, double> _damageTaken  = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, double> _energyGained = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, double> _prevEnergy   = new(StringComparer.Ordinal);
     private string? _hoveredPanelName;
 
     // Sensor-view: non-null while the user holds LMB on a tank.
@@ -314,6 +319,9 @@ public partial class ArenaUserControl : UserControl
         _closeBtnBounds.Clear();
         _ecmBtnBounds.Clear();
         _ecmOverrides.Clear();
+        _damageTaken.Clear();
+        _energyGained.Clear();
+        _prevEnergy.Clear();
         _focusedTank = null;
         _pinnedTank  = null;
         _waitingForPulse = false;
@@ -498,14 +506,41 @@ public partial class ArenaUserControl : UserControl
 
     private void Engine_TickCompleted(object? sender, TickEventArgs e)
     {
+        UpdateCombatStats();
         TickCompleted?.Invoke(this, e);
+    }
+
+    private void UpdateCombatStats()
+    {
+        if (_engine is null) return;
+        foreach (var t in _engine.Tanks)
+        {
+            double curr = t.State.Energy;
+            if (!_prevEnergy.TryGetValue(t.Name, out double prev))
+            {
+                _prevEnergy[t.Name] = curr; _damageTaken[t.Name] = 0; _energyGained[t.Name] = 0;
+                continue;
+            }
+            double delta = curr - prev;
+            if (delta < 0) _damageTaken[t.Name]  += -delta;
+            else           _energyGained[t.Name] +=  delta;
+            _prevEnergy[t.Name] = curr;
+        }
     }
 
     private void Engine_RoundEnded(object? sender, RoundEndedEventArgs e)
     {
         // Keep the render timer running so burning-hulk animations continue playing.
         // The engine simulation is already stopped; the timer just drives Invalidate calls.
-        _statusMessage = $"Round ended after {e.TotalTicks} ticks.";
+        var survivors = _engine?.Tanks.Where(t => t.State.IsAlive).ToList() ?? [];
+        var swarmsSurv = survivors.Select(t => t.SwarmId).Distinct().ToList();
+        int? winnerId = swarmsSurv.Count == 1 ? swarmsSurv[0] : (int?)null;
+        string winText = winnerId is int w
+            ? $"Swarm {w} wins  ({string.Join(", ", survivors.Select(t => t.Name))} alive)"
+            : survivors.Count == 0 ? "Draw  (no survivors)" : $"Draw  ({survivors.Count} survivors)";
+        double s1E = survivors.Where(t => t.SwarmId == 1).Sum(t => t.State.Energy);
+        double s2E = survivors.Where(t => t.SwarmId == 2).Sum(t => t.State.Energy);
+        _statusMessage = $"{winText}  |  {e.TotalTicks} ticks  |  S1: {s1E:F0}E  S2: {s2E:F0}E";
         RoundEnded?.Invoke(this, e);
         Invalidate();
     }
@@ -1708,6 +1743,8 @@ public partial class ArenaUserControl : UserControl
             ("Radar",    $"{tank.RadarHeading:F1}°"),
             ("Velocity", $"{tank.Velocity:F2} px/t"),
             ("Status",   tank.IsAlive ? "Alive" : "Dead"),
+            ("Dmg Taken", _damageTaken.TryGetValue(tank.Name, out var dmg) ? $"{dmg:F0}" : "-"),
+            ("E Gained",  _energyGained.TryGetValue(tank.Name, out var eg)  ? $"{eg:F0}"  : "-"),
         ];
 
         // Header row + small gap + separator + data rows + separator + ECM button + bottom pad
@@ -1845,10 +1882,11 @@ public partial class ArenaUserControl : UserControl
         foreach (var grp in swarmGroups)
         {
             int alive = grp.Count(t => t.State.IsAlive);
+            double swarmE = grp.Where(t => t.State.IsAlive).Sum(t => t.State.Energy);
             Color c = SwarmColours[Math.Abs(grp.Key) % SwarmColours.Length];
             string label = grp.Key == 0
                 ? $"Solo: {alive} alive"
-                : $"Swarm {grp.Key}: {alive} alive";
+                : $"Swarm {grp.Key}: {alive} alive  ({swarmE:F0}E)";
 
             using SolidBrush sb = new(c);
             g.DrawString(label, Font, sb, scoreX, scoreY);
