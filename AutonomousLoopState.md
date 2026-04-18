@@ -1,19 +1,40 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 7 complete
+2026-04-18 — Iteration 8 complete
 
 ## Current Iteration
-**8** — pending
+**9** — pending
 
 ## Next Hypothesis
-Ghost's structural advantage comes from its passive/non-threatening hider role causing Blue to deprioritize it while real combatants fight. Replace Ghost with an Arrow clone (MaxFirePower=1.5, PreferredRange=220, RetreatEnergyThreshold=20, no ECM) to test: does Red's win rate increase (Ghost was costly), hold (~56%), or decrease (Ghost enables wins by drawing Blue attention)?
+Root cause confirmed: Ghost's RetreatEnergyThreshold=40 gives it a survivability edge over BlueEcm's 35. Raising BlueEcm's RetreatEnergyThreshold from 35 → 45 (retreating earlier than Ghost) makes BlueEcm a comparable hider, evening the ECM duel and dropping Red's win rate from 56% toward 45–52%.
 
-**Branch:** `research/iter-8-ghost-replace-arrow-clone`
+**Branch:** `research/iter-9-blueecm-hider-buff`
 
 ---
 
 ## Iteration Log
+
+### Iter 8 — `research/iter-8-ghost-replace-arrow-clone`
+**Date:** 2026-04-18
+**Status:** Confirmed — Ghost's hider role is worth +16% win rate (ROOT CAUSE FOUND)
+
+**Hypothesis:** Ghost's passive hider role is the structural advantage. Replace with Arrow clone to test magnitude.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), Ghost=Arrow clone config
+
+**Results:**
+- Red **80 (40%)** / Blue **120 (60%)** — Red COLLAPSED from 56% to 40% (−16pp)
+- Ghost(clone) WinSurv: 35/80 = 44% (baseline Ghost: 59%)
+- Ghost(clone) Rate/100t: **17.84** (fully combat, baseline: 2.16)
+- BlueEcm WinSurv: 66/120 = **55%**, solo carry: 35/120 = **29%** — BlueEcm took over as dominant survivor
+- BlueStrike Rate/100t: 23.89 — Blue combat surged without Ghost's jamming
+
+**Confirmed:** Ghost's hider role (MaxFirePower=0.1, RetreatEnergyThreshold=40) is worth +16pp. Root cause of Red's 56% advantage: Ghost outlasts Blue's combat tanks and harvests wins from close matches. Without it, Red has 4 combatants who all die — Blue wins when Red runs out of survivors.
+**Key finding:** BlueEcm mirrors Ghost's hider role — ECM+survive+inherit. The balance is an ECM duel: Ghost (RetreatEnergyThreshold=40) vs BlueEcm (35). Ghost retreats earlier → superior hider → Red wins ECM duel.
+**Code:** Reverted — Ghost restored to original config.
+
+---
 
 ### Iter 7 — `research/iter-7-arrow-retreat-nerf`
 **Date:** 2026-04-18
