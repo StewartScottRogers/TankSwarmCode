@@ -1,19 +1,36 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 8 complete
+2026-04-18 — Iteration 9 complete
 
 ## Current Iteration
-**9** — pending
+**10** — pending
 
 ## Next Hypothesis
-Root cause confirmed: Ghost's RetreatEnergyThreshold=40 gives it a survivability edge over BlueEcm's 35. Raising BlueEcm's RetreatEnergyThreshold from 35 → 45 (retreating earlier than Ghost) makes BlueEcm a comparable hider, evening the ECM duel and dropping Red's win rate from 56% toward 45–52%.
+BlueEcm's MaxFirePower=1.5 is the binding constraint. It drains energy through combat, preventing survival even with a high retreat threshold. Lowering MaxFirePower 1.5 → 0.1 (matching Ghost's near-zero firepower) makes BlueEcm a true hider that conserves energy for ECM and survival, approaching Ghost's 59% WinSurv and 32% solo carry.
 
-**Branch:** `research/iter-9-blueecm-hider-buff`
+**Branch:** `research/iter-10-blueecm-firepower-nerf`
 
 ---
 
 ## Iteration Log
+
+### Iter 9 — `research/iter-9-blueecm-hider-buff`
+**Date:** 2026-04-18
+**Status:** Refuted — retreat threshold is not the binding constraint
+
+**Hypothesis:** BlueEcm RetreatEnergyThreshold 35→45 makes it a comparable hider, drops Red toward 45-52%.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, BlueEcm retreat=45, Red rebuilt with baseline Ghost.
+
+**Results:**
+- Red 112 (56%) / Blue 88 (44%) — identical to baseline (unchanged)
+
+**Refuted:** Retreat threshold doesn't matter because BlueEcm drains energy through shooting (MaxFirePower=1.5) before the threshold fires. Ghost drains ~0 energy from combat (MaxFirePower=0.1) — this is the binding constraint.
+**Process note (CRITICAL):** Always rebuild BOTH dlls after reverting either side's code changes. Two contaminated runs in a row (iter-7, iter-9) from stale dlls. New protocol: after any revert, rebuild all affected dlls and verify match count against baseline before recording.
+**Code:** Reverted — BlueEcm restored to RetreatEnergyThreshold=35.
+
+---
 
 ### Iter 8 — `research/iter-8-ghost-replace-arrow-clone`
 **Date:** 2026-04-18
