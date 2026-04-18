@@ -2081,7 +2081,7 @@ public partial class ArenaUserControl : UserControl
             float t      = ageFraction * 2f;                          // 0→1
             float radius = dist * t;                                  // 0 → dist
             float fade   = t;                                         // linear: dim at origin, full brightness at contact
-            if (radius > 1f && fade > 0.01f)
+            if (radius > 1f && fade > 0.01f && arcSpan > 0f)
             {
                 // Build an exclusion clip from building shadow polygons so the outbound
                 // arc and edge lines are invisible where buildings block line-of-sight.
