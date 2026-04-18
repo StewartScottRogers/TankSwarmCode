@@ -11,7 +11,7 @@ public sealed class BlueEcm : SwarmBrainBase
     protected override TankConfig Config { get; } = new()
     {
         FormationSlot = 4,
-        MaxFirePower = 1.5,
+        MaxFirePower = 1.0, // iter-11: binary search step 2 (0.5=Blue60%, 1.5=Red56%)
         PreferredRange = 150.0,
         HasEcm = true,
         OffensiveEcmMode = EcmMode.Jam,
