@@ -1,19 +1,39 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 9 complete
+2026-04-18 — Iteration 10 complete
 
 ## Current Iteration
-**10** — pending
+**11** — pending
 
 ## Next Hypothesis
-BlueEcm's MaxFirePower=1.5 is the binding constraint. It drains energy through combat, preventing survival even with a high retreat threshold. Lowering MaxFirePower 1.5 → 0.1 (matching Ghost's near-zero firepower) makes BlueEcm a true hider that conserves energy for ECM and survival, approaching Ghost's 59% WinSurv and 32% solo carry.
+Binary search calibration: BlueEcm MaxFirePower=0.5 (geometric midpoint between 0.1=Blue59% and 1.5=Red56%) should land closer to the 45–52% balance target. If Red wins at 0.5: try 0.3. If Blue wins: try 1.0.
 
-**Branch:** `research/iter-10-blueecm-firepower-nerf`
+**Branch:** `research/iter-11-blueecm-fp-calibrate-0.5`
 
 ---
 
 ## Iteration Log
+
+### Iter 10 — `research/iter-10-blueecm-firepower-nerf`
+**Date:** 2026-04-18
+**Status:** Refuted — over-corrected to Blue 59% (opposite problem)
+
+**Hypothesis:** BlueEcm MaxFirePower 1.5→0.1 makes it a Ghost-mirror hider, dropping Red to 45-52%.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, BlueEcm MaxFirePower=0.1
+
+**Results:**
+- Red 79–82 (41%) / Blue 118–121 (59%) — Blue now dominates
+- BlueEcm WinSurv: 93/121 = **77%** (baseline 62%), Rate/100t: **2.00** (mirrors Ghost's 2.16)
+- BlueEcm solo carry: 37/121 = **31%** — matches Ghost's baseline carry rate!
+- RedGhost: **Linchpin** (alive: 91%, dead: 21%) — Ghost is now critical to Red competing
+
+**Refuted (over-corrected):** BlueEcm at 0.1 fire is a better hider than Ghost because Burnthrough counters Ghost's JamAndSpoof while costing less ECM energy than JamAndSpoof.
+**Key finding:** Crossover point between 0.1 (Blue59%) and 1.5 (Red56%) — need binary search.
+**Code:** Reverted — BlueEcm restored to MaxFirePower=1.5.
+
+---
 
 ### Iter 9 — `research/iter-9-blueecm-hider-buff`
 **Date:** 2026-04-18
