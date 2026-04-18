@@ -1,4 +1,4 @@
-namespace TankSwarmCode
+namespace TankSwarmCode.Gui
 {
     internal static class Program
     {

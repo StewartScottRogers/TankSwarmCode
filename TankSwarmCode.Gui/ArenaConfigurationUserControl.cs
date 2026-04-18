@@ -1,4 +1,4 @@
-namespace TankSwarmCode;
+namespace TankSwarmCode.Gui;
 
 /// <summary>
 /// Side-panel that exposes render-toggle checkboxes for <see cref="ArenaUserControl"/>.

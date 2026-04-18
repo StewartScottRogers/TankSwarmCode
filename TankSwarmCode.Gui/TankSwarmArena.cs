@@ -3,7 +3,7 @@ using TankSwarmCode.SwarmTank.Interfaces;
 using TankSwarmCode.SwarmTanks.Blue;
 using TankSwarmCode.SwarmTanks.Red;
 
-namespace TankSwarmCode;
+namespace TankSwarmCode.Gui;
 
 public partial class TankSwarmArena : Form
 {

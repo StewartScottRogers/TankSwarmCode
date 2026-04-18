@@ -6,7 +6,7 @@ using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Events;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
-namespace TankSwarmCode;
+namespace TankSwarmCode.Gui;
 
 /// <summary>
 /// WinForms control that hosts the <see cref="ArenaEngine"/> simulation and renders

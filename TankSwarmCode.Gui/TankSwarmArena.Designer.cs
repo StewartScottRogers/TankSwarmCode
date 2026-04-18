@@ -1,4 +1,4 @@
-namespace TankSwarmCode
+namespace TankSwarmCode.Gui
 {
     partial class TankSwarmArena
     {

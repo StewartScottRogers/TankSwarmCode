@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace TankSwarmCode;
+namespace TankSwarmCode.Gui;
 
 /// <summary>
 /// Prevents Windows from blanking the display or entering sleep while the
