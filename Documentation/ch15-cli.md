@@ -90,12 +90,12 @@ A single match outputs one JSON object. A batch (`--batch N`) outputs **NDJSON**
   "swarm2_survivors": 0,
   "swarm1_energy": 187.4,
   "swarm2_energy": 0.0,
-  "swarm1_survivor_names": ["RedAlpha", "RedScout", "ECM-Jammer"],
+  "swarm1_survivor_names": ["RedHammer", "RedArrow", "RedGhost"],
   "swarm2_survivor_names": [],
   "first_kill_tick": 312,
   "tanks": [
     {
-      "name": "RedAlpha",
+      "name": "RedHammer",
       "swarm_id": 1,
       "role": "Attacker",
       "survived": true,
@@ -116,6 +116,8 @@ A single match outputs one JSON object. A batch (`--batch N`) outputs **NDJSON**
 {"match":2,"winner_swarm_id":2,"ticks":887,...,"seed":43}
 ```
 
+`swarm1_survivor_names` and `swarm2_survivor_names` use the tank's `Name` property (e.g. `"RedHammer"`, `"BlueEcm"`) as set in each tank class.
+
 ---
 
 ### Table (`--format table`)
@@ -128,13 +130,13 @@ Energy left: Red 187.4E  |  Blue 0.0E
 
   Tank                 Sw  Role            Surv    Energy   DmgTaken   EGained   Died@
   -------------------- --  -------------- ----  -------  ---------  --------  ------
-  RedAlpha              1  Attacker        Yes     74.3       52.1      26.4       -
+  RedHammer             1  Attacker        Yes     74.3       52.1      26.4       -
   ...
 
   Death order:
-     1. BlueCommand           (swarm 2) @ tick 312
+     1. BlueStrike            (swarm 2) @ tick 312
      ...
-     -  RedAlpha              (swarm 1) survived  74.3E
+     -  RedHammer             (swarm 1) survived  74.3E
 ```
 
 For a batch, the table lists every match followed by a summary section.

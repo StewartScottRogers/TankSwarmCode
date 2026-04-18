@@ -120,7 +120,7 @@ public override void OnTick(TickEventArgs e)
 }
 ```
 
-Guarantees every tank in the arena will be scanned within 8 ticks. Used by `RedScout`.
+Guarantees every tank in the arena will be scanned within 8 ticks. Used by `RedArrow` (Role = Scout) to keep the whole Red swarm's `RadarMap` current.
 
 ### Lock-on Tracking
 

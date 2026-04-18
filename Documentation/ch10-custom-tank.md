@@ -24,7 +24,14 @@ Add a new C# class library project to the solution. Reference the base class pac
 
 ---
 
-## Step 2 — Subclass SwarmTankBase
+## Step 2 — Choose a Base Class
+
+You have two options:
+
+- **`SwarmTankBase`** — full control; implement all AI logic yourself. Use this for bespoke strategies.
+- **`SwarmBrainBase`** — inherit the full coordination brain (leader election, epoch strategies, volley scheduling, ECM handling) and configure it via a `TankConfig` record. Use this when you want the built-in team coordination and only need to tune parameters. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the `SwarmBrainBase` API.
+
+The rest of this chapter uses `SwarmTankBase` to show a complete ground-up implementation.
 
 Every tank is a class that inherits from `SwarmTankBase`. Set identity in the constructor — `SwarmId` and `Role` are regular properties, not virtual:
 
@@ -280,7 +287,7 @@ See [Chapter 15: Headless CLI Runner](ch15-cli.md) for all options.
 - **Use RadarMap, not `OnScannedTank` alone**: `RadarMap` is updated by allies too; your tank may know about enemies it has never directly scanned.
 - **Energy management**: check `State.Energy` before firing at high power; a dead tank contributes nothing.
 - **ECM awareness**: if `Arena.GetActiveBullets()` shows a bullet heading your way, consider `SetEcm(EcmMode.Jam)` as a momentary defensive measure.
-- **Role as a contract**: set `Role` honestly — swarm-wide coordination logic (like `BlueCommander`'s orders) may key off `Role` values.
+- **Role as a contract**: set `Role` honestly — `SwarmBrainBase`'s ECM handling checks `Role == EcmSpecialist`, and any coordination logic you write can use `Role` to differentiate behaviour across swarm members.
 
 ---
 

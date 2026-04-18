@@ -2,7 +2,7 @@
 
 This shared project documents the design and implementation of the **Blue Swarm AI** for TankSwarmCode — a 2D real-time tank battle simulator with swarm tactics, shared radar, and electronic counter-measures (ECM).
 
-The Blue Swarm's philosophy is **defensive coordination with a clear command hierarchy**. Seven tanks share a unified brain, elect a leader each epoch, and execute synchronized tactical strategies.
+The Blue Swarm's philosophy is **defensive coordination with slot-based leadership**. Five named tanks (plus dynamic `BlueTrooper` instances for NvN matches) share a unified brain, elect a leader each epoch, and execute synchronized tactical strategies.
 
 ---
 
@@ -15,7 +15,7 @@ The Blue Swarm's philosophy is **defensive coordination with a clear command hie
 | BlueRush | 2 | Attacker | 2.5 | 180 px | — |
 | BlueGuard | 3 | Defender | 2.0 | 200 px | — |
 | BlueEcm | 4 | EcmSpecialist | 1.5 | — | Jam / Burnthrough |
-| BlueTrooper | 5 | Attacker | 2.5 | 220 px | — |
+| BlueTrooper | 5+ | Attacker | 2.5 | 200 px | — |
 
 Slot numbers drive formation assignments (encircle angle, pincer group) and leadership election tiebreaking.
 
@@ -48,9 +48,9 @@ The leader selects one of six strategies each epoch based on ally energy, enemy 
 | Strategy | Trigger | Behavior |
 |----------|---------|---------|
 | `Wolfpack` | Default offensive | Converge all tanks on the lowest-energy enemy |
-| `Encircle` | Enemy count ≤ 3 | Spread to equal angular intervals around target |
-| `Pincer` | Enemy count ≥ 4 | Split into two groups, attack from opposite bearings |
-| `ECMScreen` | BlueEcm alive, enemy grouped | BlueEcm jams; remaining tanks rush under cover |
+| `Encircle` | Allies ≥ 2× enemies AND ≥ 3 allies | Spread to equal angular intervals around target |
+| `Pincer` | ≥ 3 allies AND ≤ 2 enemies | Split into two groups, attack from opposite bearings |
+| `ECMScreen` | Recent `EcmAlert` received | BlueEcm jams; remaining tanks rush under cover |
 | `Fallback` | Ally energy < 30% | Retreat to the furthest arena corner |
 | `Scatter` | Emergency (all energy critical) | Individual flight, radio silence |
 
@@ -103,7 +103,7 @@ The leader schedules a `VolleyFire` message specifying a target name and a futur
 | | Blue Swarm | Red Swarm |
 |-|-----------|----------|
 | **Philosophy** | Defensive coordination, clear hierarchy | Aggressive assault, distributed |
-| **Tank count** | 7 | 6 |
+| **Default tank count** | 5 (+ BlueTrooper for NvN) | 4 (+ RedTrooper for NvN) |
 | **ECM specialist** | BlueEcm (Burnthrough-first) | RedGhost (Spoof-first) |
 | **Engagement range** | Medium-to-long | Close-to-medium |
 | **Key tactic** | Synchronized volleys + ECCM | Ghost spoofing + pincer flanking |
@@ -135,7 +135,10 @@ Documentation/                       ← 15-chapter markdown reference
 dotnet run --project TankSwarmCode.Gui/TankSwarmCode.Gui.csproj
 
 # Headless batch run (100 matches, table output)
-dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- --batch 100 --format table
+dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- \
+  --bot1 TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Red.dll \
+  --bot2 TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Blue.dll \
+  --batch 100 --format table
 ```
 
 From Visual Studio: open `TankSwarmCode.slnx`, set startup project to **TankSwarmCode.Gui**, press F5.

@@ -6,9 +6,13 @@
 
 ## Overview
 
-The AI framework is built around a single abstract class: `SwarmTankBase` (`TankSwarmCode.SwarmTank/SwarmTank.cs`). Every tank AI — whether from the built-in swarms or a custom implementation — is a subclass of `SwarmTankBase`.
+The AI framework has two layers in `TankSwarmCode.SwarmTank`:
 
-`SwarmTankBase` implements `ISwarmTank` (the engine's contract) and exposes a friendly API that hides the raw command buffer from the AI author.
+- **`SwarmTankBase`** (`SwarmTank.cs`) — the base class for all tank AI. It implements `ISwarmTank`, maintains `RadarMap`, exposes the command API (`SetAhead`, `SetFire`, `Broadcast`, etc.), and provides default no-op lifecycle hooks. Subclass this directly for full control over your AI logic.
+
+- **`SwarmBrainBase`** (`SwarmBrainBase.cs`) — a concrete AI layer built on top of `SwarmTankBase`. All built-in Red and Blue tanks subclass `SwarmBrainBase`. It provides a complete team-coordination brain: leader election, epoch-based strategy selection, coordinated volley scheduling, ally health tracking, and automatic ECM handling. You configure it with a `TankConfig` record rather than implementing strategy logic from scratch. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full `SwarmBrainBase` reference.
+
+For a custom tank you can subclass either: `SwarmTankBase` for full control, or `SwarmBrainBase` to inherit the coordination brain and override only the `TankConfig`.
 
 ---
 

@@ -56,15 +56,24 @@ Everything AI authors see lives here:
 - `Events/` — event argument types for every lifecycle hook
 - `Enums/` — `TankRole`, `EcmMode`, `SwarmMessageType`
 
-### Layer 2 — Tank Base Class (`TankSwarmCode.SwarmTank`)
+### Layer 2 — Tank Base Classes (`TankSwarmCode.SwarmTank`)
 
-`SwarmTankBase` implements `ISwarmTank` and exposes the friendly AI API:
+**`SwarmTankBase`** implements `ISwarmTank` and exposes the friendly AI API:
 
 - Fluent setters: `SetAhead`, `SetBack`, `SetTurnRight`, `SetTurnLeft`, `SetTurnGunRight`, `SetTurnGunLeft`, `SetTurnRadarRight`, `SetTurnRadarLeft`, `SetFire`, `SetEcm`
 - Maintained `RadarMap` (own scans merged with ally `RadarShare` broadcasts)
 - `Broadcast()` helper to queue swarm messages
 - Radar helpers: `GetFreshestEnemy()`, `GetFreshestContact()`
 - Default no-op implementations of every virtual lifecycle method
+
+**`SwarmBrainBase`** extends `SwarmTankBase` with a full team-coordination brain used by all built-in tanks:
+
+- Slot-based leader election (lowest `FormationSlot` among living allies leads each 40-tick epoch)
+- Epoch strategy selection: Wolfpack, Encircle, Pincer, ECMScreen, Fallback, Scatter
+- Coordinated volley scheduling via `VolleyFire` broadcast messages
+- Ally health tracking via `AllyPing` heartbeats every 15 ticks
+- Automatic ECM mode switching based on strategy and received `EcmAlert` messages
+- Configured via `TankConfig` — subclasses only need to provide a config record
 
 ### Layer 3 — Physics Engine (`TankSwarmCode.Arena`)
 

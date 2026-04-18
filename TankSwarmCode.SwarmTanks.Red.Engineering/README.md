@@ -6,45 +6,35 @@ This shared project is the working area for building and tuning the Red Swarm AI
 
 ## Quick Start
 
-### 1. Subclass SwarmTankBase
+### 1. Choose a Base Class
 
-Every tank inherits from `SwarmTankBase`. Reference the base library from your `.csproj`:
-
-```xml
-<ItemGroup>
-  <ProjectReference Include="..\TankSwarmCode.SwarmTank\TankSwarmCode.SwarmTank.csproj" />
-</ItemGroup>
-```
-
-Minimal tank skeleton:
+All current Red tanks use `SwarmBrainBase` for the full coordination brain. To add a new tank with identical behaviour, subclass `SwarmBrainBase` and provide a `TankConfig`:
 
 ```csharp
 using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Events;
+using TankSwarmCode.SwarmTank.Interfaces.Models;
 
-public class RedScout : SwarmTankBase
+public sealed class RedViper : SwarmBrainBase
 {
-    public RedScout() { SwarmId = 1; Role = TankRole.Scout; }
-    public override string Name => "RedScout";
-
-    public override void OnStart()      => SetTurnRadarRight(double.MaxValue);
-    public override void OnTick(TickEventArgs e) { /* AI here */ }
+    public RedViper() { SwarmId = 1; Role = TankRole.Attacker; }
+    public override string Name => "RedViper";
+    protected override TankConfig Config { get; } = new()
+    {
+        FormationSlot = 5,       // higher slot = lower leadership priority
+        MaxFirePower = 2.0,
+        PreferredRange = 190.0,
+        HasEcm = false,
+        RetreatEnergyThreshold = 22.0
+    };
 }
 ```
+
+For full AI control (no shared brain), subclass `SwarmTankBase` directly — see [ch10 — Building Your Own Tank](../Documentation/ch10-custom-tank.md).
 
 ### 2. Register in the GUI
 
-In `TankSwarmArena.cs`, add a method and wire it to the **Add Tanks** menu:
-
-```csharp
-private void AddRedSwarm()
-{
-    _engine.AddTank(new RedScout());
-    _engine.AddTank(new RedAttacker("RedAlpha"));
-    // ...
-}
-```
+In `TankSwarmArena.cs`, call `arenaUserControl1.AddTank(new RedViper())` inside one of the existing Red Swarm click handlers, or wire it to a new menu item.
 
 ### 3. Test Headless
 
@@ -69,14 +59,14 @@ dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj \
 | `SetTurnRadarRight(deg)` / `SetTurnRadarLeft(deg)` | Queue radar turn |
 | `SetFire(power)` | Fire bullet (power 0.1–3.0; higher = slower, more damage) |
 | `SetEcm(EcmMode)` | Activate ECM for this tick (Jam / Spoof / JamAndSpoof / Burnthrough) |
-| `BroadcastMessage(msg)` | Send a typed message to all allies |
+| `Broadcast(msg)` | Send a typed message to all allies |
 | `NormalizeAngle(a)` | Clamp angle to ±180° — use before every turn command |
 
 **State properties** (read in `OnTick`): `State.Position`, `State.Heading`, `State.GunHeading`, `State.RadarHeading`, `State.Energy`, `State.Velocity`
 
 **Arena properties**: `Arena.ArenaWidth`, `Arena.ArenaHeight`, `Arena.TickNumber`
 
-**Radar**: `State.RadarMap` — dictionary of known enemy contacts (updated by direct scans and ally `RadarShare` messages). Always check `contact.Timestamp` — discard contacts older than ~5 ticks.
+**Radar**: `RadarMap` — dictionary of known enemy contacts (updated by direct scans and ally `RadarShare` messages). Always check `contact.Timestamp` — discard contacts older than ~5 ticks.
 
 ---
 

@@ -19,7 +19,7 @@
 ### From Visual Studio
 
 1. Open `TankSwarmCode.slnx`.
-2. Set the startup project to **TankSwarmCode** (the WinForms host).
+2. Set the startup project to **TankSwarmCode.Gui** (the WinForms host).
 3. Select **Debug** or **Release** configuration.
 4. Press **F5** to build and run.
 
@@ -27,10 +27,10 @@
 
 ```bash
 # Debug run
-dotnet run --project TankSwarmCode/TankSwarmCode.csproj
+dotnet run --project TankSwarmCode.Gui/TankSwarmCode.Gui.csproj
 
 # Release build (single-file executable)
-dotnet publish TankSwarmCode/TankSwarmCode.csproj -c Release
+dotnet publish TankSwarmCode.Gui/TankSwarmCode.Gui.csproj -c Release
 ```
 
 The Release publish target produces a self-contained, single-file `win-x64` executable in the standard `publish/` directory under the project.
@@ -45,10 +45,12 @@ When the application starts you will see an empty arena and a toolbar/menu acros
 
 Use the **Add Tanks** menu to select one or both pre-built swarms:
 
-- **Red Swarm** — adds 6 tanks: RedScout, RedAlpha, RedBravo (RedAttacker × 2), RedWolf, RedFox (RedFlank × 2), and ECM-Jammer
-- **Blue Swarm** — adds 7 tanks: BlueCommand, BluePatrol × 2, BlueSniper × 2, BlueWarden, and ECM-Operator
+- **Red Swarm** — adds 4 tanks: RedHammer, RedBlade, RedArrow, and RedGhost (ECM specialist)
+- **Blue Swarm** — adds 5 tanks: BlueStrike, BlueSharp, BlueRush, BlueGuard, and BlueEcm (ECM specialist)
 
 You can add both swarms for a full Red vs Blue battle, or add the same swarm twice for mirror matches.
+
+For larger battles, use the **Player vs Player** menu to set up balanced NvN matches (1v1 through 12v12). NvN matches larger than the named-tank count fill extra slots with generic `RedTrooper` / `BlueTrooper` instances.
 
 ### Step 2 — Configure the Arena (optional)
 
@@ -132,8 +134,8 @@ TankSwarmCode.SwarmTank.Interfaces/
   Events/                         Event arg types for every lifecycle hook
   Enums/                          TankRole, EcmMode, SwarmMessageType
 
-TankSwarmCode.SwarmTanks.Red/     Red Swarm AI (6 tanks)
-TankSwarmCode.SwarmTanks.Blue/    Blue Swarm AI (7 tanks)
+TankSwarmCode.SwarmTanks.Red/     Red Swarm AI (4 named tanks + dynamic RedTrooper)
+TankSwarmCode.SwarmTanks.Blue/    Blue Swarm AI (5 named tanks + dynamic BlueTrooper)
 Documentation/                    This documentation
 ```
 

@@ -55,7 +55,7 @@ Broadcast(new SwarmMessage
 {
     SenderName  = Name,
     Type        = SwarmMessageType.TargetLocked,
-    TargetName  = "RedAlpha",
+    TargetName  = "RedHammer",
     Position    = enemyPosition,
     Timestamp   = Arena.TickNumber
 });
@@ -67,18 +67,21 @@ The engine queues the message and delivers it to all living, non-jamming allies 
 
 ## SwarmMessageType Enum
 
-| Value | Typical Use |
-|-------|-------------|
-| `RadarShare` | Auto-sent by base class; contains `RadarContact` for a detected enemy |
-| `Painted` | Auto-sent by base class when an enemy radar sweeps this tank; `Position` = painter's position, `TargetName` = painter's name |
-| `EnemySpotted` | Manual broadcast to share a sighting without a full RadarShare |
-| `TargetLocked` | Commander designates the priority target for the swarm |
-| `RequestBackup` | Tank signals it needs help (e.g., low energy) |
-| `FormationMove` | Commander orders a positional manoeuvre; `Position` is the rally point |
-| `FallBack` | Retreat order |
-| `RoleChange` | Dynamic role reassignment; `CustomData` carries the new role name |
-| `EcmAlert` | Sender detected enemy jamming or ghost contacts; allies should activate `Burnthrough`; `CustomData` carries a description |
-| `Custom` | Anything else; inspect `CustomData` for the payload |
+| Value | Used By | Typical Use |
+|-------|---------|-------------|
+| `RadarShare` | Auto (base class) | Contains `RadarContact` for a detected enemy; merged into allies' `RadarMap` |
+| `Painted` | Auto (base class) | Fired when an enemy radar sweeps this tank; `Position` = painter's position, `TargetName` = painter's name |
+| `AllyPing` | `SwarmBrainBase` | Heartbeat every 15 ticks; `CustomData` = `"slot:energy"` |
+| `StrategyCommand` | `SwarmBrainBase` leader | Epoch strategy decree; `CustomData` = JSON `{ Strategy, TargetName, Epoch }` |
+| `VolleyFire` | `SwarmBrainBase` leader | Coordinated fire order; `CustomData` = JSON `{ FireAtTick }`; each tank adjusts for bullet travel time |
+| `EcmAlert` | Any tank | Sender detected enemy jamming or ghost contacts; `SwarmBrainBase` responds by switching to Burnthrough for 20 ticks |
+| `EnemySpotted` | Manual | Broadcast a sighting without a full RadarShare |
+| `TargetLocked` | Manual | Designate priority target for the swarm |
+| `RequestBackup` | Manual | Signal low energy or need for help |
+| `FormationMove` | Manual | Order a positional rally; `Position` is the rally point |
+| `FallBack` | Manual | Retreat order |
+| `RoleChange` | Manual | Dynamic role reassignment; `CustomData` carries the new role name |
+| `Custom` | Manual | Anything else; inspect `CustomData` for the payload |
 
 ---
 
@@ -164,17 +167,17 @@ There is no per-tick message limit. Messages are only delivered to tanks that ar
 
 ## Coordination Patterns Used by Built-in Swarms
 
-### Commander pattern (Blue Swarm)
+### Epoch leader pattern (both swarms)
 
-`BlueCommander` scans `RadarMap` each tick, selects the lowest-energy enemy, and broadcasts `TargetLocked` with that enemy's name every 20 ticks. `BluePatrol`, `BlueSniper`, and `BlueWarden` each listen for `TargetLocked` and update their internal priority target. The whole swarm focusses fire on the same tank with zero radar duplication overhead.
+`SwarmBrainBase` elects a leader every 40 ticks — the living tank with the lowest `FormationSlot`. The leader broadcasts a `StrategyCommand` message (containing the chosen strategy name and the priority target's name) and a `VolleyFire` message (containing the tick at which all tanks should fire simultaneously). Non-leader tanks receive and apply these messages, focusing the entire swarm on the same target with a coordinated salvo. There is no central "commander" class — any tank can become leader if its predecessors die.
 
-### Scout broadcast pattern (Red Swarm)
+### Ally ping heartbeat (both swarms)
 
-`RedScout` spins its radar at full speed, relying entirely on the automatic `RadarShare` to flood the attacker tanks with fresh enemy contacts every tick. The attackers never need their own dedicated radar strategy.
+Every 15 ticks each tank broadcasts an `AllyPing` message containing its formation slot and current energy. The brain uses these to track which allies are alive, compute average energy, and decide whether to switch to Fallback strategy. Pings older than 30 ticks are treated as dead.
 
 ### ECM alert chain
 
-When `BlueEcmOperator` detects a ghost contact (name starts with `"Ghost-"`), it broadcasts `EcmAlert`. Any other Blue tank that implements `OnSwarmMessage` can respond by activating Burnthrough for a fixed duration, coordinating ECCM coverage across the swarm without a central controller.
+When any tank detects a ghost contact (name starts with `"Ghost-"`), it should broadcast `EcmAlert`. `SwarmBrainBase` handles incoming `EcmAlert` messages by switching to `Burnthrough` for 20 ticks, coordinating ECCM coverage across the swarm without a central controller. `BlueEcm` is the built-in tank most likely to generate these alerts since its default role is ECCM protection.
 
 ### Painted counter-targeting
 

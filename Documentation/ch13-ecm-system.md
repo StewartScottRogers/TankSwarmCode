@@ -186,19 +186,19 @@ public override void OnPainted(PaintedEventArgs e)
 The intended ECM meta-game between the built-in swarms:
 
 ```
-RedEcmJammer runs Spoof
-    → Blue RadarMap fills with Ghost-ECM contacts
-    → Blue tanks fire on ghosts and miss
+RedGhost runs JamAndSpoof (ECMScreen strategy)
+    → Red tanks close to 130 px under cover
+    → Blue RadarMap fills with Ghost-RedGh contacts
+    → Blue tanks running linear prediction fire on ghosts and miss
 
-BlueEcmOperator scans a Ghost contact
-    → calls OnScannedTank("Ghost-ECM...")
+BlueEcm scans a Ghost contact (name starts with "Ghost-")
     → broadcasts EcmAlert to Blue swarm
-    → activates Burnthrough for 40 ticks
+    → SwarmBrainBase responds: all Blue tanks switch to Burnthrough
 
 Blue swarm now filters 70% of ghost contacts per sweep
 
-BlueEcmOperator switches to offensive Jam
-    → RedEcmJammer is forced to switch from Spoof to Jam
+BlueEcm switches to offensive Jam (when strategy calls for it)
+    → RedGhost is forced to switch from JamAndSpoof to Jam (or Burnthrough)
     → ghost projection stops; Red loses deception advantage
 
 Additionally, every time an enemy radar paints any Blue tank:

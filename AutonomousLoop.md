@@ -38,7 +38,29 @@ Read `AutoResearch.md` for the full research framework, thresholds, baselines, a
    - `notes`: what was surprising or notable
    - `nextHypothesis`: the next concrete, falsifiable claim to test
 
-6. **Stop** — Output a one-paragraph summary of this iteration's findings, then exit. Do not prompt for input. The loop will call you again.
+6. **Update documentation** — If this iteration changed any source code (tank configs, physics constants, CLI flags, swarm brain logic, etc.), update the affected documentation files **before committing**. Run `git diff --name-only` to see what changed, then apply the minimum edits needed to keep docs accurate:
+
+   | Code area changed | Documentation to update |
+   |------------------|------------------------|
+   | `TankConfig` values in any tank | `Documentation/ch09-builtin-tanks.md` roster table + tank section; Engineering READMEs |
+   | New tank class added or removed | `ch09`, `ch01` solution layout, `ch02` Add Tanks walkthrough, Engineering README |
+   | `ArenaConstants` values | `Documentation/ch12-configuration.md`, `ch04-physics-engine.md`, `ch13-ecm-system.md`, `ch14-tank-energy.md` |
+   | `SwarmBrainBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Blue/Red Engineering READMEs |
+   | CLI flags or output format | `Documentation/ch15-cli.md`; Engineering READMEs |
+   | `ISwarmTank` / `IArenaContext` interface | `ch05-tank-ai-framework.md`, `ch08-data-models.md` |
+   | New `SwarmMessageType` enum value | `ch06-swarm-communication.md` message table |
+   | ECM mode behaviour | `ch13-ecm-system.md` |
+
+   Do not rewrite sections that are still accurate. Do not update documentation for code that was not changed this iteration. If only bench data changed (no code), skip this step entirely.
+
+7. **Commit** — If any files (code or documentation) were modified this iteration, stage and commit them together in a single commit:
+   ```
+   git add <changed-source-files> <changed-doc-files>
+   git commit -m "<one-line summary of what changed and why>"
+   ```
+   Never commit source changes without the corresponding documentation updates in the same commit.
+
+8. **Stop** — Output a one-paragraph summary of this iteration's findings, then exit. Do not prompt for input. The loop will call you again.
 
 ## Rules
 
@@ -46,3 +68,4 @@ Read `AutoResearch.md` for the full research framework, thresholds, baselines, a
 - Never pause for confirmation.
 - If you hit an error (build failure, missing file), fix it and continue.
 - Each iteration must produce a concrete verdict on its hypothesis.
+- **Documentation and code are committed together.** A commit that changes tank behaviour without updating the relevant docs is not acceptable.
