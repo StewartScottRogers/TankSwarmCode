@@ -17,7 +17,7 @@ TankSwarmCode is split into narrow, purpose-built projects that keep the public 
 ## Project Dependency Graph
 
 ```
-TankSwarmCode (WinForms host / renderer)
+TankSwarmCode.Gui (WinForms host / renderer)
     │
     ├── TankSwarmCode.Arena
     │       ├── TankSwarmCode.Arena.Interfaces
@@ -31,9 +31,15 @@ TankSwarmCode (WinForms host / renderer)
     │
     └── TankSwarmCode.SwarmTanks.Blue
             └── TankSwarmCode.SwarmTank
+
+TankSwarmCode.Cli (headless runner)
+    │
+    └── TankSwarmCode.Arena
+            ├── TankSwarmCode.Arena.Interfaces
+            └── TankSwarmCode.SwarmTank.Interfaces
 ```
 
-Neither the Red nor Blue swarm projects reference the Arena project — they cannot call engine internals.
+Neither the Red nor Blue swarm projects reference the Arena project — they cannot call engine internals. The CLI loads swarm DLLs at runtime via reflection; it does not reference them at compile time.
 
 ---
 
@@ -69,12 +75,21 @@ Everything AI authors see lives here:
 - `ArenaEngine` — the simulation loop (detailed in [Chapter 4](ch04-physics-engine.md))
 - `ArenaContext` — snapshot-backed implementation of `IArenaContext`
 
-### Layer 4 — WinForms Host (`TankSwarmCode`)
+### Layer 4 — Host Applications
+
+**`TankSwarmCode.Gui` (WinForms host)**
 
 - `TankSwarmArena` (main form) — menus, speed slider, start/stop/step/reset buttons, radio log panel
-- `ArenaUserControl` — GDI+ double-buffered renderer; owns the `ArenaEngine` instance; drives the `System.Windows.Forms.Timer`-based tick loop
+- `ArenaUserControl` — GDI+ double-buffered renderer; owns the `ArenaEngine` instance; drives the `System.Windows.Forms.Timer`-based tick loop; tracks per-tank damage/energy stats
 - `ArenaConfigurationUserControl` — arena dimension configuration form
 - `ScreenWakeLock` — prevents Windows display sleep during simulation
+
+**`TankSwarmCode.Cli` (headless runner)**
+
+- Single `Program.cs` entry point; no GUI dependency
+- Loads swarm DLLs at runtime via `Assembly.LoadFrom` + reflection
+- Runs one match or a parallel batch (`Parallel.For`); streams results as JSON, NDJSON, table, or CSV
+- See [Chapter 15: Headless CLI Runner](ch15-cli.md) for full documentation
 
 ---
 

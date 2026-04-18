@@ -220,7 +220,9 @@ public override void OnRoundEnded(RoundEndedEventArgs e)
 
 ---
 
-## Step 8 — Register the Tank
+## Step 8 — Test Your Tank
+
+### Option A — GUI
 
 In `TankSwarmArena.cs`, add a method to register your swarm and wire it to a menu item:
 
@@ -231,6 +233,27 @@ private void AddMySwarm()
     _engine.AddTank(new MyTank("MyTank2"));
 }
 ```
+
+### Option B — Headless CLI (no GUI required)
+
+Build your project as a class library, then point the CLI at the output DLL:
+
+```bash
+dotnet build -c Release
+
+dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj \
+  --bot1 YourSwarm/bin/Release/net10.0/YourSwarm.dll \
+  --bot2 TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Blue.dll \
+  --batch 50 --format table
+```
+
+Use `--list` to verify the CLI can find your tanks before running a match:
+
+```bash
+TankSwarmCode.Cli --list YourSwarm/bin/Release/net10.0/YourSwarm.dll
+```
+
+See [Chapter 15: Headless CLI Runner](ch15-cli.md) for all options.
 
 ---
 

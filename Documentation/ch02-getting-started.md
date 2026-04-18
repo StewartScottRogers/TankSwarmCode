@@ -88,15 +88,32 @@ Click **Reset** to clear the arena and prepare for a new round, or **Start** aga
 
 ---
 
+## Headless CLI Runner
+
+For AI training and benchmarking you can run matches without the GUI:
+
+```bash
+dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj \
+  --bot1 path/to/Red.dll --bot2 path/to/Blue.dll \
+  --batch 100 --parallel 8 --format table
+```
+
+See [Chapter 15: Headless CLI Runner](ch15-cli.md) for the full flag reference, output formats (JSON, NDJSON, table, CSV), and example workflows.
+
+---
+
 ## Project Layout
 
 ```
-TankSwarmCode/                    WinForms host
+TankSwarmCode.Gui/                WinForms host
   Program.cs                      Entry point
   TankSwarmArena.cs               Main form (menus, controls, radio log)
   ArenaUserControl.cs             GDI+ renderer + engine host
   ArenaConfigurationUserControl   Arena dimension settings panel
   ScreenWakeLock.cs               Prevents display sleep during simulation
+
+TankSwarmCode.Cli/
+  Program.cs                      Headless match runner (JSON/NDJSON/table/CSV output)
 
 TankSwarmCode.Arena/
   ArenaEngine.cs                  Tick loop, physics, collision detection

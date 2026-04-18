@@ -60,6 +60,7 @@ Any tank can activate an ECM mode each tick at an energy cost. ECM modes interfe
 | Parallel simulation | Tick callbacks, bullet movement, radar scans, and state sync run in parallel |
 | GDI+ rendering | Animated radar sweeps, ECM auras, ghost echoes, explosion sequences, energy bars |
 | Interactive UI | Click tanks to inspect state; force ECM modes via UI; step-by-step debugging |
+| Headless CLI runner | Run matches without a GUI; stream JSON/NDJSON/table/CSV; parallel batches for AI training |
 
 ---
 
@@ -73,7 +74,8 @@ TankSwarmCode.slnx
 ├── TankSwarmCode.Arena                  — ArenaEngine physics & runtime state
 ├── TankSwarmCode.SwarmTanks.Red         — Red Swarm AI (6 tanks)
 ├── TankSwarmCode.SwarmTanks.Blue        — Blue Swarm AI (7 tanks)
-├── TankSwarmCode                        — WinForms host, renderer, main form
+├── TankSwarmCode.Gui                    — WinForms host, renderer, main form
+├── TankSwarmCode.Cli                    — headless JSON/NDJSON/table/CSV match runner
 └── Documentation                        — this documentation
 ```
 

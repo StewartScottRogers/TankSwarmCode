@@ -1,6 +1,6 @@
 # Chapter 14: Tank Energy
 
-[← ECM System](ch13-ecm-system.md) | [Table of Contents](TOC.md)
+[← ECM System](ch13-ecm-system.md) | [Table of Contents](TOC.md) | [Next: Headless CLI Runner →](ch15-cli.md)
 
 ---
 
@@ -167,4 +167,4 @@ See [Chapter 12: Configuration & Constants](ch12-configuration.md) for the full 
 
 ---
 
-[← ECM System](ch13-ecm-system.md) | [Table of Contents](TOC.md)
+[← ECM System](ch13-ecm-system.md) | [Table of Contents](TOC.md) | [Next: Headless CLI Runner →](ch15-cli.md)
