@@ -12,4 +12,5 @@
   <Project Path="TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj" Id="be78a83d-584a-4e89-bdac-f64806767d51" />
   <Project Path="TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj" Id="8057c000-7f96-4207-9bbf-47b82e799357" />
   <Project Path="TankSwarmCode.Gui/TankSwarmCode.Gui.csproj" />
+  <Project Path="TankSwarmCode.Cli/TankSwarmCode.Cli.csproj" />
 </Solution>

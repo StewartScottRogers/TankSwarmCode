@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TankSwarmCode.Cli</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TankSwarmCode.Arena\TankSwarmCode.Arena.csproj" />
+    <ProjectReference Include="..\TankSwarmCode.Arena.Interfaces\TankSwarmCode.Arena.Interfaces.csproj" />
+    <ProjectReference Include="..\TankSwarmCode.SwarmTank.Interfaces\TankSwarmCode.SwarmTank.Interfaces.csproj" />
+  </ItemGroup>
+
+</Project>

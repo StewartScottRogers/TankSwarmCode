@@ -19,7 +19,7 @@ public sealed class ArenaEngine : IArena
     private readonly List<BuildingDefinition> _buildings = [];
 
     private readonly ArenaContext _context;
-    private readonly Random _rng = new();
+    private readonly Random _rng;
 
     // Cached snapshots rebuilt once per tick — avoids per-access List allocations
     private IReadOnlyList<ISwarmTank> _tanksSnapshot = [];
@@ -67,10 +67,11 @@ public sealed class ArenaEngine : IArena
 
     // ── Construction ──────────────────────────────────────────────────────────
 
-    public ArenaEngine(double width = 800, double height = 600)
+    public ArenaEngine(double width = 800, double height = 600, int? seed = null)
     {
         Width = width;
         Height = height;
+        _rng = seed.HasValue ? new Random(seed.Value) : new Random();
         _context = new ArenaContext(this);
     }
 
