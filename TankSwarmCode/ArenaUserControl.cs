@@ -2022,6 +2022,7 @@ public partial class ArenaUserControl : UserControl
 
         float dist = MathF.Sqrt((ex - sx) * (ex - sx) + (ey - sy) * (ey - sy));
         if (dist < 2f) return;
+        if (!float.IsFinite(sx) || !float.IsFinite(sy) || !float.IsFinite(ex) || !float.IsFinite(ey)) return;
 
         Color spotterColor = ev.SpotterColor;
 
@@ -2030,6 +2031,7 @@ public partial class ArenaUserControl : UserControl
         // Arena 0°=N clockwise → GDI+ (0°=E clockwise) requires subtracting 90°.
         float outboundMid = ev.SweepMidDeg - 90f;
         float arcSpan     = ev.SweepSpanDeg;
+        if (!float.IsFinite(outboundMid) || !float.IsFinite(arcSpan)) return;
 
         // ── Phase 1: outbound wave (ageFraction 0 → <0.5) ────────────────────
         // t goes 0→1 across the first half-lifetime.

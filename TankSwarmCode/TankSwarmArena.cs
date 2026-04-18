@@ -1,4 +1,5 @@
 using TankSwarmCode.Arena;
+using TankSwarmCode.SwarmTank.Interfaces;
 using TankSwarmCode.SwarmTanks.Blue;
 using TankSwarmCode.SwarmTanks.Red;
 
@@ -6,14 +7,17 @@ namespace TankSwarmCode;
 
 public partial class TankSwarmArena : Form
 {
-    private int _redAttackerCount;
-    private int _redFlankerCount;
-    private int _bluePatrolCount;
-    private int _blueSniperCount;
-    private bool _blueCommanderAdded;
+    private bool _blueStrikeAdded;
+    private bool _blueSharpAdded;
+    private bool _blueRushAdded;
+    private bool _blueGuardAdded;
+    private bool _blueEcmAdded;
+    private bool _redHammerAdded;
+    private bool _redBladeAdded;
+    private bool _redArrowAdded;
+    private bool _redGhostAdded;
     private bool _roundEnded;
-    private bool _redEcmJammerAdded;
-    private bool _blueEcmOperatorAdded;
+    private int  _lastNvN;
 
     // Per-swarm colours for radio log text, indexed by SwarmId (SwarmId 0 = solo/unknown)
     private static readonly Color[] _radioSwarmColours =
@@ -127,19 +131,19 @@ public partial class TankSwarmArena : Form
 
     private void MenuItemAddRedEcmJammer_Click()
     {
-        if (_redEcmJammerAdded) return;
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new RedEcmJammer());
-        _redEcmJammerAdded = true;
+        if (_redGhostAdded) return;
+        arenaUserControl1.AddTank(new RedGhost());
+        _redGhostAdded = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddBlueEcmOperator_Click()
     {
-        if (_blueEcmOperatorAdded) return;
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new BlueEcmOperator());
-        _blueEcmOperatorAdded = true;
+        if (_blueEcmAdded) return;
+        arenaUserControl1.AddTank(new BlueEcm());
+        _blueEcmAdded = true;
         UpdateMenuState();
     }
 
@@ -148,39 +152,41 @@ public partial class TankSwarmArena : Form
     private void MenuItemBuildDefaultRedSwarm_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new RedScout());
-        arenaUserControl1.AddTank(new RedAttacker("RedAlpha"));
-        arenaUserControl1.AddTank(new RedAttacker("RedBravo"));
-        arenaUserControl1.AddTank(new RedFlank("RedWolf",  90));
-        arenaUserControl1.AddTank(new RedFlank("RedFox",  -90));
-        arenaUserControl1.AddTank(new RedEcmJammer());
-        _redAttackerCount  = 2;
-        _redFlankerCount   = 2;
-        _redEcmJammerAdded = true;
+        arenaUserControl1.AddTank(new RedHammer());
+        arenaUserControl1.AddTank(new RedBlade());
+        arenaUserControl1.AddTank(new RedArrow());
+        arenaUserControl1.AddTank(new RedGhost());
+        _redHammerAdded = true;
+        _redBladeAdded  = true;
+        _redArrowAdded  = true;
+        _redGhostAdded  = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddRedScout_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new RedScout());
+        if (_redArrowAdded) return;
+        arenaUserControl1.AddTank(new RedArrow());
+        _redArrowAdded = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddRedAttacker_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        _redAttackerCount++;
-        arenaUserControl1.AddTank(new RedAttacker($"Red{_redAttackerCount}"));
+        if (_redHammerAdded) return;
+        arenaUserControl1.AddTank(new RedHammer());
+        _redHammerAdded = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddRedFlanker_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        _redFlankerCount++;
-        int angle = (_redFlankerCount % 2 == 1) ? 90 : -90;
-        arenaUserControl1.AddTank(new RedFlank($"RedFlanker{_redFlankerCount}", angle));
+        if (_redBladeAdded) return;
+        arenaUserControl1.AddTank(new RedBlade());
+        _redBladeAdded = true;
         UpdateMenuState();
     }
 
@@ -189,48 +195,52 @@ public partial class TankSwarmArena : Form
     private void MenuItemBuildDefaultBlueSwarm_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new BlueCommander());
-        arenaUserControl1.AddTank(new BlueWarden());
-        arenaUserControl1.AddTank(new BluePatrol("BlueEast", 0));
-        arenaUserControl1.AddTank(new BluePatrol("BlueWest", 1));
-        arenaUserControl1.AddTank(new BlueSniper("BlueEagle", topLeft: true));
-        arenaUserControl1.AddTank(new BlueSniper("BlueHawk",  topLeft: false));
-        arenaUserControl1.AddTank(new BlueEcmOperator());
-        _bluePatrolCount        = 2;
-        _blueCommanderAdded     = true;
-        _blueEcmOperatorAdded   = true;
+        arenaUserControl1.AddTank(new BlueStrike());
+        arenaUserControl1.AddTank(new BlueSharp());
+        arenaUserControl1.AddTank(new BlueRush());
+        arenaUserControl1.AddTank(new BlueGuard());
+        arenaUserControl1.AddTank(new BlueEcm());
+        _blueStrikeAdded = true;
+        _blueSharpAdded  = true;
+        _blueRushAdded   = true;
+        _blueGuardAdded  = true;
+        _blueEcmAdded    = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddBlueWarden_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new BlueWarden());
+        if (_blueGuardAdded) return;
+        arenaUserControl1.AddTank(new BlueGuard());
+        _blueGuardAdded = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddBluePatrol_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        arenaUserControl1.AddTank(new BluePatrol($"BluePatrol{_bluePatrolCount}", _bluePatrolCount % 2));
-        _bluePatrolCount++;
+        if (_blueRushAdded) return;
+        arenaUserControl1.AddTank(new BlueRush());
+        _blueRushAdded = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddBlueSniper_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        _blueSniperCount++;
-        arenaUserControl1.AddTank(new BlueSniper($"BlueSniper{_blueSniperCount}", topLeft: _blueSniperCount % 2 == 1));
+        if (_blueSharpAdded) return;
+        arenaUserControl1.AddTank(new BlueSharp());
+        _blueSharpAdded = true;
         UpdateMenuState();
     }
 
     private void MenuItemAddBlueCommander_Click(object? sender, EventArgs e)
     {
         EnsureResetAfterRound();
-        if (_blueCommanderAdded) return;
-        arenaUserControl1.AddTank(new BlueCommander());
-        _blueCommanderAdded = true;
+        if (_blueStrikeAdded) return;
+        arenaUserControl1.AddTank(new BlueStrike());
+        _blueStrikeAdded = true;
         UpdateMenuState();
     }
 
@@ -244,36 +254,42 @@ public partial class TankSwarmArena : Form
     {
         if (!_roundEnded) return;
         arenaUserControl1.Reset();
-        _redAttackerCount      = 0;
-        _redFlankerCount       = 0;
-        _bluePatrolCount       = 0;
-        _blueSniperCount       = 0;
-        _blueCommanderAdded    = false;
-        _redEcmJammerAdded     = false;
-        _blueEcmOperatorAdded  = false;
-        _roundEnded            = false;
+        ResetTankFlags();
+        _roundEnded = false;
         ClearRadioLog();
     }
 
     private void MenuItemClearAllTanks_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount      = 0;
-        _redFlankerCount       = 0;
-        _bluePatrolCount       = 0;
-        _blueSniperCount       = 0;
-        _blueCommanderAdded    = false;
-        _redEcmJammerAdded     = false;
-        _blueEcmOperatorAdded  = false;
-        _roundEnded            = false;
+        ResetTankFlags();
+        _roundEnded = false;
         ClearRadioLog();
         UpdateMenuState();
+    }
+
+    private void ResetTankFlags()
+    {
+        _blueStrikeAdded = false;
+        _blueSharpAdded  = false;
+        _blueRushAdded   = false;
+        _blueGuardAdded  = false;
+        _blueEcmAdded    = false;
+        _redHammerAdded  = false;
+        _redBladeAdded   = false;
+        _redArrowAdded   = false;
+        _redGhostAdded   = false;
     }
 
     // ── War handlers ──────────────────────────────────────────────────────────
 
     private void MenuItemStart_Click(object? sender, EventArgs e)
     {
+        if (_roundEnded && _lastNvN > 0)
+        {
+            ConfigureNvN(_lastNvN);
+            return;
+        }
         arenaUserControl1.Start();
         UpdateMenuState();
         UpdateStatusStrip();
@@ -296,13 +312,8 @@ public partial class TankSwarmArena : Form
     private void MenuItemResetArena_Click(object? sender, EventArgs e)
     {
         arenaUserControl1.Reset();
-        _redAttackerCount     = 0;
-        _redFlankerCount      = 0;
-        _bluePatrolCount      = 0;
-        _blueSniperCount      = 0;
-        _redEcmJammerAdded    = false;
-        _blueEcmOperatorAdded = false;
-        _roundEnded           = false;
+        ResetTankFlags();
+        _roundEnded = false;
         ClearRadioLog();
         UpdateMenuState();
         UpdateStatusStrip();
@@ -328,15 +339,10 @@ public partial class TankSwarmArena : Form
     /// <summary>Clears the arena and builds a balanced N-per-side Red vs Blue configuration.</summary>
     private void ConfigureNvN(int n)
     {
+        _lastNvN = n;
         arenaUserControl1.Reset();
-        _redAttackerCount     = 0;
-        _redFlankerCount      = 0;
-        _bluePatrolCount      = 0;
-        _blueSniperCount      = 0;
-        _blueCommanderAdded   = false;
-        _redEcmJammerAdded    = false;
-        _blueEcmOperatorAdded = false;
-        _roundEnded           = false;
+        ResetTankFlags();
+        _roundEnded = false;
         ClearRadioLog();
 
         BuildRedTeam(n);
@@ -346,71 +352,39 @@ public partial class TankSwarmArena : Form
         UpdateMenuState();
     }
 
-    /// <summary>
-    /// Adds n Red tanks:
-    ///   n=1 → 1 Attacker
-    ///   n=2 → 1 Attacker + 1 Flanker
-    ///   n≥3 → 1 Scout + ceil((n-1)/2) Attackers + floor((n-1)/2) Flankers
-    /// </summary>
+    // Red tanks ordered by formation slot (slot 0 = highest authority)
+    private static readonly Func<ISwarmTank>[] RedTankFactories =
+    [
+        () => new RedHammer(),
+        () => new RedBlade(),
+        () => new RedArrow(),
+        () => new RedGhost(),
+    ];
+
+    // Blue tanks ordered by formation slot
+    private static readonly Func<ISwarmTank>[] BlueTankFactories =
+    [
+        () => new BlueStrike(),
+        () => new BlueSharp(),
+        () => new BlueRush(),
+        () => new BlueGuard(),
+        () => new BlueEcm(),
+    ];
+
     private void BuildRedTeam(int n)
     {
-        bool hasScout  = n >= 3;
-        int  combat    = n - (hasScout ? 1 : 0);
-        int  attackers = (combat + 1) / 2;
-        int  flankers  = combat / 2;
-
-        if (hasScout)
-            arenaUserControl1.AddTank(new RedScout());
-
-        for (int i = 0; i < attackers; i++)
-        {
-            _redAttackerCount++;
-            arenaUserControl1.AddTank(new RedAttacker($"Red{_redAttackerCount}"));
-        }
-
-        for (int i = 0; i < flankers; i++)
-        {
-            _redFlankerCount++;
-            int angle = (_redFlankerCount % 2 == 1) ? 90 : -90;
-            arenaUserControl1.AddTank(new RedFlank($"RedFlanker{_redFlankerCount}", angle));
-        }
+        for (int i = 0; i < n; i++)
+            arenaUserControl1.AddTank(i < RedTankFactories.Length
+                ? RedTankFactories[i]()
+                : new RedTrooper(i));
     }
 
-    /// <summary>
-    /// Adds n Blue tanks:
-    ///   n=1 → 1 Patrol
-    ///   n=2 → 1 Patrol + 1 Sniper
-    ///   n=3 → 1 Commander + 1 Patrol + 1 Sniper
-    ///   n≥4 → 1 Commander + 1 Warden + ceil((n-2)/2) Patrols + floor((n-2)/2) Snipers
-    /// </summary>
     private void BuildBlueTeam(int n)
     {
-        bool hasCommander = n >= 3;
-        int  rest         = n - (hasCommander ? 1 : 0);
-        bool hasWarden    = rest >= 3;
-        int  combat       = rest - (hasWarden ? 1 : 0);
-        int  patrols      = (combat + 1) / 2;
-        int  snipers      = combat / 2;
-
-        if (hasCommander)
-        {
-            arenaUserControl1.AddTank(new BlueCommander());
-            _blueCommanderAdded = true;
-        }
-
-        if (hasWarden)
-            arenaUserControl1.AddTank(new BlueWarden());
-
-        for (int i = 0; i < patrols; i++)
-        {
-            arenaUserControl1.AddTank(new BluePatrol($"BluePatrol{_bluePatrolCount}", _bluePatrolCount % 2));
-            _bluePatrolCount++;
-        }
-
-        for (int i = 1; i <= snipers; i++)
-        {
-            arenaUserControl1.AddTank(new BlueSniper($"BlueSniper{i}", topLeft: i % 2 == 1));
-        }
+        for (int i = 0; i < n; i++)
+            arenaUserControl1.AddTank(i < BlueTankFactories.Length
+                ? BlueTankFactories[i]()
+                : new BlueTrooper(i));
     }
 
     /// <summary>Configures a 1 vs 1 match.</summary>
@@ -527,23 +501,25 @@ public partial class TankSwarmArena : Form
         _menuItemAddBlueWarden.Enabled         = canBuild;
         _menuItemAddBluePatrol.Enabled         = canBuild;
         _menuItemAddBlueSniper.Enabled         = canBuild;
-        _menuItemAddBlueCommander.Enabled      = canBuild && !_blueCommanderAdded;
+        _menuItemAddBlueCommander.Enabled      = canBuild && !_blueStrikeAdded;
         _menuItemClearAllTanks2.Enabled        = canBuild;
 
-        if (_menuItemAddRedEcmJammer   is not null) _menuItemAddRedEcmJammer.Enabled   = canBuild && !_redEcmJammerAdded;
-        if (_menuItemAddBlueEcmOperator is not null) _menuItemAddBlueEcmOperator.Enabled = canBuild && !_blueEcmOperatorAdded;
-        _menuItemPlayerVsPlayer.Enabled        = canBuild;
+        if (_menuItemAddRedEcmJammer    is not null) _menuItemAddRedEcmJammer.Enabled    = canBuild && !_redGhostAdded;
+        if (_menuItemAddBlueEcmOperator is not null) _menuItemAddBlueEcmOperator.Enabled = canBuild && !_blueEcmAdded;
+        // ConfigureNvN always resets first, so it's safe to offer NvN any time the sim isn't ticking.
+        _menuItemPlayerVsPlayer.Enabled        = !running;
 
         bool hasTanks = arenaUserControl1.TankCount > 0;
 
-        _menuItemStart.Enabled      = !running && hasTanks && !_roundEnded;
+        bool canStart = !running && ((!_roundEnded && hasTanks) || (_roundEnded && _lastNvN > 0));
+        _menuItemStart.Enabled      = canStart;
         _menuItemStop.Enabled       = running;
         _menuItemSingleStep.Enabled = !running && hasTanks && !_roundEnded;
         // Reset is always available
         _menuItemResetArena.Enabled = true;
 
         // ── Toolbar mirrors War menu ──────────────────────────────────────────
-        _btnStartWar.Enabled   = !running && hasTanks && !_roundEnded;
+        _btnStartWar.Enabled   = canStart;
         _btnStopWar.Enabled    = running;
         _btnSingleStep.Enabled = !running && hasTanks && !_roundEnded;
     }

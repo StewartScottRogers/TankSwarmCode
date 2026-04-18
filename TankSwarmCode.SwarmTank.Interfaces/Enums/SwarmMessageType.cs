@@ -47,5 +47,24 @@ public enum SwarmMessageType
     /// arena position at the moment of the scan.
     /// Emitted automatically by the base class on <see cref="ISwarmTank.OnPainted"/>.
     /// </summary>
-    Painted
+    Painted,
+
+    /// <summary>
+    /// Leader's epoch decree. <c>TargetName</c> is the priority target.
+    /// <c>CustomData</c> carries <c>{"strategy":"Wolfpack","targetName":"X","epoch":N}</c>.
+    /// </summary>
+    StrategyCommand,
+
+    /// <summary>
+    /// Coordinated fire order. <c>TargetName</c> is the target.
+    /// <c>CustomData</c> carries <c>{"fireAtTick":N}</c>.
+    /// Each recipient computes its own offset so all bullets arrive simultaneously.
+    /// </summary>
+    VolleyFire,
+
+    /// <summary>
+    /// Periodic energy status ping used for leadership determination.
+    /// <c>CustomData</c> carries the sender's current energy as a decimal string.
+    /// </summary>
+    AllyPing
 }
