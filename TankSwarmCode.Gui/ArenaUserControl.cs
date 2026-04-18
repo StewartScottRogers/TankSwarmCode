@@ -2088,25 +2088,24 @@ public partial class ArenaUserControl : UserControl
                 // The shadow trapezoid starts at each building's near face, so only the
                 // portion of the wavefront that has already passed an building is hidden.
                 GraphicsState? preClip = null;
-                if (_engine is not null && _engine.Buildings.Count > 0)
-                {
-                    using GraphicsPath shadowPath = new();
-                    foreach (BuildingDefinition obs in _engine.Buildings)
-                    {
-                        PointF[]? poly = ComputeBuildingShadowPolygon(
-                            sx, sy, obs, radius + 60f);
-                        if (poly is not null)
-                        {
-                            shadowPath.StartFigure();
-                            shadowPath.AddPolygon(poly);
-                        }
-                    }
-                    preClip = g.Save();
-                    g.SetClip(shadowPath, CombineMode.Exclude);
-                }
-
                 try
                 {
+                    if (_engine is not null && _engine.Buildings.Count > 0)
+                    {
+                        using GraphicsPath shadowPath = new();
+                        foreach (BuildingDefinition obs in _engine.Buildings)
+                        {
+                            PointF[]? poly = ComputeBuildingShadowPolygon(
+                                sx, sy, obs, radius + 60f);
+                            if (poly is not null)
+                            {
+                                shadowPath.StartFigure();
+                                shadowPath.AddPolygon(poly);
+                            }
+                        }
+                        preClip = g.Save();
+                        g.SetClip(shadowPath, CombineMode.Exclude);
+                    }
                     float penW = Math.Max(1f, 2.5f * (1f - t * 0.6f));
                     using Pen arcPen = new(Color.FromArgb((int)(230 * fade), spotterColor), penW);
                     g.DrawArc(arcPen,
