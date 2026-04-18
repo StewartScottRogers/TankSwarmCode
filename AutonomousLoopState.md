@@ -1,19 +1,53 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 10 complete
+2026-04-18 — Iteration 11 complete
 
 ## Current Iteration
-**11** — pending
+**12** — pending (or HALT — balance target achieved)
 
-## Next Hypothesis
-Binary search calibration: BlueEcm MaxFirePower=0.5 (geometric midpoint between 0.1=Blue59% and 1.5=Red56%) should land closer to the 45–52% balance target. If Red wins at 0.5: try 0.3. If Blue wins: try 1.0.
+## Status
+**BALANCE FIX CONFIRMED.** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%.
 
-**Branch:** `research/iter-11-blueecm-fp-calibrate-0.5`
+Branch `research/iter-11-blueecm-fp-calibrate-0.5` contains the fix.
+**Awaiting human merge to master.**
+
+If continuing research: investigate why the 0.5→1.0 jump is non-linear, or test cross-seed validation (seed 2000).
+
+**Branch:** (awaiting human decision)
 
 ---
 
 ## Iteration Log
+
+### Iter 11 — `research/iter-11-blueecm-fp-calibrate-0.5`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — BALANCE FIX FOUND
+
+**Hypothesis:** Binary search between MaxFP=0.1 (Blue59%) and 1.5 (Red56%) — try 0.5, then 1.0.
+
+**Binary search runs:**
+- MaxFirePower=0.5: Red 40%, Blue 60% — still Blue-dominated
+- MaxFirePower=1.0: Red **51%**, Blue **49%** — ✅ BALANCED (target: 45–52%)
+
+**Code change KEPT:** BlueEcm MaxFirePower 1.5 → 1.0
+
+**Results at 1.0:**
+- Red 102–103 (51%) / Blue 97–98 (49%)
+- Ghost: MVP, 54% WinSurv, solo carry 32% (stable throughout all iterations)
+- BlueEcm: MVP, Linchpin (alive:90%/dead:21%), solo carry 34% — now mirrors Ghost's role
+- Both ECM hiders carry ~33% of their team's wins — symmetric ECM duel achieved
+
+**Root cause chain:**
+1. Ghost (MaxFirePower=0.1, RetreatEnergyThreshold=40) is a hider — barely drains energy
+2. BlueEcm (MaxFirePower=1.5, RetreatEnergyThreshold=35) fires aggressively — drains energy, dies in Red wins
+3. Fix: BlueEcm MaxFirePower 1.5→1.0 reduces per-shot energy drain by 33%
+4. BlueEcm now survives longer, carries Blue wins more effectively
+5. Result: 51%/49% — ECM duel symmetric
+
+**Awaiting human merge.**
+
+---
 
 ### Iter 10 — `research/iter-10-blueecm-firepower-nerf`
 **Date:** 2026-04-18
