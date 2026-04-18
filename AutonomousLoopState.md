@@ -1,19 +1,40 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 3 complete
+2026-04-18 — Iteration 4 complete
 
 ## Current Iteration
-**4** — pending
+**5** — pending
 
 ## Next Hypothesis
-Reducing EcmJamDropChance from 0.50 → 0.30 and EcmJamCorruptChance from 0.30 → 0.15 (jam effectiveness nerf) reduces Ghost's scan-corruption advantage, dropping its solo carry rate from 32% to ≤20% and Red's win rate from 56% toward 45–52%. BlueEcm (MaxFirePower=1.5) survives the nerf better than Ghost (Rate/100t ≈ 2) since BlueEcm has real combat ability.
+Ghost's carry is purely structural (hider/survivor role), not ECM. Setting Ghost's `HasEcm = false` will leave its solo carry rate and WinSurv unchanged (25–35% carry, MVP or near-MVP), while Red's win rate holds near 56%. If confirmed: ECM on Ghost is cosmetic and the real driver of Red's 56% is compositional.
 
-**Branch:** `research/iter-4-jam-drop-nerf`
+**Branch:** `research/iter-5-ghost-no-ecm`
 
 ---
 
 ## Iteration Log
+
+### Iter 4 — `research/iter-4-jam-drop-nerf`
+**Date:** 2026-04-18
+**Status:** Refuted — jam parameters are not the binding constraint
+
+**Hypothesis:** EcmJamDropChance 0.50→0.30, EcmJamCorruptChance 0.30→0.15 drops Ghost solo carry to ≤20% and Red win rate toward 45–52%.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600)
+
+**Results:**
+- Red 111 (56%) / Blue 89 (44%) — identical to baseline
+- RedGhost WinSurv: 65/111 = **59%** (baseline 58%)
+- RedGhost solo carry: 35/111 = **32%** (identical to iter-3)
+- RedGhost Rate/100t: **2.13** (near 0 — unchanged)
+- RedGhost loss-survivals: **6** (near-baseline 5)
+
+**Refuted:** Zero effect. Three ECM parameter sweeps (cramped arena, spoof radius, jam chances) have all returned 56%/~32%. Balance is insensitive to ECM parameters.
+**Key finding:** Ghost's carry is structural, not ECM-driven. Ghost solos decisively (71%) at near-zero combat rate — it outlasts by being passive and non-threatening (MaxFirePower=0.1, RetreatEnergyThreshold=40), not by misdirecting Blue via ECM. ECM appears cosmetic at the carry level.
+**Code:** Reverted — jam constants restored to 0.50/0.30.
+
+---
 
 ### Iter 3 — `research/iter-3-ghost-ecm-nerf`
 **Date:** 2026-04-18
