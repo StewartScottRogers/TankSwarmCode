@@ -1,19 +1,41 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 6 complete
+2026-04-18 — Iteration 7 complete
 
 ## Current Iteration
-**7** — pending
+**8** — pending
 
 ## Next Hypothesis
-Red's 56% advantage is driven by RedArrow's extreme first-kill aggression (RetreatEnergyThreshold=20). Arrow gets first blood in 60% of matches consistently. Raising RedArrow's RetreatEnergyThreshold from 20 → 35 reduces Arrow's first-kill frequency, keeps matches numerically even longer, and drops Red's win rate from 56% toward 45–52%.
+Ghost's structural advantage comes from its passive/non-threatening hider role causing Blue to deprioritize it while real combatants fight. Replace Ghost with an Arrow clone (MaxFirePower=1.5, PreferredRange=220, RetreatEnergyThreshold=20, no ECM) to test: does Red's win rate increase (Ghost was costly), hold (~56%), or decrease (Ghost enables wins by drawing Blue attention)?
 
-**Branch:** `research/iter-7-arrow-retreat-nerf`
+**Branch:** `research/iter-8-ghost-replace-arrow-clone`
 
 ---
 
 ## Iteration Log
+
+### Iter 7 — `research/iter-7-arrow-retreat-nerf`
+**Date:** 2026-04-18
+**Status:** No Effect
+
+**Hypothesis:** RedArrow RetreatEnergyThreshold 20→35 reduces Arrow's first-kill rate and drops Red's win rate.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), Arrow retreat=35
+(Note: initial accidental run used stale buffed-BlueEcm dll from iter-6 and returned 62% — discarded. Correct run used rebuilt baseline Blue dll.)
+
+**Results:**
+- Red 111 (56%) / Blue 89 (44%) — identical to baseline
+- Arrow first kills: **36** (baseline 35-36 — unchanged)
+- Arrow solos shifted: 10D+10TO (vs baseline 12D+6TO) — more timeout, same count
+- Ghost WinSurv, solo carry: unchanged at 66/111, 35 solos
+
+**No effect:** Arrow's retreat threshold governs late-match behavior; first kills happen at tick ~24 when Arrow still has 80+E — the threshold (35E) never fires at that point.
+**Key finding:** 56% structural advantage is deep and parameter-insensitive. Seven parameter sweeps have all returned 56%. Arrow's first-blood advantage is positional/behavioral, not energy-threshold-based.
+**Code:** Reverted — Arrow restored to RetreatEnergyThreshold=20.
+**Process note:** Always rebuild both dlls after reverting code changes.
+
+---
 
 ### Iter 6 — `research/iter-6-blueecm-combat-buff`
 **Date:** 2026-04-18
