@@ -6,8 +6,27 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTank;
 
+/// <summary>
+/// Swarm AI brain shared by all Red-team tanks.
+/// Handles leader election, strategy selection and broadcasting, coordinated volley fire,
+/// ECM management, and per-strategy movement/targeting.
+/// <para>
+/// Each concrete tank subclass provides only its <see cref="Config"/> (firepower, range,
+/// ECM capability, formation slot). All tactical logic lives here.
+/// </para>
+/// <para>
+/// <b>Coordination model:</b> The alive tank with the lowest <see cref="TankConfig.FormationSlot"/>
+/// is elected leader each tick. Every <see cref="LeadershipEpochTicks"/> ticks the leader
+/// picks a <see cref="SwarmStrategy"/>, identifies the priority target, and broadcasts a
+/// <see cref="SwarmMessageType.StrategyCommand"/> so all allies converge on the same plan.
+/// </para>
+/// </summary>
 public abstract class SwarmBrainBase : SwarmTankBase
 {
+    /// <summary>
+    /// Tank-specific configuration supplied by each concrete subclass.
+    /// Determines firepower, preferred engagement range, ECM capability, and formation slot.
+    /// </summary>
     protected abstract TankConfig Config { get; }
 
     private record AllyEntry(int Slot, double Energy, long LastSeen);
@@ -25,13 +44,23 @@ public abstract class SwarmBrainBase : SwarmTankBase
     private long _lastVolleyTick = -999;
     private double _radarSpin = 45.0;
 
+    /// <summary>Ticks between leader strategy re-evaluations.</summary>
     private const int LeadershipEpochTicks = 40;
+    /// <summary>Ticks between ally-ping broadcasts used for leader election and energy tracking.</summary>
     private const int AllyPingInterval = 15;
+    /// <summary>Ticks of silence before an ally is considered dead and removed from the map.</summary>
     private const int AllyStaleTicks = 30;
+    /// <summary>Orbit radius in pixels for the Encircle formation.</summary>
     private const double OrbitRadius = 180.0;
+    /// <summary>Maximum target distance for scheduling a coordinated volley.</summary>
     private const double VolleyRange = 300.0;
+    /// <summary>Minimum ticks between consecutive volley fire commands to avoid spamming.</summary>
     private const long VolleyIntervalTicks = 30;
 
+    /// <summary>
+    /// Main per-tick AI loop. Runs ally bookkeeping, leadership election, ECM control,
+    /// scheduled volley fire, and the active strategy's movement/targeting logic.
+    /// </summary>
     public override void OnTick(TickEventArgs e)
     {
         base.OnTick(e);
@@ -467,6 +496,11 @@ public abstract class SwarmBrainBase : SwarmTankBase
         return _allyMap.Values.Count(e => e.LastSeen >= freshCutoff) - 1; // subtract self
     }
 
+    /// <summary>
+    /// Handles incoming swarm messages: updates the ally map from pings, adopts strategy
+    /// commands from the leader (epoch-guarded to reject stale messages), schedules volley
+    /// fire, and records ECM alerts to trigger Burnthrough mode.
+    /// </summary>
     public override void OnSwarmMessage(SwarmMessageEventArgs e)
     {
         base.OnSwarmMessage(e); // handles RadarShare

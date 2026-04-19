@@ -4,6 +4,11 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Red;
 
+/// <summary>
+/// ECM specialist (formation slot 3). Fires minimally (power 0.1) and instead disrupts
+/// enemy radar using <see cref="EcmMode.JamAndSpoof"/> during ECMScreen strategy.
+/// High retreat threshold (40 energy) keeps the ECM capability on the field longer.
+/// </summary>
 public sealed class RedGhost : SwarmBrainBase
 {
     public RedGhost() { SwarmId = 1; Role = TankRole.EcmSpecialist; }

@@ -4,6 +4,10 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Blue;
 
+/// <summary>
+/// Formation leader (Slot 0). High firepower at medium range; acts as swarm commander
+/// because the lowest FormationSlot wins leader election in SwarmBrainBase.
+/// </summary>
 public sealed class BlueStrike : SwarmBrainBase
 {
     public BlueStrike() { SwarmId = 2; Role = TankRole.Attacker; }

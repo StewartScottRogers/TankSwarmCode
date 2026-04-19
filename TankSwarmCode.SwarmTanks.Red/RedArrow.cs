@@ -4,6 +4,10 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Red;
 
+/// <summary>
+/// Scout (formation slot 2). Optimised for reconnaissance: longest preferred range (220 px)
+/// and low firepower (1.5) so it prioritises staying alive and feeding radar data to allies.
+/// </summary>
 public sealed class RedArrow : SwarmBrainBase
 {
     public RedArrow() { SwarmId = 1; Role = TankRole.Scout; }

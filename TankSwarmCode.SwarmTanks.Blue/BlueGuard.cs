@@ -4,6 +4,10 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Blue;
 
+/// <summary>
+/// Defensive anchor (Slot 3). Reduced firepower and the highest non-ECM retreat threshold (30)
+/// so it pulls back early, preserving energy as a fallback rallying point.
+/// </summary>
 public sealed class BlueGuard : SwarmBrainBase
 {
     public BlueGuard() { SwarmId = 2; Role = TankRole.Defender; }

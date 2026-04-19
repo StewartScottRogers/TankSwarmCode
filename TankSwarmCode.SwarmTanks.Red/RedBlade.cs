@@ -4,6 +4,10 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Red;
 
+/// <summary>
+/// Secondary attacker (formation slot 1). Slightly lower firepower than RedHammer but
+/// a tighter preferred range (160 px), making it effective in close-quarters engagements.
+/// </summary>
 public sealed class RedBlade : SwarmBrainBase
 {
     public RedBlade() { SwarmId = 1; Role = TankRole.Attacker; }
