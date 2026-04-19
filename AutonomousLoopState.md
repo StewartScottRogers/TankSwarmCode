@@ -1,23 +1,42 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 15 complete
+2026-04-18 — Iteration 16 complete
 
 ## Current Iteration
-**16** — pending
+**17** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Iter-15 confirmed that BlueEcm's Linchpin/carry role is structural (survival-driven), NOT ECM-dependent. HasEcm=false at MaxFP=1.0 yields Red 52% / Blue 48% — identical to the HasEcm=true baseline. ECM hardware is not the mechanism behind the balance fix.
+Iter-16 showed PreferredRange=150 IS the Linchpin mechanism (removing it kills the Linchpin label), but balance shifted the wrong way: Blue gained ground (56%) instead of losing it. PreferredRange=150 serves double duty — creates Linchpin AND limits BlueEcm's raw firepower.
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** BlueEcm's survival advantage (structural Linchpin role) comes from PreferredRange=150 (standoff positioning). Test: BlueEcm with PreferredRange=80 (close-quarters, like combat tanks) at MaxFP=1.0, HasEcm=true — expect Linchpin to weaken and Blue to lose ground.
+**Next hypothesis:** RetreatEnergyThreshold=35 (BlueEcm retreats earlier than combat tanks at 20–25) may be the other survival driver. Test: BlueEcm with RetreatEnergyThreshold=20 at MaxFP=1.0, PreferredRange=150 — expect survival to drop, Linchpin to weaken, and balance to shift toward Red.
 
 ---
 
 ## Iteration Log
+
+### Iter 16 — `research/iter-000016-blueecm-preferred-range`
+**Date:** 2026-04-18
+**Status:** ⚠️ PARTIALLY REFUTED — Linchpin weakened (✅) but Blue GAINED ground (❌)
+
+**Hypothesis:** PreferredRange=150 creates Linchpin via standoff. Testing PR=80 (close-quarters) at MaxFP=1.0 — expect Linchpin to weaken and Blue to lose ground.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0 + PR=80
+
+**Results:**
+- Red 89 (44%) / Blue 111 (56%) — Blue MORE dominant (was 49% at PR=150)
+- BlueEcm: MVP, solo carry 29/111 — **NOT Linchpin** (Linchpin label gone as predicted)
+- Rate 8.46 vs ~7.4 at PR=150 — closer range = more aggressive = stronger Blue
+
+**Key finding:** PreferredRange=150 serves double duty: creates Linchpin AND limits BlueEcm aggression. PR=80 kills Linchpin but makes Blue more dominant (56%). The standoff range is a firepower limiter, not just a survival mechanism.
+
+**Code:** Reverted — PR=80 is a probe, not a fix.
+
+---
 
 ### Iter 15 — `research/iter-000015-blueecm-noecm-structural`
 **Date:** 2026-04-18
