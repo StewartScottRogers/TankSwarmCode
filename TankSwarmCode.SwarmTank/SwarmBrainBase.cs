@@ -29,7 +29,7 @@ public abstract class SwarmBrainBase : SwarmTankBase
     /// </summary>
     protected abstract TankConfig Config { get; }
 
-    private record AllyEntry(int Slot, double Energy, long LastSeen);
+    private record AllyEntry(int Slot, double Energy, long LastSeen, Vector2D Position);
     private record StrategyPayload(string Strategy, string TargetName, int Epoch);
     private record VolleyPayload(long FireAtTick);
 
@@ -70,7 +70,7 @@ public abstract class SwarmBrainBase : SwarmTankBase
         base.OnTick(e);
 
         // 1. Add self entry so DetermineLeader() can include us
-        _allyMap[Name] = new AllyEntry(Config.FormationSlot, State.Energy, Arena.TickNumber);
+        _allyMap[Name] = new AllyEntry(Config.FormationSlot, State.Energy, Arena.TickNumber, State.Position);
 
         // 2. Broadcast ally ping
         BroadcastAllyPing();
@@ -415,13 +415,45 @@ public abstract class SwarmBrainBase : SwarmTankBase
         _lastPosition = State.Position;
     }
 
+    private const double SeparationRadius = 80.0;
+    private const double SeparationStrength = 60.0;
+
+    private Vector2D ComputeSeparationOffset()
+    {
+        double dx = 0, dy = 0;
+        long freshCutoff = Arena.TickNumber - AllyStaleTicks;
+
+        foreach (KeyValuePair<string, AllyEntry> kv in _allyMap)
+        {
+            if (kv.Key == Name) continue;
+            if (kv.Value.LastSeen < freshCutoff) continue;
+
+            double dist = State.Position.DistanceTo(kv.Value.Position);
+            if (dist >= SeparationRadius || dist < 0.01) continue;
+
+            double weight = (SeparationRadius - dist) / SeparationRadius;
+            dx += (State.Position.X - kv.Value.Position.X) / dist * weight;
+            dy += (State.Position.Y - kv.Value.Position.Y) / dist * weight;
+        }
+
+        double magnitude = Math.Sqrt(dx * dx + dy * dy);
+        if (magnitude < 0.01) return new Vector2D(0, 0);
+
+        return new Vector2D(
+            dx / magnitude * SeparationStrength,
+            dy / magnitude * SeparationStrength);
+    }
+
     private void NavigateTo(Vector2D dest, double stopDistance)
     {
-        double distToDest = State.Position.DistanceTo(dest);
+        Vector2D sep = ComputeSeparationOffset();
+        Vector2D adjustedDest = new(dest.X + sep.X, dest.Y + sep.Y);
+
+        double distToDest = State.Position.DistanceTo(adjustedDest);
         if (distToDest <= stopDistance)
             return;
 
-        double bearing = State.Position.BearingTo(dest);
+        double bearing = State.Position.BearingTo(adjustedDest);
         double bodyTurn = RelativeBearing(bearing - State.Heading);
         bodyTurn = Math.Clamp(bodyTurn, -ArenaConstants.MaxTurnRate, ArenaConstants.MaxTurnRate);
         SetTurnRight(bodyTurn);
@@ -478,7 +510,7 @@ public abstract class SwarmBrainBase : SwarmTankBase
         {
             Type = SwarmMessageType.AllyPing,
             SenderName = Name,
-            CustomData = $"{Config.FormationSlot}:{State.Energy:F1}",
+            CustomData = $"{Config.FormationSlot}:{State.Energy:F1}:{State.Position.X:F1}:{State.Position.Y:F1}",
             Timestamp = Arena.TickNumber
         });
     }
@@ -552,11 +584,16 @@ public abstract class SwarmBrainBase : SwarmTankBase
                 if (e.Message.SenderName == Name) break;
                 string? data = e.Message.CustomData;
                 if (data is null) break;
-                int colonIdx = data.IndexOf(':');
-                if (colonIdx < 0) break;
-                if (!int.TryParse(data[..colonIdx], out int slot)) break;
-                if (!double.TryParse(data[(colonIdx + 1)..], out double energy)) break;
-                _allyMap[e.Message.SenderName] = new AllyEntry(slot, energy, Arena.TickNumber);
+                string[] parts = data.Split(':');
+                if (parts.Length < 2) break;
+                if (!int.TryParse(parts[0], out int slot)) break;
+                if (!double.TryParse(parts[1], out double energy)) break;
+                Vector2D allyPos = parts.Length >= 4
+                    && double.TryParse(parts[2], out double px)
+                    && double.TryParse(parts[3], out double py)
+                    ? new Vector2D(px, py)
+                    : new Vector2D(0, 0);
+                _allyMap[e.Message.SenderName] = new AllyEntry(slot, energy, Arena.TickNumber, allyPos);
                 break;
             }
 
