@@ -14,12 +14,12 @@ Every iteration works on its own branch. **Only a human may merge to `master`.**
 
 ```
 master  (human-only merges)
-  ├── research/iter-1-ghost-solo-carry      ← Confirmed → human merges
-  ├── research/iter-2-blueecm-firepower     ← Refuted   → code reverted; human discards
-  └── research/iter-3-wolfpack-volley-range ← in progress
+  ├── Research/iter-000001-ghost-solo-carry      ← Confirmed → human merges
+  ├── Research/iter-000002-blueecm-firepower     ← Refuted   → code reverted; human discards
+  └── Research/iter-000003-wolfpack-volley-range ← in progress
 ```
 
-Branch names follow the pattern: `research/iter-{N}-{short-slug}` where the slug is 2–4 words from the hypothesis (lowercase, hyphens).
+Branch names follow the pattern: `research/iter-{000001}-{short-slug}` where the slug is 2–4 words from the hypothesis (lowercase, hyphens).
 
 ---
 

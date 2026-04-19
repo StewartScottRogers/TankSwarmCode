@@ -10,6 +10,7 @@
     <File Path="TheKarpathyLoop.png" />
   </Folder>
   <Project Path="Documentation/Documentation.shproj" Id="077cdfac-1e54-47ed-87fb-188e5052fbae" />
+  <Project Path="Research/Research.shproj" Id="2f897578-dd2c-46ca-bcdc-f6ee941afe46" />
   <Project Path="TankSwarmCode.Arena.Interfaces/TankSwarmCode.Arena.Interfaces.csproj" Id="ff66c312-fa57-41df-830f-eb6e5815bf29" />
   <Project Path="TankSwarmCode.Arena/TankSwarmCode.Arena.csproj" />
   <Project Path="TankSwarmCode.Cli.Engineering/TankSwarmCode.Cli.Engineering.shproj" Id="038d9c79-bffb-4e29-b84b-8e82f3378d09" />

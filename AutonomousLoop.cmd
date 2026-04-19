@@ -1,6 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
-set "LOOP_COUNT=3"
+set "LOOP_COUNT=100"
 if not "%~1"=="" set "LOOP_COUNT=%~1"
 
 pushd "%~dp0"
