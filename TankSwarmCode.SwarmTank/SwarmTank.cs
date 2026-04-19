@@ -201,7 +201,7 @@ public abstract class SwarmTankBase : ISwarmTank
     /// Returns the most recently observed <em>enemy</em> contact (non-ally) that is not
     /// older than <paramref name="staleAfterTicks"/> ticks, or <c>null</c> if none exists.
     /// </summary>
-    protected RadarContact? GetFreshestEnemy(int staleAfterTicks = 30)
+    protected internal RadarContact? GetFreshestEnemy(int staleAfterTicks = 30)
         => GetFreshestContact(staleAfterTicks, includeAllies: false);
 
     /// <summary>

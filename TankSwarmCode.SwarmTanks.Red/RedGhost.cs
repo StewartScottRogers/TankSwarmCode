@@ -1,10 +1,9 @@
-using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Red;
 
-public sealed class RedGhost : SwarmBrainBase
+public sealed class RedGhost : SwarmBrainBaseRed
 {
     public RedGhost() { SwarmId = 1; Role = TankRole.EcmSpecialist; }
     public override string Name => "RedGhost";

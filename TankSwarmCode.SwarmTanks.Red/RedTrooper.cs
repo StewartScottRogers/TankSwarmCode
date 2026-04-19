@@ -1,4 +1,3 @@
-using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
@@ -9,7 +8,7 @@ namespace TankSwarmCode.SwarmTanks.Red;
 /// Each instance gets a unique formation slot so the swarm brain assigns
 /// distinct roles and orbit positions.
 /// </summary>
-public sealed class RedTrooper : SwarmBrainBase
+public sealed class RedTrooper : SwarmBrainBaseRed
 {
     private readonly TankConfig _config;
 

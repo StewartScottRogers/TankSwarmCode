@@ -1,10 +1,9 @@
-using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Blue;
 
-public sealed class BlueEcm : SwarmBrainBase
+public sealed class BlueEcm : SwarmBrainBaseBlue
 {
     public BlueEcm() { SwarmId = 2; Role = TankRole.EcmSpecialist; }
     public override string Name => "BlueEcm";
