@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-19 — Iteration 78 complete
+2026-04-19 — Iteration 80 complete
 
 ## Current Iteration
-**79** — pending
+**81** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -42,7 +42,10 @@
 
 All three former dip points are now balanced plateau behavior. The old dip (PR=167–190, no Linchpin) at seed 1000 was an artifact of the old engine. Post-engine, the balanced plateau at seed 1000 is likely uninterrupted: PR=142–238 (no dip interruption). Seed 2000 dip persists (PR=170 seed 2000 = 44% Red, no Linchpin, iter-71 — new engine).
 
-**DIP STATUS CROSS-SEED / POST-ENGINE (iter-78):** PR=170 at seed 3000 (new engine) = 48% Red, BlueEcm NOT Linchpin. The dip structural signature (no BlueEcm Linchpin) persists at seed 3000, but depth is shallower (48%, not 44%). Seed 3000 dip behavior at PR=170 resembles seed 2000's PR=175 (both 48% shallow). All three seeds show dip signature (no Linchpin) at PR=170, but depth varies: seeds 1000 (new engine) fully eliminated (50%), seed 2000 full depth (44%), seed 3000 shallow (48%).
+**DIP STATUS CROSS-SEED / POST-ENGINE (iters 78–80):** 
+- PR=170 seed 3000 = 48% Red, NO Linchpin (iter-78) — shallow dip.
+- PR=167 seed 3000 = 53% Red, Linchpin YES (iter-79) — **plateau**. Seed 3000 dip does NOT extend to PR=167.
+- PR=169 seed 3000 = 45% Red, NO Linchpin (iter-80) — **deep dip** (deeper than PR=170!). Boundary at seed 3000 is between PR=167 (plateau) and PR=169 (dip) — 2-unit window. The seed 3000 dip floor may be ~45% centered near PR=169. Next: PR=168 to pin boundary to single-integer precision.
 
 **INTERIOR PR CURVE (MaxFP=1.0) — DIP FULLY CHARACTERIZED (seed 1000 OLD ENGINE), CROSS-SEED PARTIAL (seed 2000 full gradient, seed 1000 post-engine dip eliminated, seed 3000 partial):**
 
@@ -57,6 +60,8 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 | 170        | 44%   | 56%   | No (iter-62)  | 1000 | old |
 | 170        | **50%**| **50%**| **Yes (iter-76)** | 1000 | **NEW** |
 | 170        | 44%   | 56%   | No (iter-71)  | 2000 | new |
+| 167        | **53%**| **47%**| **Yes (iter-79)** | 3000 | **new** |
+| 169        | **45%**| **55%**| **No (iter-80)** | 3000 | **new** |
 | 170        | **48%**| **52%**| **No (iter-78)** | 3000 | **new** |
 | 171        | 50%   | 50%   | Yes (iter-75 baseline) | 1000 | new |
 | 171        | 46%   | 54%   | No (iter-75)  | 2000 | new |
@@ -72,11 +77,63 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 | 217        | 49%   | 51%   | No (iter-44)  | 1000 | old |
 | 238        | 49%   | 51%   | Yes (iter-58) | 1000 | old |
 
-**Next hypothesis:** Probe PR=167 at seed 3000 (new engine). Seed 3000 shows 48% at PR=170 (no BlueEcm Linchpin — dip signature present but shallow). Does seed 3000 have a full-depth zone (44%) at PR=167, or is 48% the floor? Predict: if seed 3000 follows seed 2000 pattern, PR=167 may show ~44–46% Red, no Linchpin. If instead ≥48% → seed 3000 has no deep zone; 48% is its dip floor.
+**Next hypothesis:** Probe PR=168 at seed 3000 (new engine). PR=167 = plateau (53%, Linchpin YES); PR=169 = dip (45%, no Linchpin). Boundary is in the PR=167–169 window (2 units). PR=168 will pin it to single-integer precision. Predict: PR=168 may be plateau (Linchpin YES, ~50%+ Red) → boundary PR=168→169. Or if dip (no Linchpin) → boundary PR=167→168 and the dip region is a single unit wide at seed 3000.
 
 ---
 
 ## Iteration Log
+
+### Iter 80 — `research/iter-000080-blueecm-pr169-seed3000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=169 seed 3000 (new engine) = 45% Red, BlueEcm NOT Linchpin; dip confirmed at PR=169, boundary narrowed to PR=167–169 (2-unit window)
+
+**Hypothesis:** PR=169 at seed 3000 will have dip signature (no BlueEcm Linchpin), narrowing the boundary between PR=167 (plateau) and PR=170 (dip). If dip → boundary is PR=167→169 or PR=168→169.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=169 (new engine)
+
+**Results:**
+- Red 90 (45%) / Blue 110 (55%) — **BLUE-DOMINANT** (dip confirmed)
+- BlueEcm: MVP (73/110), All-in, Solo carry (22/110), ECM, Rate/100t: 6.97 — **NO Linchpin**
+- RedGhost: MVP (67/90), **Linchpin (alive:100%/dead:17%)**, Solo carry (36/90), ECM, Rate/100t: 1.78
+
+**Cross-seed PR=169 comparison:**
+
+| PR  | Seed | Red%  | BlueEcm Linchpin? | Depth |
+|-----|------|-------|-------------------|-------|
+| 167 | 3000 | 53%   | YES (iter-79)     | Plateau |
+| 169 | 3000 | 45%   | NO (iter-80)      | Deep dip (deeper than PR=170!) |
+| 170 | 3000 | 48%   | NO (iter-78)      | Shallow |
+
+**Key finding:** PR=169 seed 3000 is DEEPER (45%) than PR=170 (48%) — the dip peaks near PR=169 at seed 3000. The boundary is exactly in the PR=167–169 window. Next: PR=168 to pin to single-integer precision.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 79 — `research/iter-000079-blueecm-pr167-seed3000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=167 seed 3000 (new engine) = 53% Red, BlueEcm IS Linchpin; seed 3000 dip doesn't extend to PR=167, 48% at PR=170 is NOT its floor
+
+**Hypothesis:** PR=167 at seed 3000 (new engine) will be Blue-dominant (~44–46% Red, no BlueEcm Linchpin), following seed 2000's pattern where PR=167–170 are all full-depth dip.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=167 (new engine)
+
+**Results:**
+- Red 106 (53%) / Blue 94 (47%) — **BALANCED/plateau** (prediction WRONG — expected Blue-dominant)
+- BlueEcm: MVP (67/94), **Linchpin (alive:83%/dead:23%)**, Solo carry (20/94), ECM, Rate/100t: 9.98
+- RedGhost: MVP (70/106), Solo carry (47/106), ECM, Rate/100t: 2.66
+
+**Cross-seed PR=167 comparison:**
+
+| PR  | Seed | Red%  | BlueEcm Linchpin? | Depth |
+|-----|------|-------|-------------------|-------|
+| 167 | 1000 | 50%   | YES (iter-77)     | Plateau (new engine) |
+| 167 | 2000 | 44%   | NO (iter-65/seed2 not tested) | Full depth (old engine, extrapolated) |
+| 167 | 3000 | 53%   | YES (iter-79)     | Plateau |
+
+**Key finding:** Prediction WRONG — seed 3000 at PR=167 is plateau, not dip. The seed 3000 dip starts above PR=167. Next: probe PR=169 to narrow the boundary.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 78 — `research/iter-000076-blueecm-pr170-seed3000`
 **Date:** 2026-04-19
