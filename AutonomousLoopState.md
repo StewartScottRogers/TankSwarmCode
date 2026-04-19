@@ -1,25 +1,58 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 43 complete
+2026-04-18 — Iteration 44 complete
 
 ## Current Iteration
-**44** — pending
+**45** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Iter 43 confirmed BlueEcm IS Linchpin at PR=216 — Linchpin threshold narrowed to **216 < threshold ≤ 218** (2-unit window: {217, 218}). Perfect 50/50 balance at all tested PR values (212, 215, 216, 218).
+Iter 44 confirmed BlueEcm NOT Linchpin at PR=217 — **Linchpin threshold is exactly PR=217** (Linchpin active at PR ≤ 216; absent at PR ≥ 217). Binary search complete after 9 PR iterations (150→300→250→225→212→218→215→216→217).
 
-**Linchpin threshold: 216 < X ≤ 218 (2-unit window: {217, 218}).**
+**Linchpin threshold: exactly PR=217 (Linchpin active when PR ≤ 216).**
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** Test PR=217 to determine if threshold is exactly 217 or 218. If Linchpin at PR=217 → threshold is exactly 218. If not Linchpin → threshold is exactly 217. Balance prediction: likely 50/50 (region is flat).
+**Next hypothesis:** PR threshold investigation is complete. Pivot to a new research question: cross-seed validation of the PR=217 threshold (test at seed 2000 — is threshold stable across seeds?). If stable → threshold is a structural property of the ECM range mechanics, not seed-dependent noise. Predict: NOT Linchpin at PR=217 with seed 2000 (balance ~50/50).
 
 ---
 
 ## Iteration Log
+
+### Iter 44 — `research/iter-000044-blueecm-pr217`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — BlueEcm NOT Linchpin at PR=217; threshold is exactly PR=217
+
+**Hypothesis:** PR=217 (just above 216) — predict BlueEcm loses Linchpin, pinpointing threshold exactly.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=217
+
+**Results:**
+- Red 98 (49%) / Blue 102 (51%) — near-perfect balance
+- BlueEcm: MVP (73/102), Solo carry (31/102 [13D+18TO]), **NO Linchpin**, Rate/100t: 7.17
+- RedGhost: MVP (62/98), Solo carry (35/98), ECM — no Linchpin flag
+
+**PR balance curve (MaxFP=1.0) — FINAL:**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 150        | 51%   | 49%   | Yes       |
+| 200        | 54%   | 46%   | Yes       |
+| 212        | 50%   | 50%   | Yes       |
+| 215        | 50%   | 50%   | Yes       |
+| 216        | 50%   | 50%   | Yes ← last Linchpin |
+| 217        | 49%   | 51%   | No ← threshold |
+| 218        | 50%   | 50%   | No        |
+| 225        | 48%   | 52%   | No        |
+| 250        | 56%   | 44%   | No        |
+| 300        | 46%   | 54%   | No        |
+
+**Key finding:** Linchpin threshold is exactly PR=217. Binary search complete (9 PR iterations). Balance stays ~50/50 on both sides of threshold — ECM phase transition does not affect overall balance.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 43 — `research/iter-000043-blueecm-pr216`
 **Date:** 2026-04-18
