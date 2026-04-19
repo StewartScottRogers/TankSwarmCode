@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-19 — Iteration 47 complete
+2026-04-19 — Iteration 48 complete
 
 ## Current Iteration
-**48** — pending
+**49** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -13,11 +13,39 @@
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** Low-end PR balance boundary binary search continues. PR=133 confirmed Blue-dominant (46% Red). Boundary is between PR=133 and PR=150 (17-unit window). Midpoint: PR=142. Predict: PR=142 will be Blue-dominant or near-boundary; if still Blue-dominant → boundary is PR=142–150 (8-unit window).
+**Next hypothesis:** Low-end PR balance boundary binary search continues. PR=142 confirmed BALANCED (51% Red, Linchpin=Yes). Boundary is between PR=133 and PR=142 (9-unit window). Midpoint: PR=137. Predict: PR=137 will be Blue-dominant; if so → boundary is PR=137–142 (5-unit window).
 
 ---
 
 ## Iteration Log
+
+### Iter 48 — `research/iter-000048-blueecm-pr142`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=142 BALANCED (Red 51%), BlueEcm IS Linchpin; low-end boundary is PR=133–142
+
+**Hypothesis:** PR=142 (midpoint of PR=133–150) with MaxFP=1.0 — predict Blue-dominant or near-boundary.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=142
+
+**Results:**
+- Red 102 (51%) / Blue 97 (48%) / 1 draw — **BALANCED** (same as PR=150)
+- BlueEcm: MVP (68/97), **Linchpin (alive:88%/dead:24%)**, Solo carry (28/97 [14D+14TO]), Rate/100t: 7.29
+- RedGhost: MVP (57/102), Solo carry (31/102 [24D+7TO]), ECM, Rate/100t: 2.54
+
+**Low-end PR boundary progress (MaxFP=1.0):**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 80         | 44%   | 56%   | No (iter-18) |
+| 115        | 44%   | 56%   | No (iter-46) |
+| 133        | 46%   | 54%   | No (iter-47) |
+| 142        | 51%   | 48%   | **Yes ← NEW** |
+| 150        | 51%   | 49%   | Yes (iter-11) |
+
+**Key finding:** PR=142 is BALANCED with Linchpin active — exactly matching the PR=150 result. The balance transition is sharp: 5pp jump (46%→51% Red) in just 9 PR units (PR=133→142). Low-end boundary is between PR=133 and PR=142. Binary search continues at PR=137.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 47 — `research/iter-000047-blueecm-pr133`
 **Date:** 2026-04-19
