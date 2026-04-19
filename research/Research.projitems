@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>f19ca849-4160-4b0f-9c68-880650266a95</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>Research</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)iter-0010-blueecm-firepower-nerf.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0011-blueecm-fp-calibrate.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0002-ghost-cramped-arena.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0003-ghost-ecm-nerf.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0004-jam-drop-nerf.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0005-ghost-no-ecm.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0006-blueecm-combat-buff.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0007-arrow-retreat-nerf.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0008-ghost-replace-arrow-clone.md" />
+    <None Include="$(MSBuildThisFileDirectory)iter-0009-blueecm-hider-buff.md" />
+  </ItemGroup>
+</Project>
