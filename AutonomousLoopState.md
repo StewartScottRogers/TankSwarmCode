@@ -1,25 +1,56 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 41 complete
+2026-04-18 — Iteration 42 complete
 
 ## Current Iteration
-**42** — pending
+**43** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Iter 41 confirmed BlueEcm is NOT Linchpin at PR=218 — Linchpin threshold narrowed to **212 < threshold ≤ 218**. Balance is perfect 50/50 at PR=218 despite no Linchpin. Two excellent 50/50 configurations now known: PR=212 (Linchpin active) and PR=218 (no Linchpin).
+Iter 42 confirmed BlueEcm IS Linchpin at PR=215 — Linchpin threshold narrowed to **215 < threshold ≤ 218** (3-unit window: {216, 217, 218}). Perfect 50/50 balance at all tested PR values (212, 215, 218).
 
-**Linchpin threshold: 212 < X ≤ 218 (6-unit window).**
+**Linchpin threshold: 215 < X ≤ 218 (3-unit window).**
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** Test PR=215 (midpoint 212–218) to nail the exact Linchpin threshold. Predict: If Linchpin at PR=215, threshold is 215–218. If not Linchpin, threshold is 212–215. Balance prediction uncertain (non-monotonic region) — either 50/50 or slight deviation.
+**Next hypothesis:** Test PR=216 (just above 215) to check if threshold is exactly 216. If Linchpin at PR=216 → threshold is 216–218 (2-unit). If not Linchpin → threshold is exactly 216 (PR=216 is the first non-Linchpin). Balance prediction: likely 50/50 (region is flat).
 
 ---
 
 ## Iteration Log
+
+### Iter 42 — `research/iter-000042-blueecm-pr215`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — BlueEcm IS Linchpin at PR=215; threshold narrowed to 215–218 (3-unit)
+
+**Hypothesis:** PR=215 midpoint — predict BlueEcm retains Linchpin (threshold is 215–218).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=215
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **perfect 50/50 balance**
+- BlueEcm: MVP (72/100), **Linchpin (alive:86%/dead:24%)**, Solo carry (30/100), Rate/100t: 7.63
+- RedGhost: MVP (61/100), Solo carry (36/100), ECM — no Linchpin flag
+
+**PR balance curve (MaxFP=1.0) — updated:**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 150        | 51%   | 49%   | Yes       |
+| 200        | 54%   | 46%   | Yes       |
+| 212        | 50%   | 50%   | Yes ✓     |
+| 215        | 50%   | 50%   | Yes ✓     |
+| 218        | 50%   | 50%   | No ✓      |
+| 225        | 48%   | 52%   | No        |
+| 250        | 56%   | 44%   | No        |
+| 300        | 46%   | 54%   | No        |
+
+**Key finding:** Linchpin threshold confirmed in (215, 218] — 3-unit window {216, 217, 218}.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 41 — `research/iter-000041-blueecm-pr218`
 **Date:** 2026-04-18
