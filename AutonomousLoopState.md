@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-19 — Iteration 45 complete
+2026-04-19 — Iteration 46 complete
 
 ## Current Iteration
-**46** — pending
+**47** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -13,11 +13,37 @@
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** Pivot to new research question — find the LOW-end PR balance boundary for MaxFP=1.0. Known: PR=80 gives Blue-dominant (44% Red, from iter-18 2×2 grid). PR=150 gives 51% Red (balanced). Binary search between PR=80 and PR=150 to find lower balance threshold. Predict: PR=115 (midpoint) will be either balanced or still Blue-dominant.
+**Next hypothesis:** Low-end PR balance boundary binary search continues. PR=115 confirmed Blue-dominant (44% Red), same as PR=80. Boundary is between PR=115 and PR=150 (35-unit window). Midpoint: PR=133. Predict: PR=133 will be Blue-dominant or near-boundary; if still Blue-dominant → binary search to PR=142.
 
 ---
 
 ## Iteration Log
+
+### Iter 46 — `research/iter-000046-blueecm-pr115-low-boundary`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=115 Blue-dominant; low-end boundary is PR=115–150
+
+**Hypothesis:** PR=115 (midpoint of PR=80–150) with MaxFP=1.0 — predict Blue-dominant.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=115
+
+**Results:**
+- Red 88 (44%) / Blue 112 (56%) — Blue dominant ✅
+- BlueEcm: MVP (77/112), Solo carry (29/112 [15D+14TO]), **NO Linchpin**, Rate/100t: 9.41
+- RedGhost: MVP (47/88), Solo carry (24/88 [15D+9TO]), **NO Linchpin**, Rate/100t: 2.64
+
+**Low-end PR boundary progress (MaxFP=1.0):**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 80         | 44%   | 56%   | No (iter-18) |
+| 115        | 44%   | 56%   | No (iter-46) |
+| 150        | 51%   | 49%   | Yes (iter-11) |
+
+**Key finding:** PR=115 is identical to PR=80 — flat Blue-dominant regime. Low-end balance boundary is between PR=115 and PR=150. Binary search continues at PR=133.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 45 — `research/iter-000045-pr217-seed2000`
 **Date:** 2026-04-19
