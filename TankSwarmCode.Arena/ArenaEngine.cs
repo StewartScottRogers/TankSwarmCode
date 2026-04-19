@@ -927,13 +927,34 @@ public sealed class ArenaEngine : IArena
         double margin = ArenaConstants.TankHalfSize * 4;
         double minSep = ArenaConstants.TankHalfSize * 2 + 4; // minimum centre-to-centre gap
 
+        // Red (SwarmId=1) spawns upper-left; Blue (SwarmId=2) spawns lower-right.
+        double zoneW = Width  * 0.4;
+        double zoneH = Height * 0.4;
+
         foreach (TankRuntimeState rts in RuntimeTanks)
         {
+            double xMin, xMax, yMin, yMax;
+            if (rts.Tank.SwarmId == 1)
+            {
+                xMin = margin;       xMax = zoneW;
+                yMin = margin;       yMax = zoneH;
+            }
+            else if (rts.Tank.SwarmId == 2)
+            {
+                xMin = Width  - zoneW; xMax = Width  - margin;
+                yMin = Height - zoneH; yMax = Height - margin;
+            }
+            else
+            {
+                xMin = margin; xMax = Width  - margin;
+                yMin = margin; yMax = Height - margin;
+            }
+
             // Retry up to 200 times to find a non-overlapping spawn position.
             for (int attempt = 0; attempt < 200; attempt++)
             {
-                double candidateX = _rng.NextDouble() * (Width - margin * 2) + margin;
-                double candidateY = _rng.NextDouble() * (Height - margin * 2) + margin;
+                double candidateX = _rng.NextDouble() * (xMax - xMin) + xMin;
+                double candidateY = _rng.NextDouble() * (yMax - yMin) + yMin;
 
                 bool tooClose = RuntimeTanks
                     .Where(other => other != rts && other.Energy > 0)
