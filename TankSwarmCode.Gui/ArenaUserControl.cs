@@ -2123,6 +2123,7 @@ public partial class ArenaUserControl : UserControl
                         g.DrawLine(trailPen, sx, sy, edgeX, edgeY);
                     }
                 }
+                catch (System.Runtime.InteropServices.ExternalException) { }
                 finally
                 {
                     if (preClip is not null) g.Restore(preClip);
@@ -2175,9 +2176,8 @@ public partial class ArenaUserControl : UserControl
                 using Pen arcPen = new(Color.FromArgb((int)(220 * fade), spotterColor), penW);
                 arcPen.DashStyle = DashStyle.Dash;
                 arcPen.DashPattern = [4f, 3f];
-                g.DrawArc(arcPen,
-                    cx - radius, cy - radius, radius * 2, radius * 2,
-                    bearingToSpotter - echoSpan / 2f, echoSpan);
+                try { g.DrawArc(arcPen, cx - radius, cy - radius, radius * 2, radius * 2, bearingToSpotter - echoSpan / 2f, echoSpan); }
+                catch (System.Runtime.InteropServices.ExternalException) { }
 
                 // Single trailing line along the echo centre-axis toward the spotter.
                 float edgeAlpha = (int)(130 * fade);
