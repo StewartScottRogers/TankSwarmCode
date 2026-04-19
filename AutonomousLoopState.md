@@ -1,23 +1,50 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 14 complete
+2026-04-18 — Iteration 18 complete
 
 ## Current Iteration
-**15** — pending
+**19** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Iter 14 confirmed the non-linear threshold: the entire MaxFP=0.1–0.75 range is a flat Blue-dominant regime (57–60% Blue). The crossover to balance is a sharp transition between 0.75 and 1.0. MaxFP=1.0 is uniquely correct.
+Iter 18 confirmed MaxFP and PR effects are approximately additive (no nonlinear interaction). MaxFP=1.5 + PR=80 ≈ 52/48 balanced — the +5pp Red from MaxFP=1.5 and +7pp Blue from PR=80 cancel. Linchpin requires MaxFP=1.0 + PR=150 simultaneously.
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** BlueEcm's carry role at MaxFP=1.0 is structural (survival), not ECM-dependent. Testing BlueEcm with HasEcm=false at MaxFP=1.0 should maintain 45–55% balance — mirrors iter-5 (Ghost HasEcm=false, zero effect).
+**Next hypothesis:** MaxFP effect is linear between 1.0 (51% Red, Linchpin) and 1.5 (56% Red, no Linchpin). Test MaxFP=1.25 with PR=150 — predict Red ~53–54%, likely no Linchpin. This probes the MaxFP curve shape and Linchpin threshold location in the 1.0–1.5 range.
 
 ---
 
 ## Iteration Log
+
+### Iter 18 — `research/iter-000018-blueecm-maxfp15-pr80`
+**Date:** 2026-04-18
+**Status:** ✅ REFUTED — MaxFP=1.5 does not dominate PR=80; effects approximately cancel
+
+**Hypothesis:** MaxFP=1.5 + PR=80 will tip toward Red-dominant (MaxFP=1.5 dominates over PR=80).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.5 + PR=80
+
+**Results:**
+- Red 104 (52%) / Blue 96 (48%) — **near-balanced, same as iter-11/17**
+- BlueEcm: MVP (50/96), **NO Linchpin**, survival 61/200 (dropped from 80/200)
+- Effects are additive: MaxFP=1.5 (+5pp Red) + PR=80 (+7pp Blue) ≈ cancel to 52/48
+
+**2×2 grid (MaxFP × PR):**
+
+| Config               | Red%  | Blue% | Linchpin? |
+|----------------------|-------|-------|-----------|
+| MaxFP=1.5, PR=150    | 56%   | 44%   | No        |
+| MaxFP=1.0, PR=150    | 51%   | 49%   | Yes       |
+| MaxFP=1.0, PR=80     | 44%   | 56%   | No        |
+| MaxFP=1.5, PR=80     | 52%   | 48%   | No        |
+
+**Key finding:** Linchpin requires MaxFP=1.0 AND PR=150 simultaneously. Parameter effects are approximately additive — no interaction synergy.
+**Code:** Reverted — PR=80 probe only.
+
+---
 
 ### Iter 14 — `research/iter-000014-blueecm-fp-curve`
 **Date:** 2026-04-18
