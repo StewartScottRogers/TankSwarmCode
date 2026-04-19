@@ -416,9 +416,12 @@ public abstract class SwarmBrainBase : SwarmTankBase
     }
 
     private const double SeparationRadius = 80.0;
-    private const double SeparationStrength = 60.0;
 
-    private Vector2D ComputeSeparationOffset()
+    /// <summary>
+    /// Computes a separation bearing and blend weight from nearby allies.
+    /// Weight is in [0,1]: 0 = no nearby allies, 1 = fully overriding nav.
+    /// </summary>
+    private (double Turn, double Weight) ComputeSeparationTurn()
     {
         double dx = 0, dy = 0;
         long freshCutoff = Arena.TickNumber - AllyStaleTicks;
@@ -437,31 +440,37 @@ public abstract class SwarmBrainBase : SwarmTankBase
         }
 
         double magnitude = Math.Sqrt(dx * dx + dy * dy);
-        if (magnitude < 0.01) return new Vector2D(0, 0);
+        if (magnitude < 0.01) return (0.0, 0.0);
 
-        return new Vector2D(
-            dx / magnitude * SeparationStrength,
-            dy / magnitude * SeparationStrength);
+        // Same bearing convention as Vector2D.BearingTo: atan2(dx, -dy), clockwise from north.
+        double sepBearing = Math.Atan2(dx, -dy) * (180.0 / Math.PI);
+        double sepTurn = RelativeBearing(sepBearing - State.Heading);
+        double sepWeight = Math.Clamp(magnitude, 0.0, 1.0);
+
+        return (sepTurn, sepWeight);
     }
 
     private void NavigateTo(Vector2D dest, double stopDistance)
     {
-        Vector2D sep = ComputeSeparationOffset();
-        Vector2D adjustedDest = new(dest.X + sep.X, dest.Y + sep.Y);
-
-        double distToDest = State.Position.DistanceTo(adjustedDest);
+        double distToDest = State.Position.DistanceTo(dest);
         if (distToDest <= stopDistance)
             return;
 
-        double bearing = State.Position.BearingTo(adjustedDest);
-        double bodyTurn = RelativeBearing(bearing - State.Heading);
-        bodyTurn = Math.Clamp(bodyTurn, -ArenaConstants.MaxTurnRate, ArenaConstants.MaxTurnRate);
-        SetTurnRight(bodyTurn);
+        double navBearing = State.Position.BearingTo(dest);
+        double navTurn = RelativeBearing(navBearing - State.Heading);
 
-        if (Math.Abs(bodyTurn) < 30)
-            SetAhead(Math.Min(distToDest - stopDistance, 100));
+        (double sepTurn, double sepWeight) = ComputeSeparationTurn();
+
+        // Blend separation turn over nav turn, and slow down proportionally.
+        double blendedTurn = navTurn * (1.0 - sepWeight) + sepTurn * sepWeight;
+        blendedTurn = Math.Clamp(blendedTurn, -ArenaConstants.MaxTurnRate, ArenaConstants.MaxTurnRate);
+        SetTurnRight(blendedTurn);
+
+        double speedScale = 1.0 - sepWeight * 0.7;
+        if (Math.Abs(blendedTurn) < 30)
+            SetAhead(Math.Min(distToDest - stopDistance, 100) * speedScale);
         else
-            SetAhead(40);
+            SetAhead(40 * speedScale);
     }
 
     private void MaintainRadar(Vector2D? focusPoint)
