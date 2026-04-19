@@ -1,23 +1,42 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 14 complete
+2026-04-18 — Iteration 15 complete
 
 ## Current Iteration
-**15** — pending
+**16** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Iter 14 confirmed the non-linear threshold: the entire MaxFP=0.1–0.75 range is a flat Blue-dominant regime (57–60% Blue). The crossover to balance is a sharp transition between 0.75 and 1.0. MaxFP=1.0 is uniquely correct.
+Iter-15 confirmed that BlueEcm's Linchpin/carry role is structural (survival-driven), NOT ECM-dependent. HasEcm=false at MaxFP=1.0 yields Red 52% / Blue 48% — identical to the HasEcm=true baseline. ECM hardware is not the mechanism behind the balance fix.
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** BlueEcm's carry role at MaxFP=1.0 is structural (survival), not ECM-dependent. Testing BlueEcm with HasEcm=false at MaxFP=1.0 should maintain 45–55% balance — mirrors iter-5 (Ghost HasEcm=false, zero effect).
+**Next hypothesis:** BlueEcm's survival advantage (structural Linchpin role) comes from PreferredRange=150 (standoff positioning). Test: BlueEcm with PreferredRange=80 (close-quarters, like combat tanks) at MaxFP=1.0, HasEcm=true — expect Linchpin to weaken and Blue to lose ground.
 
 ---
 
 ## Iteration Log
+
+### Iter 15 — `research/iter-000015-blueecm-noecm-structural`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — BlueEcm carry role is structural, not ECM-dependent
+
+**Hypothesis:** BlueEcm with HasEcm=false at MaxFP=1.0 maintains balance (ECM is not the mechanism).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0 + HasEcm=false
+
+**Results:**
+- Red 103 (52%) / Blue 97 (48%) — ✅ balanced, identical to iter-11 HasEcm=true baseline
+- BlueEcm: MVP, **Linchpin** (alive:89%/dead:22%), solo carry 31/97 — unchanged without ECM
+- RedGhost: MVP, solo carry 33/103 — not Linchpin this seed (seed-dependent variation)
+
+**Key finding:** BlueEcm Linchpin role and balance both survive ECM removal. The structural survival role is NOT ECM-dependent. Candidates for what drives survival: PreferredRange=150 standoff OR RetreatEnergyThreshold=35.
+
+**Code:** Reverted — HasEcm=false is a probe, not a fix.
+
+---
 
 ### Iter 14 — `research/iter-000014-blueecm-fp-curve`
 **Date:** 2026-04-18

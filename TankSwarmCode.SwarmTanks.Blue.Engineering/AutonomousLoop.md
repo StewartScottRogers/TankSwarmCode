@@ -53,7 +53,7 @@ State the concrete, falsifiable claim with measurable success criteria before to
 ```
 git checkout master
 git pull
-git checkout -b research/iter-{N}-{slug}
+git checkout -b research/iter-{NNNNNNN}-{slug}
 ```
 
 All work from this point happens on this branch. Never commit directly to `master`.
@@ -110,8 +110,8 @@ Do not update docs for code that did not change.
 ### 8. Commit code + docs
 
 ```
-git add <changed-source-files> <changed-doc-files>
-git commit -m "[iter-{N}] <what changed and why>"
+git add Research/iter-{NNNNNNN}-{slug}.md AutonomousLoopState.md
+git commit -m "[iter-{NNNNNNN}] record findings — {verdict}"
 ```
 
 ### 9. Apply verdict
@@ -137,7 +137,7 @@ dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.cspro
 
 ### 10. Record findings
 
-Write a new research file `Research/iter-{NNNN}-{slug}.md` with sections: Hypothesis, Code Change, Run Parameters, Raw Results, Analysis, Key Findings, Summary.
+Write a new research file `Research/iter-{NNNNNNNN}-{slug}.md` with sections: Hypothesis, Code Change, Run Parameters, Raw Results, Analysis, Key Findings, Summary.
 
 Update `AutonomousLoopState.md` **on the iteration branch**:
 
@@ -150,8 +150,8 @@ Update `AutonomousLoopState.md` **on the iteration branch**:
 - `nextHypothesis`: next concrete, falsifiable Blue improvement to test
 
 ```
-git add Research/iter-{NNNN}-{slug}.md AutonomousLoopState.md
-git commit -m "[iter-{N}] record findings — {verdict}"
+git add Research/iter-{NNNNNNN}-{slug}.md AutonomousLoopState.md
+git commit -m "[iter-{NNNNNNN}] record findings — {verdict}"
 ```
 
 ### 11. Propagate state to master
@@ -161,7 +161,7 @@ Cherry-pick only the `AutonomousLoopState.md` + research file commit to `master`
 ```
 git checkout master
 git cherry-pick <state-commit-hash>
-git checkout research/iter-{N}-{slug}
+git checkout research/iter-{NNNNNNN}-{slug}
 ```
 
 This is the **only** write the loop makes directly to `master`.

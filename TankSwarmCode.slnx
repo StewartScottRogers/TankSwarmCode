@@ -4,6 +4,7 @@
     <File Path=".gitignore" />
     <File Path="AutonomousLoop.cmd" />
     <File Path="AutonomousLoop.md" />
+    <File Path="AutonomousLoopState.md" />
     <File Path="AutoResearch.md" />
     <File Path="Claude--dangerously-skip-permissions.cmd" />
     <File Path="README.md" />

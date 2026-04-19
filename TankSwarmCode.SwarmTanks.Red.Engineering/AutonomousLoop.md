@@ -109,8 +109,8 @@ Do not update docs for code that did not change.
 ### 8. Commit code + docs
 
 ```
-git add <changed-source-files> <changed-doc-files>
-git commit -m "[iter-{N}] <what changed and why>"
+git add Research/iter-{NNNNNNN}-{slug}.md AutonomousLoopState.md
+git commit -m "[iter-{NNNNNNN}] record findings — {verdict}"
 ```
 
 ### 9. Apply verdict
@@ -143,7 +143,7 @@ Update `AutonomousLoopState.md` **on the iteration branch**:
 
 ```
 git add AutonomousLoopState.md
-git commit -m "[iter-{N}] record findings — {verdict}"
+git commit -m "[iter-{NNNNNNN}] record findings — {verdict}"
 ```
 
 ### 11. Propagate state to master
@@ -153,7 +153,7 @@ Cherry-pick only the `AutonomousLoopState.md` commit to `master`:
 ```
 git checkout master
 git cherry-pick <state-commit-hash>
-git checkout research/iter-{N}-{slug}
+git checkout research/iter-{NNNNNNN}-{slug}
 ```
 
 This is the **only** write the loop makes directly to `master`.
