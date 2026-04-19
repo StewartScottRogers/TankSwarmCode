@@ -1,23 +1,49 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 18 complete
+2026-04-18 — Iteration 19 complete
 
 ## Current Iteration
-**19** — pending
+**20** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Iter 18 confirmed MaxFP and PR effects are approximately additive (no nonlinear interaction). MaxFP=1.5 + PR=80 ≈ 52/48 balanced — the +5pp Red from MaxFP=1.5 and +7pp Blue from PR=80 cancel. Linchpin requires MaxFP=1.0 + PR=150 simultaneously.
+Iter 19 confirmed the MaxFP balance curve is linear in the 1.0–1.5 range (~2.5pp Red per 0.25 MaxFP). Surprisingly, BlueEcm retains Linchpin status at MaxFP=1.25 (alive:90%/dead:21%). The Linchpin threshold is between 1.25 and 1.5, not at exactly 1.0.
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** MaxFP effect is linear between 1.0 (51% Red, Linchpin) and 1.5 (56% Red, no Linchpin). Test MaxFP=1.25 with PR=150 — predict Red ~53–54%, likely no Linchpin. This probes the MaxFP curve shape and Linchpin threshold location in the 1.0–1.5 range.
+**Next hypothesis:** Binary search for the Linchpin threshold between MaxFP=1.25 (Linchpin) and MaxFP=1.5 (no Linchpin). Test MaxFP=1.375 with PR=150 — predict Red ~55%. If Linchpin lost: threshold is in 1.25–1.375. If retained: threshold is in 1.375–1.5.
 
 ---
 
 ## Iteration Log
+
+### Iter 19 — `research/iter-000019-blueecm-maxfp125`
+**Date:** 2026-04-18
+**Status:** ✅ PARTIALLY CONFIRMED — balance linear (correct), Linchpin prediction wrong
+
+**Hypothesis:** MaxFP=1.25 → Red ~53–54%, Linchpin likely lost.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.25 + PR=150
+
+**Results:**
+- Red 108 (54%) / Blue 92 (46%) — **balance prediction correct**
+- BlueEcm: MVP (65/92), **Linchpin (alive:90%/dead:21%)** — Linchpin prediction WRONG
+- Survival: 72/200, WinSurv 71% — still high despite higher MaxFP
+
+**Balance curve (MaxFP=1.0–1.5 is approximately linear):**
+
+| MaxFP | Red%  | Blue% | Linchpin? |
+|-------|-------|-------|-----------|
+| 1.0   | 51%   | 49%   | Yes       |
+| 1.25  | 54%   | 46%   | Yes       |
+| 1.5   | 56%   | 44%   | No        |
+
+**Key finding:** Linchpin threshold is between MaxFP=1.25 and MaxFP=1.5, not at exactly 1.0.
+**Code:** Reverted — 1.25 is a probe only.
+
+---
 
 ### Iter 18 — `research/iter-000018-blueecm-maxfp15-pr80`
 **Date:** 2026-04-18
