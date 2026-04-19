@@ -44,6 +44,10 @@ public abstract class SwarmBrainBase : SwarmTankBase
     private long _lastVolleyTick = -999;
     private double _radarSpin = 45.0;
 
+    private Vector2D _lastPosition = new(0, 0);
+    private int _stuckTicks = 0;
+    private int _unstuckTurnsLeft = 0;
+
     /// <summary>Ticks between leader strategy re-evaluations.</summary>
     private const int LeadershipEpochTicks = 40;
     /// <summary>Ticks between ally-ping broadcasts used for leader election and energy tracking.</summary>
@@ -102,7 +106,10 @@ public abstract class SwarmBrainBase : SwarmTankBase
             _scheduledFireTick = -1;
         }
 
-        // 7. Execute strategy
+        // 7. Stuck detection and recovery
+        UpdateStuck();
+
+        // 8. Execute strategy
         ExecuteStrategy();
     }
 
@@ -262,6 +269,15 @@ public abstract class SwarmBrainBase : SwarmTankBase
 
     private void ExecuteStrategy()
     {
+        if (_unstuckTurnsLeft > 0)
+        {
+            _unstuckTurnsLeft--;
+            // Drive toward arena center to positively escape any corner or wall.
+            Vector2D center = new(Arena.ArenaWidth / 2.0, Arena.ArenaHeight / 2.0);
+            NavigateTo(center, 60);
+            return;
+        }
+
         RadarContact? target = GetStrategyTarget();
 
         switch (_activeStrategy)
@@ -373,6 +389,30 @@ public abstract class SwarmBrainBase : SwarmTankBase
     {
         SetTurnRadarRight(45);
         SetAhead(100);
+    }
+
+    private void UpdateStuck()
+    {
+        // Don't re-trigger while already recovering — let the escape run to completion.
+        if (_unstuckTurnsLeft > 0)
+        {
+            _lastPosition = State.Position;
+            return;
+        }
+
+        if (State.Position.DistanceTo(_lastPosition) < 1.5)
+        {
+            if (++_stuckTicks >= 8)
+            {
+                _stuckTicks = 0;
+                _unstuckTurnsLeft = 20;
+            }
+        }
+        else
+        {
+            _stuckTicks = 0;
+        }
+        _lastPosition = State.Position;
     }
 
     private void NavigateTo(Vector2D dest, double stopDistance)
