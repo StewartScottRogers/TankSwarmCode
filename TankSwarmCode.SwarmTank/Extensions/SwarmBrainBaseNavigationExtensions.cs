@@ -11,8 +11,25 @@ internal static class SwarmBrainBaseNavigationExtensions
         if (distToDest <= stopDistance)
             return;
 
-        double bearing = brain.State.Position.BearingTo(dest);
-        double bodyTurn = (bearing - brain.State.Heading).RelativeBearing();
+        Vector2D pos = brain.State.Position;
+        double W = brain.Arena.ArenaWidth;
+        double H = brain.Arena.ArenaHeight;
+        const double avoidDist = 80.0;
+
+        // Destination direction in screen-space Cartesian (right=+X, down=+Y)
+        double destBearing = pos.BearingTo(dest);
+        double destRad = destBearing * (Math.PI / 180.0);
+        double vx = Math.Sin(destRad);
+        double vy = -Math.Cos(destRad);
+
+        // Wall repulsion: each nearby wall adds a proportional push away from it
+        if (pos.X     < avoidDist) vx += (avoidDist - pos.X)     / avoidDist;
+        if (W - pos.X < avoidDist) vx -= (avoidDist - (W - pos.X)) / avoidDist;
+        if (pos.Y     < avoidDist) vy += (avoidDist - pos.Y)     / avoidDist;
+        if (H - pos.Y < avoidDist) vy -= (avoidDist - (H - pos.Y)) / avoidDist;
+
+        double finalBearing = Math.Atan2(vx, -vy) * (180.0 / Math.PI);
+        double bodyTurn = (finalBearing - brain.State.Heading).RelativeBearing();
         bodyTurn = Math.Clamp(bodyTurn, -ArenaConstants.MaxTurnRate, ArenaConstants.MaxTurnRate);
         brain.SetTurnRight(bodyTurn);
 
