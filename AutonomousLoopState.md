@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-19 — Iteration 46 complete
+2026-04-19 — Iteration 47 complete
 
 ## Current Iteration
-**47** — pending
+**48** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -13,11 +13,38 @@
 
 **Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Next hypothesis:** Low-end PR balance boundary binary search continues. PR=115 confirmed Blue-dominant (44% Red), same as PR=80. Boundary is between PR=115 and PR=150 (35-unit window). Midpoint: PR=133. Predict: PR=133 will be Blue-dominant or near-boundary; if still Blue-dominant → binary search to PR=142.
+**Next hypothesis:** Low-end PR balance boundary binary search continues. PR=133 confirmed Blue-dominant (46% Red). Boundary is between PR=133 and PR=150 (17-unit window). Midpoint: PR=142. Predict: PR=142 will be Blue-dominant or near-boundary; if still Blue-dominant → boundary is PR=142–150 (8-unit window).
 
 ---
 
 ## Iteration Log
+
+### Iter 47 — `research/iter-000047-blueecm-pr133`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=133 Blue-dominant; low-end boundary is PR=133–150
+
+**Hypothesis:** PR=133 (midpoint of PR=115–150) with MaxFP=1.0 — predict Blue-dominant.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=133
+
+**Results:**
+- Red 93 (46%) / Blue 107 (54%) — Blue dominant ✅
+- BlueEcm: MVP (73/107), Solo carry (36/107 [18D+18TO]), **NO Linchpin**, Rate/100t: 8.28
+- RedGhost: MVP (54/93), Solo carry (29/93 [18D+11TO]), **NO Linchpin**, Rate/100t: 2.81
+
+**Low-end PR boundary progress (MaxFP=1.0):**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 80         | 44%   | 56%   | No (iter-18) |
+| 115        | 44%   | 56%   | No (iter-46) |
+| 133        | 46%   | 54%   | No (iter-47) |
+| 150        | 51%   | 49%   | Yes (iter-11) |
+
+**Key finding:** PR=133 slightly closer to balance (+2pp Red vs PR=115) but still Blue-dominant. Low-end boundary is between PR=133 and PR=150 (17-unit window). Binary search continues at PR=142.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 46 — `research/iter-000046-blueecm-pr115-low-boundary`
 **Date:** 2026-04-19
