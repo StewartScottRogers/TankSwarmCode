@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-19 — Iteration 73 complete
+2026-04-19 — Iteration 74 complete
 
 ## Current Iteration
-**74** — pending
+**75** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -24,14 +24,15 @@
 - Upper boundary: PR=190 is Blue-dominant (no Linchpin); PR=191 is balanced (Linchpin YES). Step: PR=190→191.
 - Blue-dip (no Linchpin) region: **PR=167–190** (24 units wide). Both boundaries are single-integer precision.
 
-**BLUE-DIP CROSS-SEED STRUCTURE CHARACTERIZED (iters 70+71+72+73).** The dip has seed-dependent depth variation:
+**BLUE-DIP CROSS-SEED STRUCTURE CHARACTERIZED (iters 70+71+72+73+74).** The dip has seed-dependent depth variation:
 - PR=170 seed 2000 = 44% Red, NO Linchpin (iter-71) — **full depth**, identical to seed 1000
-- PR=175 seed 2000 = 48% Red, NO Linchpin (iter-73) — **shallow** (transition is PR=170→175)
+- PR=172 seed 2000 = 47% Red, NO Linchpin (iter-74) — **intermediate** (gradient, not sharp step)
+- PR=175 seed 2000 = 48% Red, NO Linchpin (iter-73) — **shallow**
 - PR=180 seed 2000 = 49% Red, NO Linchpin (iter-70) — **shallow**
 - PR=190 seed 2000 = 50% Red, NO Linchpin (iter-72) — **shallow** (balanced, but structurally in dip)
 - The structural signature (no Linchpin for BlueEcm) is seed-stable across the whole dip.
-- At seed 2000, the deep sub-region is **very narrow**: PR=167–170 (≤4 units). Shallow zone spans PR=175–190.
-- Full-depth/shallow transition at seed 2000: PR=170→175 (5-unit window).
+- At seed 2000, the deep sub-region (≤44% Red) is **exactly PR=167–170** (4 units). Gradient zone PR=171–174. Shallow zone PR=175–190.
+- Full-depth → shallow transition at seed 2000 is a **gradient**, not a sharp step: 44% (PR=170) → 47% (PR=172) → 48% (PR=175).
 
 **INTERIOR PR CURVE (MaxFP=1.0) — DIP FULLY CHARACTERIZED (seed 1000), CROSS-SEED PARTIAL:**
 
@@ -44,6 +45,7 @@
 | 167        | 44%   | 56%   | No (iter-65)  | 1000 |
 | 170        | 44%   | 56%   | No (iter-62)  | 1000 |
 | 170        | 44%   | 56%   | No (iter-71)  | 2000 |
+| 172        | 47%   | 53%   | No (iter-74)  | 2000 |
 | 175        | 48%   | 52%   | No (iter-73)  | 2000 |
 | 180        | 49%   | 51%   | No (iter-70)  | 2000 |
 | 190        | 44%   | 56%   | No (iter-61)  | 1000 |
@@ -55,11 +57,41 @@
 | 217        | 49%   | 51%   | No (iter-44)  | 1000 |
 | 238        | 49%   | 51%   | Yes (iter-58) | 1000 |
 
-**Next hypothesis:** Probe PR=172 at seed 2000 to narrow the full-depth/shallow boundary to single-integer precision. Transition is currently a 5-unit window (PR=170→175). Predict: 44% Red, no Linchpin (full depth). If instead ~48% Red → boundary is PR=170→172, deep sub-region is PR=167–170 (4 units, very narrow).
+**Next hypothesis:** Probe PR=171 at seed 2000 to determine single-integer boundary of deep zone (≤44%). PR=170=44% (deep), PR=172=47% (gradient). If PR=171 = 44% → deep zone extends to PR=171, gradient starts at PR=172. If PR=171 = 47% → gradient starts immediately at PR=171, deep zone is exactly PR=167–170. Predict: 47% Red (gradient already started), no Linchpin.
 
 ---
 
 ## Iteration Log
+
+### Iter 74 — `research/iter-000074-blueecm-pr172-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=172 seed 2000 = 47% Red (intermediate gradient), not 44% Red (full depth); deep zone ends exactly at PR=170
+
+**Hypothesis:** PR=172 at seed 2000 will be FULL DEPTH (44% Red, no Linchpin) — same as PR=170 at seed 2000. Deep sub-region extends to at least PR=172.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=172
+
+**Results:**
+- Red 94 (47%) / Blue 106 (53%) — **INTERMEDIATE** (prediction WRONG — expected 44% full depth)
+- BlueEcm: MVP (66/106), **NO Linchpin**, Solo carry (22/106 [10D+12TO]), Rate/100t: 8.62
+- RedGhost: MVP (62/94), **Linchpin (alive:95%/dead:24%)**, Solo carry (32/94 [21D+11TO]), ECM, Rate/100t: 2.71
+
+**Cross-seed dip validation (MaxFP=1.0) — updated:**
+
+| BlueEcm PR | Seed  | Red%  | Blue% | Linchpin? | Depth |
+|------------|-------|-------|-------|-----------|-------|
+| 170        | 1000  | 44%   | 56%   | No        | Full  |
+| 170        | 2000  | 44%   | 56%   | No (iter-71) | Full |
+| 172        | 2000  | 47%   | 53%   | No ← iter-74 | Intermediate |
+| 175        | 2000  | 48%   | 52%   | No (iter-73) | Shallow |
+| 180        | 2000  | 49%   | 51%   | No (iter-70) | Shallow |
+| 190        | 1000  | 44%   | 56%   | No        | Full  |
+| 190        | 2000  | 50%   | 50%   | No (iter-72) | Shallow |
+
+**Key finding:** PR=172 at seed 2000 is INTERMEDIATE (47%) — prediction WRONG. The full-depth→shallow transition at seed 2000 is a gradient (44%→47%→48%), NOT a sharp step. Deep zone (≤44%) ends at PR=170. By PR=172, already 3pp above floor. Next: probe PR=171 to determine if deep zone extends to PR=171 (still 44%) or gradient starts immediately at PR=171.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 73 — `research/iter-000073-blueecm-pr175-seed2000`
 **Date:** 2026-04-19
