@@ -1,26 +1,49 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 12 complete
+2026-04-18 — Iteration 13 complete
 
 ## Current Iteration
-**13** — optional (balance confirmed across 2 seeds — HALT recommended)
+**HALT** — triple-seed validation complete
 
 ## Status
-**BALANCE FIX SEED-VALIDATED.** BlueEcm MaxFP=1.0 confirmed across seed 1000 (Red 51%) and seed 2000 (Red 46%) — both within 45–55% target.
+**BALANCE FIX TRIPLE-VALIDATED.** BlueEcm MaxFP=1.0 confirmed across seeds 1000 (51%), 2000 (46%), and 3000 (50%) — all within 45–55% target.
+
+| Seed | Red%  | Blue% | In Range? |
+|------|-------|-------|-----------|
+| 1000 | 51%   | 49%   | ✅        |
+| 2000 | 46%   | 54%   | ✅        |
+| 3000 | 50.5% | 49.5% | ✅        |
 
 Branch `research/iter-11-blueecm-fp-calibrate-0.5` contains the code fix.
-Branch `research/iter-12-cross-seed-validation` contains iter-12 research file (no code change).
 **Awaiting human merge of iter-11 fix to master.**
 
-**HALT recommended.** Research goal achieved: balanced at 2 seeds.
-If continuing: Seed 3000 triple-validation, or investigate Ghost's 34–42% solo carry variance across seeds.
-
-**Next branch (if continuing):** `research/iter-13-seed-3000-triple-validation` or `research/iter-13-ghost-carry-variance`
+**HALT. Research goal fully achieved.**
 
 ---
 
 ## Iteration Log
+
+### Iter 13 — `research/iter-13-seed-3000-triple-validation`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — Triple-seed validation complete (no code change)
+
+**Hypothesis:** BlueEcm MaxFP=1.0 balance holds at seed 3000 (third independent seed).
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0
+
+**Results:**
+- Red 101 (50.5%) / Blue 99 (49.5%) — ✅ closest to 50/50 of all three seeds
+- Ghost: MVP, Linchpin (alive:96%/dead:22%), solo carry 48/101 = **48%** (highest across seeds)
+- BlueEcm: MVP, Linchpin (alive:85%/dead:25%), solo carry 28/99 = **28%**
+- Both ECM tanks simultaneously Linchpin — ECM duel at maximum tension, balance perfect
+
+**Key finding:** Ghost's solo carry rate is seed-variable (34–48%) but not balance-breaking. Blue's corps compensates when Ghost dominates. BlueEcm Linchpin status also varies by seed — neither ECM tank locks in one role permanently.
+
+**Code:** No change — same iter-11 fix (BlueEcm MaxFP=1.0).
+**HALT. Three seeds validated. Merge iter-11 fix.**
+
+---
 
 ### Iter 12 — `research/iter-12-cross-seed-validation`
 **Date:** 2026-04-18
