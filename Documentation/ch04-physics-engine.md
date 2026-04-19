@@ -15,24 +15,27 @@
 Every call to `ArenaEngine.Tick()` executes the following phases in order:
 
 ```
-1.  OnTick callbacks              — parallel; each tank writes its TankCommand
-2.  FlushCommands                 — sequential; collect all TankCommands
-3.  ApplyMovement                 — sequential; update positions; wall & building collisions
-4.  ApplyFiring                   — sequential; create new bullets (skipped for jammers)
-5.  ApplyEcm                      — sequential; deduct ECM energy costs; set ActiveEcm;
-                                    update ghost echo positions
-6.  MoveBullets                   — parallel; advance bullet positions; decay deflected bullets
-7.  CheckBulletTankCollisions     — sequential; apply damage; lethal hits remove bullet;
-                                    non-lethal hits deflect bullet (ricochet)
-8.  CheckTankTankCollisions       — sequential; apply mutual 0.6 damage; push tanks apart
-9.  ProcessRadarScans             — parallel; fire OnScannedTank events; ECM drop/corrupt/ghost
-                                    injection; fire OnPainted on scanned tanks
-10. DeliverSwarmMessages          — sequential; route broadcasts to living, non-jamming allies;
-                                    fire OnSwarmMessage for each delivered message
-11. UpdateTankStates              — parallel; push fresh immutable TankState to each tank
-12. RebuildSnapshots              — remove spent bullets; publish RicochetFlashes &
-                                    ActiveGhostEchoes for the renderer
-13. CheckRoundEnd                 — determine if a winner exists; fire OnRoundEnded
+1.   OnTick callbacks              — parallel; each tank writes its TankCommand
+2.   FlushCommands                 — sequential; collect all TankCommands
+3.   ApplyMovement                 — sequential; update positions; wall & building collisions
+4.   ApplyFiring                   — sequential; create new bullets (skipped for jammers)
+5.   ApplyEcm                      — sequential; deduct ECM energy costs; set ActiveEcm;
+                                     update ghost echo positions
+6.   MoveBullets                   — parallel; advance bullet positions; decay deflected bullets
+7.   CheckBulletTankCollisions     — sequential; apply damage; lethal hits remove bullet;
+                                     non-lethal hits deflect bullet (ricochet)
+8.   CheckTankTankCollisions       — sequential; apply mutual 0.6 damage; push tanks apart;
+                                     push live tanks off hulks; burn tanks stuck beside hulks
+8.5. TankRecovery                  — sequential; detect physically-stuck tanks and apply
+                                     escalating recovery (nudge → reverse → BFS teleport)
+9.   ProcessRadarScans             — parallel; fire OnScannedTank events; ECM drop/corrupt/ghost
+                                     injection; fire OnPainted on scanned tanks
+10.  DeliverSwarmMessages          — sequential; route broadcasts to living, non-jamming allies;
+                                     fire OnSwarmMessage for each delivered message
+11.  UpdateTankStates              — parallel; push fresh immutable TankState to each tank
+12.  RebuildSnapshots              — remove spent bullets; publish RicochetFlashes &
+                                     ActiveGhostEchoes for the renderer
+13.  CheckRoundEnd                 — determine if a winner exists; fire OnRoundEnded
 ```
 
 The ordering is significant: movement and firing happen before collision checks, ECM is applied before radar scans, and state is synchronised after all physics are resolved.
@@ -111,6 +114,30 @@ When two tanks overlap (combined radii = `TankHalfSize × 2 = 18 px`):
 1. Each tank loses **0.6 energy** (`ArenaConstants.TankCollisionDamage`).
 2. Both tanks are pushed apart along the collision axis and then re-checked against buildings.
 3. `OnHitTank(HitTankEventArgs e)` is fired on both tanks; `e.Other` is the other tank's `TankState`, `e.Bearing` is its relative bearing.
+
+### Burning Hulks
+
+Destroyed tanks leave an **impassable burning hulk** at their last position. Living tanks are continuously pushed away from hulks (hulks never move). A tank that remains in physical contact with a hulk for **99 consecutive ticks** catches fire and is destroyed — this counts as a self-kill. The burn fires `OnDeath()` and ends the tank normally.
+
+---
+
+## Stuck Recovery
+
+Because collision resolution zeroes velocity every tick, a tank wedged between a building and a wall (or pinned against a hulk) can make no net progress despite its AI issuing move commands. `TankRecovery` detects this situation by sampling each tank's position every 10 ticks. A tank that moves less than 5 px over a 10-tick window (while actively wanting to move) accumulates *stuck-ticks*. When a tank is intentionally parked (no move command issued), the counter resets immediately.
+
+Three escalating recovery levels are applied automatically:
+
+| Stuck-ticks | Action |
+|-------------|--------|
+| 30 | **Soft nudge** — random 12–20 px push into free space |
+| 60 | **Reverse nudge** — 20–30 px push opposite to current heading |
+| 100 | **BFS teleport** — scans concentric rings outward up to 120 px and moves the tank to the nearest free cell (clear of buildings and living tanks) |
+
+Each recovery action resets the reference position so the next level is only triggered if the tank remains stuck after the previous action. The teleport also resets the stuck counter entirely, cycling back to level 1 if the problem persists.
+
+All recovery events are logged to the console as `[UNSTICK] <name> t=<tick> stuck=<ticks>t → <action>`.
+
+> **Hulk burn vs. recovery**: the soft and reverse nudges fire at 30 and 60 stuck-ticks — well before the 99-tick hulk burn threshold — giving a stuck tank two chances to escape a hulk before it catches fire.
 
 ---
 

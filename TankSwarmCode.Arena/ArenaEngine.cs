@@ -203,6 +203,10 @@ public sealed class ArenaEngine : IArena
         // 7. Tank-tank collisions (sequential — mutates both tanks)
         CheckTankTankCollisions();
 
+        // 7.5 Stuck recovery — after all collision resolution, unstick wedged tanks
+        foreach (TankRuntimeState rts in livingTanks)
+            TankRecovery.Apply(rts, TickNumber, _buildings, RuntimeTanks, Width, Height, _rng);
+
         // 8. Radar scans — parallel (each scanner writes only to its own RadarMap/command buffer)
         Parallel.ForEach(commands, pair => ProcessRadarScan(pair.Rts));
 
@@ -257,6 +261,8 @@ public sealed class ArenaEngine : IArena
 
     private void ApplyMovement(TankRuntimeState rts, TankCommand cmd)
     {
+        rts.WantedToMove = Math.Abs(cmd.MoveDistance) > 0.01;
+
         // --- Body turn (rate limited by current speed) ---
         double maxTurn = ArenaConstants.MaxTurnRate
                        - ArenaConstants.VelocityTurnPenalty * Math.Abs(rts.Velocity);
@@ -558,11 +564,14 @@ public sealed class ArenaEngine : IArena
         // ── Live-vs-hulk collisions ───────────────────────────────────────────
         // Destroyed tanks leave an impassable burning hulk. Living tanks are pushed
         // away from hulks; hulks themselves never move.
+        // A tank that remains in contact with a hulk for 99 consecutive ticks
+        // catches fire and is destroyed (self-kill).
         for (int i = 0; i < RuntimeTanks.Count; i++)
         {
             if (!RuntimeTanks[i].IsAlive) continue;
 
             TankRuntimeState live = RuntimeTanks[i];
+            bool touchingAnyHulk = false;
 
             for (int j = 0; j < RuntimeTanks.Count; j++)
             {
@@ -576,6 +585,7 @@ public sealed class ArenaEngine : IArena
 
                 if (dist > minDist) continue;
 
+                touchingAnyHulk = true;
                 live.Velocity = 0;
 
                 // Push the living tank entirely out of the hulk — hulk does not move.
@@ -587,6 +597,21 @@ public sealed class ArenaEngine : IArena
                 live.X = Math.Clamp(live.X + nx * (overlap + 0.5), ArenaConstants.TankHalfSize, Width - ArenaConstants.TankHalfSize);
                 live.Y = Math.Clamp(live.Y + ny * (overlap + 0.5), ArenaConstants.TankHalfSize, Height - ArenaConstants.TankHalfSize);
                 PushTankFromBuildings(live);
+            }
+
+            if (touchingAnyHulk)
+            {
+                live.HulkContactTicks++;
+                if (live.HulkContactTicks >= 99)
+                {
+                    Console.WriteLine($"[BURN] {live.Tank.Name} t={TickNumber} caught fire beside a hulk after {live.HulkContactTicks} ticks");
+                    live.Energy = 0;
+                    CheckDeath(live);
+                }
+            }
+            else
+            {
+                live.HulkContactTicks = 0;
             }
         }
     }

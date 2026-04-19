@@ -29,6 +29,22 @@ internal sealed class TankRuntimeState
     /// <summary>Tick on which this tank was destroyed; 0 while alive.</summary>
     internal long DestroyedAtTick { get; set; }
 
+    // ── Stuck-recovery tracking ───────────────────────────────────────────────
+    internal double StuckCheckX { get; set; } = double.NaN;
+    internal double StuckCheckY { get; set; } = double.NaN;
+    internal long   StuckCheckTick { get; set; }
+    internal int    StuckTicks  { get; set; }
+    internal int    StuckLevel  { get; set; }
+    /// <summary>True when the tank's AI issued a non-zero move command this tick.</summary>
+    internal bool   WantedToMove { get; set; }
+
+    /// <summary>
+    /// Consecutive ticks this tank has been in physical contact with a burning hulk.
+    /// Resets to 0 the first tick the tank is no longer touching any hulk.
+    /// At 99 the tank burns to death.
+    /// </summary>
+    internal int HulkContactTicks { get; set; }
+
     /// <summary>The ECM mode active this tick, set by <see cref="ArenaEngine.ApplyEcm"/>.</summary>
     internal EcmMode ActiveEcm { get; set; }
 

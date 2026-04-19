@@ -53,6 +53,12 @@ At maximum velocity (8 px/tick) this is 3.0. Grazes below 2 px/tick cost nothing
 
 Both tanks in a body collision each lose **0.6 energy** (`ArenaConstants.TankCollisionDamage`).
 
+### Hulk proximity (burning)
+
+A destroyed tank leaves a burning hulk at its last position. If a living tank remains in physical contact with a hulk for **99 consecutive ticks**, it catches fire and its energy is immediately reduced to 0, triggering death. This is counted as a self-kill. The counter resets the moment the tank breaks contact.
+
+See [Chapter 4: Physics Engine — Stuck Recovery](ch04-physics-engine.md#stuck-recovery) for how the recovery system attempts to free wedged tanks before the burn threshold is reached.
+
 ### ECM modes
 
 Running ECM drains energy every tick the mode is active:
