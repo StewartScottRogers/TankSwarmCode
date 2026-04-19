@@ -1,24 +1,54 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 11 complete
+2026-04-18 — Iteration 12 complete
 
 ## Current Iteration
-**12** — pending (or HALT — balance target achieved)
+**13** — optional (balance confirmed across 2 seeds — HALT recommended)
 
 ## Status
-**BALANCE FIX CONFIRMED.** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%.
+**BALANCE FIX SEED-VALIDATED.** BlueEcm MaxFP=1.0 confirmed across seed 1000 (Red 51%) and seed 2000 (Red 46%) — both within 45–55% target.
 
-Branch `research/iter-11-blueecm-fp-calibrate-0.5` contains the fix.
-**Awaiting human merge to master.**
+Branch `research/iter-11-blueecm-fp-calibrate-0.5` contains the code fix.
+Branch `research/iter-12-cross-seed-validation` contains iter-12 research file (no code change).
+**Awaiting human merge of iter-11 fix to master.**
 
-If continuing research: investigate why the 0.5→1.0 jump is non-linear, or test cross-seed validation (seed 2000).
+**HALT recommended.** Research goal achieved: balanced at 2 seeds.
+If continuing: Seed 3000 triple-validation, or investigate Ghost's 34–42% solo carry variance across seeds.
 
-**Branch:** (awaiting human decision)
+**Next branch (if continuing):** `research/iter-13-seed-3000-triple-validation` or `research/iter-13-ghost-carry-variance`
 
 ---
 
 ## Iteration Log
+
+### Iter 12 — `research/iter-12-cross-seed-validation`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — Balance fix seed-validated (no code change)
+
+**Hypothesis:** BlueEcm MaxFP=1.0 balance holds at seed 2000 (not just seed 1000).
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0
+
+**Results:**
+- Red 92 (46%) / Blue 108 (54%) — ✅ within 45–55% balance target
+- Ghost: MVP, Linchpin (alive:92%/dead:21%), solo carry 39/92 = **42%** (higher than seed 1000's 34%)
+- BlueEcm: MVP, solo carry 24/108 = **22%** (lower than seed 1000's 34%)
+- ECM duel asymmetric at seed 2000, but overall balance holds
+
+**Cross-seed summary:**
+
+| Seed | Red% | Blue% | In Range? |
+|------|------|-------|-----------|
+| 1000 | 51%  | 49%   | ✅        |
+| 2000 | 46%  | 54%   | ✅        |
+
+**Key finding:** Ghost solo carry varies 34–42% across seeds; BlueEcm 22–34%. Neither side locks in a single-seed artifact — overall balance holds despite ECM duel variance.
+
+**Code:** No change — same iter-11 fix (BlueEcm MaxFP=1.0).
+**HALT recommended.** Research goal achieved.
+
+---
 
 ### Iter 11 — `research/iter-11-blueecm-fp-calibrate-0.5`
 **Date:** 2026-04-18
