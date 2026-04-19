@@ -899,53 +899,99 @@ public sealed class ArenaEngine : IArena
 
     private void SpawnTanks()
     {
+        var mode = (SpawnMode)_rng.Next(2);
+        if (mode == SpawnMode.CornerBunched)
+            SpawnCornerBunched();
+        else
+            SpawnRandom();
+    }
+
+    private void SpawnRandom()
+    {
         double margin = ArenaConstants.TankHalfSize * 4;
-        double minSep = ArenaConstants.TankHalfSize * 2 + 4; // minimum centre-to-centre gap
+        double minSep = ArenaConstants.TankHalfSize * 2 + 4;
 
         foreach (TankRuntimeState rts in RuntimeTanks)
+            PlaceTank(rts, margin, Width - margin, margin, Height - margin, minSep);
+    }
+
+    private void SpawnCornerBunched()
+    {
+        double margin = ArenaConstants.TankHalfSize * 4;
+        double minSep = ArenaConstants.TankHalfSize * 2 + 4;
+
+        // Four corner regions — each 33% of arena dimensions.
+        (double xMin, double xMax, double yMin, double yMax)[] corners =
+        [
+            (margin,           Width  * 0.33, margin,           Height * 0.33), // top-left
+            (Width  * 0.67,    Width  - margin, margin,         Height * 0.33), // top-right
+            (margin,           Width  * 0.33, Height * 0.67,   Height - margin), // bottom-left
+            (Width  * 0.67,    Width  - margin, Height * 0.67, Height - margin), // bottom-right
+        ];
+
+        // Shuffle corners so every pairing of distinct corners is equally likely.
+        for (int i = corners.Length - 1; i > 0; i--)
         {
-            // Retry up to 200 times to find a non-overlapping spawn position.
-            for (int attempt = 0; attempt < 200; attempt++)
+            int j = _rng.Next(i + 1);
+            (corners[i], corners[j]) = (corners[j], corners[i]);
+        }
+
+        // SwarmId 1 → corners[0], SwarmId 2 → corners[1]; others get full arena.
+        foreach (TankRuntimeState rts in RuntimeTanks)
+        {
+            var (xMin, xMax, yMin, yMax) = rts.Tank.SwarmId switch
             {
-                double candidateX = _rng.NextDouble() * (Width - margin * 2) + margin;
-                double candidateY = _rng.NextDouble() * (Height - margin * 2) + margin;
+                1 => corners[0],
+                2 => corners[1],
+                _ => (margin, Width - margin, margin, Height - margin),
+            };
+            PlaceTank(rts, xMin, xMax, yMin, yMax, minSep);
+        }
+    }
 
-                bool tooClose = RuntimeTanks
-                    .Where(other => other != rts && other.Energy > 0)
-                    .Any(other =>
-                    {
-                        double dx = candidateX - other.X;
-                        double dy = candidateY - other.Y;
-                        return Math.Sqrt(dx * dx + dy * dy) < minSep;
-                    });
+    private void PlaceTank(TankRuntimeState rts, double xMin, double xMax, double yMin, double yMax, double minSep)
+    {
+        double spawnBuildingHalf = ArenaConstants.TankHalfSize * Math.Sqrt(2.0) + 4.0;
 
-                double spawnBuildingHalf = ArenaConstants.TankHalfSize * Math.Sqrt(2.0) + 4.0; // visual clearance at spawn
-                bool insideBuilding = !tooClose && _buildings.Any(obs =>
+        for (int attempt = 0; attempt < 200; attempt++)
+        {
+            double candidateX = _rng.NextDouble() * (xMax - xMin) + xMin;
+            double candidateY = _rng.NextDouble() * (yMax - yMin) + yMin;
+
+            bool tooClose = RuntimeTanks
+                .Where(other => other != rts && other.Energy > 0)
+                .Any(other =>
                 {
-                    double closestX = Math.Clamp(candidateX, obs.X, obs.X + obs.Width);
-                    double closestY = Math.Clamp(candidateY, obs.Y, obs.Y + obs.Height);
-                    double dx = candidateX - closestX;
-                    double dy = candidateY - closestY;
-                    return Math.Sqrt(dx * dx + dy * dy) < spawnBuildingHalf;
+                    double dx = candidateX - other.X;
+                    double dy = candidateY - other.Y;
+                    return Math.Sqrt(dx * dx + dy * dy) < minSep;
                 });
 
-                if ((!tooClose && !insideBuilding) || attempt == 199)
-                {
-                    rts.X = candidateX;
-                    rts.Y = candidateY;
-                    break;
-                }
-            }
+            bool insideBuilding = !tooClose && _buildings.Any(obs =>
+            {
+                double closestX = Math.Clamp(candidateX, obs.X, obs.X + obs.Width);
+                double closestY = Math.Clamp(candidateY, obs.Y, obs.Y + obs.Height);
+                double dx = candidateX - closestX;
+                double dy = candidateY - closestY;
+                return Math.Sqrt(dx * dx + dy * dy) < spawnBuildingHalf;
+            });
 
-            rts.Heading = _rng.NextDouble() * 360;
-            rts.GunHeading = rts.Heading;
-            rts.RadarHeading = rts.Heading;
-            rts.PrevRadarHeading = rts.Heading;
-            rts.Velocity = 0;
-            rts.Energy = ArenaConstants.TankStartEnergy;
-            rts.IsAlive = true;
-            rts.DestroyedAtTick = 0;
+            if ((!tooClose && !insideBuilding) || attempt == 199)
+            {
+                rts.X = candidateX;
+                rts.Y = candidateY;
+                break;
+            }
         }
+
+        rts.Heading = _rng.NextDouble() * 360;
+        rts.GunHeading = rts.Heading;
+        rts.RadarHeading = rts.Heading;
+        rts.PrevRadarHeading = rts.Heading;
+        rts.Velocity = 0;
+        rts.Energy = ArenaConstants.TankStartEnergy;
+        rts.IsAlive = true;
+        rts.DestroyedAtTick = 0;
     }
 
     // ── Geometry helpers ──────────────────────────────────────────────────────
