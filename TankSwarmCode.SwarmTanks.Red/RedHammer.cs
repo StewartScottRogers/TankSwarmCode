@@ -3,7 +3,7 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Red;
 
-public sealed class RedHammer : SwarmBrainBaseRed
+public sealed class RedHammer : SwarmTankBrainRed
 {
     public RedHammer() { SwarmId = 1; Role = TankRole.Attacker; }
     public override string Name => "RedHammer";

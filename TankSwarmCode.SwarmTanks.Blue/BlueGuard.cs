@@ -3,7 +3,7 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Blue;
 
-public sealed class BlueGuard : SwarmBrainBaseBlue
+public sealed class BlueGuard : SwarmTankBrainBlue
 {
     public BlueGuard() { SwarmId = 2; Role = TankRole.Defender; }
     public override string Name => "BlueGuard";

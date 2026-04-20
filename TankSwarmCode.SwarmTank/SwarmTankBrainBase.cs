@@ -5,7 +5,7 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTank;
 
-public abstract class SwarmBrainBase : SwarmTankBase
+public abstract class SwarmTankBrainBase : SwarmTankBase
 {
     protected internal abstract TankConfig TankConfig { get; }
 

@@ -5,7 +5,7 @@ namespace TankSwarmCode.SwarmTank;
 
 internal static class SwarmBrainBaseNavigationExtensions
 {
-    internal static void NavigateTo(this SwarmBrainBase brain, Vector2D dest, double stopDistance)
+    internal static void NavigateTo(this SwarmTankBrainBase brain, Vector2D dest, double stopDistance)
     {
         double distToDest = brain.State.Position.DistanceTo(dest);
         if (distToDest <= stopDistance)
@@ -39,7 +39,7 @@ internal static class SwarmBrainBaseNavigationExtensions
             brain.SetAhead(40);
     }
 
-    internal static void MaintainRadar(this SwarmBrainBase brain, Vector2D? focusPoint)
+    internal static void MaintainRadar(this SwarmTankBrainBase brain, Vector2D? focusPoint)
     {
         if (focusPoint.HasValue)
         {
@@ -54,7 +54,7 @@ internal static class SwarmBrainBaseNavigationExtensions
         }
     }
 
-    internal static void LinearPredictionFire(this SwarmBrainBase brain, RadarContact target)
+    internal static void LinearPredictionFire(this SwarmTankBrainBase brain, RadarContact target)
     {
         double power = Math.Min(brain.TankConfig.MaxFirePower, brain.State.Energy * 0.1);
         if (power < 0.1 || brain.State.Energy < 5)
@@ -77,7 +77,7 @@ internal static class SwarmBrainBaseNavigationExtensions
     }
 
     // Returns true if any known wall segment crosses the line from this tank to the target point.
-    internal static bool IsWallInLineOfFire(this SwarmBrainBase brain, Vector2D target)
+    internal static bool IsWallInLineOfFire(this SwarmTankBrainBase brain, Vector2D target)
     {
         double ax = brain.State.Position.X, ay = brain.State.Position.Y;
         double bx = target.X,              by = target.Y;
@@ -103,7 +103,7 @@ internal static class SwarmBrainBaseNavigationExtensions
         return t >= 0 && t <= 1 && u >= 0 && u <= 1;
     }
 
-    internal static Vector2D FurthestArenaCorner(this SwarmBrainBase brain)
+    internal static Vector2D FurthestArenaCorner(this SwarmTankBrainBase brain)
     {
         Vector2D[] corners =
         [
@@ -113,7 +113,7 @@ internal static class SwarmBrainBaseNavigationExtensions
             new(brain.Arena.ArenaWidth - 50, brain.Arena.ArenaHeight - 50)
         ];
 
-        long freshCutoff = brain.Arena.TickNumber - SwarmBrainBase.AllyStaleTicks;
+        long freshCutoff = brain.Arena.TickNumber - SwarmTankBrainBase.AllyStaleTicks;
         List<RadarContact> freshEnemies = brain.RadarMap.Values
             .Where(c => !c.IsAlly && c.Timestamp >= freshCutoff)
             .ToList();

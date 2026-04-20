@@ -6,10 +6,10 @@ namespace TankSwarmCode.SwarmTank;
 
 internal static class SwarmBrainBaseStrategyExtensions
 {
-    internal static bool IsEnemyEcmActive(this SwarmBrainBase brain)
+    internal static bool IsEnemyEcmActive(this SwarmTankBrainBase brain)
         => brain.Arena.TickNumber - brain.EnemyEcmAlertTick < 20;
 
-    internal static void HandleEcm(this SwarmBrainBase brain)
+    internal static void HandleEcm(this SwarmTankBrainBase brain)
     {
         if (brain.TankConfig.HasEcm)
         {
@@ -29,7 +29,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         }
     }
 
-    internal static void ExecuteStrategy(this SwarmBrainBase brain)
+    internal static void ExecuteStrategy(this SwarmTankBrainBase brain)
     {
         RadarContact? target = brain.GetStrategyTarget();
 
@@ -56,7 +56,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         }
     }
 
-    internal static RadarContact? GetStrategyTarget(this SwarmBrainBase brain)
+    internal static RadarContact? GetStrategyTarget(this SwarmTankBrainBase brain)
     {
         if (!string.IsNullOrEmpty(brain.PriorityTargetName)
             && brain.RadarMap.TryGetValue(brain.PriorityTargetName, out RadarContact? named)
@@ -67,19 +67,19 @@ internal static class SwarmBrainBaseStrategyExtensions
         return brain.GetFreshestEnemy(30);
     }
 
-    internal static void ExecuteWolfpack(this SwarmBrainBase brain, RadarContact target)
+    internal static void ExecuteWolfpack(this SwarmTankBrainBase brain, RadarContact target)
     {
         brain.NavigateTo(target.Position, brain.TankConfig.PreferredRange);
         brain.MaintainRadar(target.Position);
         brain.LinearPredictionFire(target);
     }
 
-    internal static void ExecuteEncircle(this SwarmBrainBase brain, RadarContact target)
+    internal static void ExecuteEncircle(this SwarmTankBrainBase brain, RadarContact target)
     {
         int aliveCount = brain.GetAliveAllyCount() + 1;
         int mySlot = brain.TankConfig.FormationSlot % aliveCount;
         double orbitAngleDeg = mySlot * (360.0 / aliveCount);
-        Vector2D orbitPoint = target.Position.PolarOffset(orbitAngleDeg, SwarmBrainBase.OrbitRadius);
+        Vector2D orbitPoint = target.Position.PolarOffset(orbitAngleDeg, SwarmTankBrainBase.OrbitRadius);
 
         brain.NavigateTo(orbitPoint, 0);
         brain.MaintainRadar(target.Position);
@@ -89,7 +89,7 @@ internal static class SwarmBrainBaseStrategyExtensions
             brain.LinearPredictionFire(target);
     }
 
-    internal static void ExecutePincer(this SwarmBrainBase brain, RadarContact target)
+    internal static void ExecutePincer(this SwarmTankBrainBase brain, RadarContact target)
     {
         double groupAngle = brain.TankConfig.FormationSlot <= 1 ? 0.0 : 180.0;
         Vector2D approachPoint = target.Position.PolarOffset(groupAngle, 200.0);
@@ -98,7 +98,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         brain.LinearPredictionFire(target);
     }
 
-    internal static void ExecuteECMScreen(this SwarmBrainBase brain, RadarContact target)
+    internal static void ExecuteECMScreen(this SwarmTankBrainBase brain, RadarContact target)
     {
         if (brain.TankConfig.HasEcm)
         {
@@ -113,7 +113,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         brain.MaintainRadar(target.Position);
     }
 
-    internal static void ExecuteFallback(this SwarmBrainBase brain)
+    internal static void ExecuteFallback(this SwarmTankBrainBase brain)
     {
         Vector2D rallyCorner = brain.FurthestArenaCorner();
         brain.NavigateTo(rallyCorner, 0);
@@ -121,7 +121,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         // Do NOT fire — preserve energy
     }
 
-    internal static void ExecuteScatter(this SwarmBrainBase brain)
+    internal static void ExecuteScatter(this SwarmTankBrainBase brain)
     {
         RadarContact? enemy = brain.GetFreshestEnemy(60);
         if (enemy != null)
@@ -138,7 +138,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         brain.SetTurnRadarRight(brain.RadarSpin);
     }
 
-    internal static void Scout(this SwarmBrainBase brain)
+    internal static void Scout(this SwarmTankBrainBase brain)
     {
         brain.SetTurnRadarRight(45);
         brain.SetAhead(100);
