@@ -1,0 +1,15 @@
+using TankSwarmCode.SwarmTank.Interfaces.Models;
+
+namespace TankSwarmCode.AiCortex.Red;
+
+public sealed class RedArrowCortex : RedCortexBase
+{
+    protected override TankConfiguration Config { get; } = new()
+    {
+        FormationSlot = 2,
+        MaxFirePower = 1.5,
+        PreferredRange = 220.0,
+        HasEcm = false,
+        RetreatEnergyThreshold = 20.0
+    };
+}

@@ -24,14 +24,24 @@ Add a new C# class library project to the solution. Reference the base class pac
 
 ---
 
-## Step 2 — Choose a Base Class
+## Step 2 — Choose an Approach
 
 You have two options:
 
-- **`SwarmTankBase`** — full control; implement all AI logic yourself. Use this for bespoke strategies.
-- **`SwarmTankCortexCradleBase`** — inherit the full coordination brain (leader election, epoch strategies, volley scheduling, ECM handling) and configure it via a `TankConfiguration` record. Use this when you want the built-in team coordination and only need to tune parameters. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the `SwarmTankCortexCradleBase` API.
+**Option A — AiCortex pattern (recommended for swarm tanks)**
 
-The rest of this chapter uses `SwarmTankBase` to show a complete ground-up implementation.
+Add a reference to `TankSwarmCode.AiCortex` as well as `TankSwarmCode.SwarmTank`. Write a thin tank shell that inherits `SwarmTankBase` and implements `ITankContext`, delegating every lifecycle call to an `IAiCortex` instance. Then write the cortex itself — inheriting from `BlueCortexBase` or `RedCortexBase` (or implementing `IAiCortex` directly for a custom team). This gives you access to `SwarmCoordinator`, `TankNavigation`, and the full epoch strategy system with no duplication. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full AiCortex API.
+
+```xml
+<!-- YourSwarm.csproj — add alongside SwarmTank reference -->
+<ProjectReference Include="..\TankSwarmCode.AiCortex\TankSwarmCode.AiCortex.csproj" />
+```
+
+**Option B — SwarmTankBase directly**
+
+Inherit `SwarmTankBase` and implement all AI logic in the tank class itself. Use this for solo tanks, simple bots, or experiments that don't need swarm coordination.
+
+The rest of this chapter uses `SwarmTankBase` (Option B) to show a complete ground-up implementation.
 
 Every tank is a class that inherits from `SwarmTankBase`. Set identity in the constructor — `SwarmId` and `Role` are regular properties, not virtual:
 
@@ -329,7 +339,7 @@ private static bool SegmentsIntersect(double ax, double ay, double bx, double by
 
 `BuildingWallMap` accumulates faces seen by this tank and relayed by allies. A face that has never been echoed is not in the map, so the check only blocks shots through *known* walls — consistent with the tank's sensor picture.
 
-If you subclass `SwarmTankCortexCradleBase` instead of `SwarmTankBase`, this check is already applied automatically before every `SetFire` call.
+If you use the AiCortex pattern (Option A above), `TankNavigation.IsWallInLineOfFire` is called automatically before every `SetFire` call — you do not need to implement this check yourself.
 
 ---
 
@@ -341,7 +351,7 @@ If you subclass `SwarmTankCortexCradleBase` instead of `SwarmTankBase`, this che
 - **Check `BuildingWallMap` before firing**: wasted shots drain energy and reveal your position. The map is free to query and populated automatically if you call `base.OnScannedBuilding(e)`.
 - **Energy management**: check `State.Energy` before firing at high power; a dead tank contributes nothing.
 - **ECM awareness**: if `Arena.GetActiveBullets()` shows a bullet heading your way, consider `SetEcm(EcmMode.Jam)` as a momentary defensive measure.
-- **Role as a contract**: set `Role` honestly — `SwarmTankCortexCradleBase`'s ECM handling checks `Role == EcmSpecialist`, and any coordination logic you write can use `Role` to differentiate behaviour across swarm members.
+- **Role as a contract**: set `Role` honestly — `SwarmCoordinator`'s ECM handling checks `Role == EcmSpecialist`, and any coordination logic you write can use `Role` to differentiate behaviour across swarm members.
 
 ---
 

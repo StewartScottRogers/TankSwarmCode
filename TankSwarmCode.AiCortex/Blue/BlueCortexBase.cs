@@ -1,0 +1,75 @@
+using TankSwarmCode.SwarmTank.Interfaces;
+using TankSwarmCode.SwarmTank.Interfaces.Enums;
+using TankSwarmCode.SwarmTank.Interfaces.Events;
+using TankSwarmCode.SwarmTank.Interfaces.Models;
+
+namespace TankSwarmCode.AiCortex.Blue;
+
+public abstract class BlueCortexBase : IAiCortex
+{
+    protected abstract TankConfiguration Config { get; }
+
+    private SwarmCoordinator _swarm = null!;
+    protected double RadarSpin { get; set; } = 45.0;
+    private long _scheduledFireTick = -1;
+
+    public virtual void OnStart(ITankContext ctx)
+    {
+        _swarm = SwarmCoordinator.ForTeam(ctx.SwarmId);
+        _swarm.Reset();
+        _scheduledFireTick = -1;
+    }
+
+    public virtual void OnTick(ITankContext ctx)
+    {
+        _swarm.UpdateSelf(ctx, Config);
+        _swarm.BroadcastAllyPing(ctx, Config);
+        _swarm.PruneStaleAllies(ctx);
+
+        string leader = _swarm.DetermineLeader();
+        if (leader == ctx.Name
+            && (ctx.Arena.TickNumber % SwarmCoordinator.LeadershipEpochTicks == 0 || _swarm.StrategyEpoch < 0))
+        {
+            long? leaderFireTick = _swarm.RunEpochLogic(ctx, Config);
+            if (leaderFireTick.HasValue) _scheduledFireTick = leaderFireTick.Value;
+        }
+
+        _swarm.HandleEcm(ctx, Config);
+
+        if (_scheduledFireTick > 0 && ctx.Arena.TickNumber >= _scheduledFireTick)
+        {
+            RadarContact? volleyTarget = _swarm.GetStrategyTarget(ctx);
+            if (volleyTarget != null)
+            {
+                double power = Math.Min(Config.MaxFirePower, ctx.State.Energy * 0.1);
+                if (power >= 0.1 && ctx.State.Energy >= 5 && !TankNavigation.IsWallInLineOfFire(ctx, volleyTarget.Position))
+                    ctx.SetFire(power);
+            }
+            _scheduledFireTick = -1;
+        }
+
+        _swarm.ExecuteStrategy(ctx, Config, RadarSpin);
+    }
+
+    public virtual void OnSwarmMessage(ITankContext ctx, SwarmMessageEventArgs e)
+    {
+        switch (e.Message.Type)
+        {
+            case SwarmMessageType.AllyPing:
+                _swarm.HandleAllyPing(ctx, e);
+                break;
+            case SwarmMessageType.StrategyCommand:
+                _swarm.HandleStrategyCommand(e);
+                break;
+            case SwarmMessageType.VolleyFire:
+                long? tick = _swarm.HandleVolleyFire(ctx, Config, e);
+                if (tick.HasValue) _scheduledFireTick = tick.Value;
+                break;
+            case SwarmMessageType.EcmAlert:
+                _swarm.HandleEcmAlert(ctx);
+                break;
+        }
+    }
+
+    public virtual void OnRoundEnded(ITankContext ctx, RoundEndedEventArgs e) { }
+}

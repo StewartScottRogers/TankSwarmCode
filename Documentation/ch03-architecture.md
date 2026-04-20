@@ -8,7 +8,7 @@
 
 TankSwarmCode is split into narrow, purpose-built projects that keep the public API separate from the implementation:
 
-- **AI authors** only reference `TankSwarmCode.SwarmTank` — they never touch the engine or renderer.
+- **AI authors** only reference `TankSwarmCode.SwarmTank` (for interfaces) and `TankSwarmCode.AiCortex` (for the cortex framework) — they never touch the engine or renderer.
 - **Engine changes** are isolated to `TankSwarmCode.Arena` and do not require AI code to be recompiled.
 - **The renderer** is a separate WinForms layer that consumes read-only snapshots, so it cannot mutate simulation state.
 
@@ -27,9 +27,13 @@ TankSwarmCode.Gui (WinForms host / renderer)
     ├── TankSwarmCode.SwarmTank
     │
     ├── TankSwarmCode.SwarmTanks.Red
+    │       ├── TankSwarmCode.AiCortex
+    │       │       └── TankSwarmCode.SwarmTank
     │       └── TankSwarmCode.SwarmTank
     │
     └── TankSwarmCode.SwarmTanks.Blue
+            ├── TankSwarmCode.AiCortex
+            │       └── TankSwarmCode.SwarmTank
             └── TankSwarmCode.SwarmTank
 
 TankSwarmCode.Cli (headless runner)
@@ -52,13 +56,15 @@ Neither the Red nor Blue swarm projects reference the Arena project — they can
 Everything AI authors see lives here:
 
 - `ISwarmTank` — the tank contract the engine calls
+- `ITankContext` — the mediated view a cortex receives of its tank (commands + read-only state)
+- `IAiCortex` — the contract every AiCortex implementation must fulfil
 - `IArenaContext` — read-only arena view (`ArenaWidth`, `ArenaHeight`, `TickNumber`, `LivingTankCount`, `Buildings`, `GetActiveBullets()`, `GetSwarmSize()`)
 - `ArenaConstants` — all physics constants (`MaxVelocity`, turn rates, damage parameters, ECM costs)
 - `Models/` — immutable data snapshots: `TankState`, `TankCommand`, `RadarContact`, `ScanResult`, `SwarmMessage`, `BulletState`, `BuildingDefinition`, `Vector2D`
 - `Events/` — event argument types for every lifecycle hook
 - `Enums/` — `TankRole`, `EcmMode`, `SwarmMessageType`
 
-### Layer 2 — Tank Base Classes (`TankSwarmCode.SwarmTank`)
+### Layer 2 — Tank Base Class (`TankSwarmCode.SwarmTank`)
 
 **`SwarmTankBase`** implements `ISwarmTank` and exposes the friendly AI API:
 
@@ -68,16 +74,18 @@ Everything AI authors see lives here:
 - Radar helpers: `GetFreshestEnemy()`, `GetFreshestContact()`
 - Default no-op implementations of every virtual lifecycle method
 
-**`SwarmTankCortexCradleBase`** extends `SwarmTankBase` with a full team-coordination brain used by all built-in tanks:
+Tank shells (e.g. `BlueEcm`, `RedGhost`) subclass `SwarmTankBase` and implement `ITankContext` — the interface through which they expose their engine state and commands to the cortex. The shell has no AI logic of its own; it delegates every lifecycle call to its `IAiCortex`.
 
-- Slot-based leader election (lowest `FormationSlot` among living allies leads each 40-tick epoch)
-- Epoch strategy selection: Wolfpack, Encircle, Pincer, ECMScreen, Fallback, Scatter
-- Coordinated volley scheduling via `VolleyFire` broadcast messages
-- Ally health tracking via `AllyPing` heartbeats every 15 ticks
-- Automatic ECM mode switching based on strategy and received `EcmAlert` messages
-- Configured via `TankConfiguration` — subclasses only need to provide a config record
+### Layer 3 — AiCortex (`TankSwarmCode.AiCortex`)
 
-### Layer 3 — Physics Engine (`TankSwarmCode.Arena`)
+All AI logic lives here. This is the only project that changes between research iterations.
+
+- **`SwarmCoordinator`** — per-team shared brain (one instance per swarm, accessed via `SwarmCoordinator.ForTeam(swarmId)`). Owns all team-wide state: `AllyEntryMap`, `ActiveSwarmStrategy`, `PriorityTargetName`, epoch counter, ECM alert tracking. Implements leader election, strategy selection, volley scheduling, ECM mode switching, and all six epoch strategies.
+- **`TankNavigation`** — stateless static helpers: `NavigateTo`, `MaintainRadar`, `LinearPredictionFire`, `IsWallInLineOfFire`, `FurthestArenaCorner`.
+- **`CortexFactory`** — maps tank name strings to concrete `IAiCortex` instances. The single seam for swapping cortex implementations.
+- **`Blue/BlueCortexBase`** and **`Red/RedCortexBase`** — abstract base classes with virtual `OnTick` and `OnSwarmMessage` implementations. Each concrete cortex (e.g. `BlueEcmCortex`) inherits from the appropriate base and only declares a `TankConfiguration`.
+
+### Layer 4 — Physics Engine (`TankSwarmCode.Arena`)
 
 `ArenaEngine` owns all mutable runtime state and drives the tick loop:
 
@@ -86,7 +94,7 @@ Everything AI authors see lives here:
 - `ArenaEngine` — the simulation loop (detailed in [Chapter 4](ch04-physics-engine.md))
 - `ArenaContext` — snapshot-backed implementation of `IArenaContext`
 
-### Layer 4 — Host Applications
+### Layer 5 — Host Applications
 
 **`TankSwarmCode.Gui` (WinForms host)**
 
@@ -115,7 +123,8 @@ ArenaUserControl.Tick()
     ▼
 ArenaEngine.Tick()          ← one simulation step
     │
-    ├─ OnTick() (parallel)              → each tank writes its TankCommand
+    ├─ OnTick() (parallel)              → each tank shell calls _cortex.OnTick(this)
+    │                                      → cortex writes commands via ITankContext
     ├─ FlushCommands() (sequential)     → commands collected
     ├─ ApplyMovement() (sequential)     → positions updated; wall & building collisions
     ├─ ApplyFiring() (sequential)       → new BulletRuntimeStates created

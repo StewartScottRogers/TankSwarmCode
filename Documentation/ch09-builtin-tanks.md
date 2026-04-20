@@ -8,15 +8,62 @@ Two fully implemented swarms ship with the project. They serve as reference impl
 
 ---
 
-## Architecture: SwarmTankCortexCradleBase
+## Architecture: AiCortex Pattern
 
-All built-in tanks inherit from `SwarmTankCortexCradleBase` (in `TankSwarmCode.SwarmTank/SwarmTankCortexCradleBase.cs`), not directly from `SwarmTankBase`. `SwarmTankCortexCradleBase` is a concrete AI layer that sits on top of `SwarmTankBase` and provides a full team-coordination brain. Individual tanks configure it via a `TankConfiguration` record:
+All built-in tanks use the composition pattern introduced by `TankSwarmCode.AiCortex`. Each tank type is two things:
+
+1. **A frozen shell** (in `TankSwarmCode.SwarmTanks.Blue` or `.Red`) — a thin `SwarmTankBase` subclass that implements `ITankContext` and delegates every lifecycle call to a single `IAiCortex` field. The shell code never changes.
+
+2. **A cortex** (in `TankSwarmCode.AiCortex`) — an `IAiCortex` implementation that contains all AI logic and owns its `TankConfiguration`. This is the only file that changes between research iterations.
+
+### Tank shell (frozen)
 
 ```csharp
-protected internal abstract TankConfiguration TankConfig { get; }
+public sealed class BlueEcm : SwarmTankBase, ITankContext
+{
+    private readonly IAiCortex _cortex = CortexFactory.For("BlueEcm");
+
+    public BlueEcm() { SwarmId = 2; Role = TankRole.EcmSpecialist; }
+
+    public override void OnTick(TickEventArgs e)                 => _cortex.OnTick(this);
+    public override void OnSwarmMessage(SwarmMessageEventArgs e) => _cortex.OnSwarmMessage(this, e);
+    // ... ITankContext pass-throughs ...
+}
 ```
 
+### Cortex (the research target)
+
+```csharp
+public sealed class BlueEcmCortex : BlueCortexBase
+{
+    protected override TankConfiguration Config { get; } = new()
+    {
+        FormationSlot = 4, MaxFirePower = 1.5, PreferredRange = 150.0,
+        HasEcm = true, OffensiveEcmMode = EcmMode.Jam, RetreatEnergyThreshold = 35.0
+    };
+}
+```
+
+`BlueCortexBase` (and its mirror `RedCortexBase`) provide a default `OnTick` / `OnSwarmMessage` implementation that calls into `SwarmCoordinator` and `TankNavigation`. Override any method to change behaviour for that tank type only.
+
+### CortexFactory
+
+`CortexFactory.For(string tankName)` is the single seam for swapping cortex implementations. To give `BlueEcm` a completely different brain, create a new class implementing `IAiCortex` and update the `"BlueEcm"` entry in the factory — no other file needs touching.
+
+---
+
+## SwarmCoordinator — Shared Team Brain
+
+`SwarmCoordinator` is shared across all tanks of the same team (one instance per `SwarmId`, retrieved via `SwarmCoordinator.ForTeam(swarmId)`). It owns:
+
+- `AllyEntryMap` — tracks living allies and their energy via `AllyPing` heartbeats
+- `ActiveSwarmStrategy` and `PriorityTargetName` — the current epoch's orders
+- Leader election, strategy selection, volley scheduling, ECM mode switching
+- Handlers for `AllyPing`, `StrategyCommand`, `VolleyFire`, and `EcmAlert` messages
+
 ### TankConfiguration Fields
+
+Each cortex declares a `TankConfiguration` that `SwarmCoordinator` uses to tune behaviour:
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -31,7 +78,7 @@ protected internal abstract TankConfiguration TankConfig { get; }
 
 ### Leader Election
 
-Every 40 ticks (`LeadershipEpochTicks`), the living tank with the **lowest `FormationSlot`** acts as leader for the epoch. Ties are broken alphabetically by name. The leader:
+Every 40 ticks (`SwarmCoordinator.LeadershipEpochTicks`), the living tank with the **lowest `FormationSlot`** acts as leader for the epoch. Ties are broken alphabetically by name. The leader:
 
 1. Picks the **priority target** — the lowest-energy enemy in `RadarMap`.
 2. Selects a **strategy** (see below) and broadcasts a `StrategyCommand` message to all allies.
@@ -56,7 +103,7 @@ Non-leader tanks receive and apply these messages immediately. If the leader die
 
 ### Ally Ping Protocol
 
-Every 15 ticks each tank broadcasts an `AllyPing` message containing its formation slot and current energy. The brain uses these pings to:
+Every 15 ticks each cortex broadcasts an `AllyPing` message containing its formation slot and current energy. `SwarmCoordinator` uses these pings to:
 
 - Track which allies are still alive (entries older than 30 ticks are purged).
 - Calculate the alive-ally count for strategy selection.
@@ -66,9 +113,9 @@ Every 15 ticks each tank broadcasts an `AllyPing` message containing its formati
 
 ### Wall-Aware Firing
 
-`SwarmTankCortexCradleBase` never fires through a wall it knows about. Before every shot — both in `LinearPredictionFire` and in scheduled volley fire — the brain checks every `WallSegment` in `BuildingWallMap` against the line from the tank to the target (or predicted position). If any known wall segment intersects that line, the shot is suppressed for that tick. The gun continues tracking the target so the shot fires as soon as the line of fire is clear.
+`TankNavigation.IsWallInLineOfFire` is called before every shot — both in `LinearPredictionFire` and in scheduled volley fire. If any known wall segment in `BuildingWallMap` intersects the line to the target, the shot is suppressed for that tick. The gun continues tracking so the shot fires as soon as the line of fire is clear.
 
-Walls accumulate in `BuildingWallMap` from both direct radar echoes and `BuildingEchoShare` messages relayed by allies. A tank that has never scanned a particular building face will not know to avoid shooting through it.
+Walls accumulate in `BuildingWallMap` from both direct radar echoes and `BuildingEchoShare` messages relayed by allies.
 
 ---
 
@@ -83,12 +130,12 @@ Walls accumulate in `BuildingWallMap` from both direct radar echoes and `Buildin
 
 **Default roster (4 tanks)**
 
-| Tank | File | Slot | Role | Max Power | Range | ECM |
-|------|------|------|------|-----------|-------|-----|
-| RedHammer | `RedHammer.cs` | 0 | Attacker | 3.0 | 200 px | — |
-| RedBlade | `RedBlade.cs` | 1 | Attacker | 2.5 | 160 px | — |
-| RedArrow | `RedArrow.cs` | 2 | Scout | 1.5 | 220 px | — |
-| RedGhost | `RedGhost.cs` | 3 | EcmSpecialist | 0.1 | 150 px | JamAndSpoof |
+| Tank | Cortex file | Slot | Role | Max Power | Range | ECM |
+|------|-------------|------|------|-----------|-------|-----|
+| RedHammer | `Red/RedHammerCortex.cs` | 0 | Attacker | 3.0 | 200 px | — |
+| RedBlade | `Red/RedBladeCortex.cs` | 1 | Attacker | 2.5 | 160 px | — |
+| RedArrow | `Red/RedArrowCortex.cs` | 2 | Scout | 1.5 | 220 px | — |
+| RedGhost | `Red/RedGhostCortex.cs` | 3 | EcmSpecialist | 0.1 | 150 px | JamAndSpoof |
 
 For NvN matches larger than 4 per side, additional `RedTrooper` instances fill slots 4, 5, …
 
@@ -126,7 +173,7 @@ RedBlade closes to tighter range than RedHammer (160 px vs 200 px) and fires at 
 new TankConfiguration { FormationSlot = 2, MaxFirePower = 1.5, PreferredRange = 220.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
 ```
 
-RedArrow's `Role` is `Scout`. Its lighter fire power (1.5) is intentional — faster bullets are harder to dodge at long range (220 px). `SwarmTankCortexCradleBase`'s `MaintainRadar` continuously re-locks the radar on the priority target, giving the whole swarm frequent fresh contacts. RedArrow also contributes to `VolleyFire` schedules when in range.
+RedArrow's `Role` is `Scout`. Its lighter fire power (1.5) is intentional — faster bullets are harder to dodge at long range (220 px). `TankNavigation.MaintainRadar` continuously re-locks the radar on the priority target, giving the whole swarm frequent fresh contacts. RedArrow also contributes to `VolleyFire` schedules when in range.
 
 ---
 
@@ -156,13 +203,13 @@ RedGhost has a high retreat threshold (40 energy) because once below that level 
 
 **Default roster (5 tanks)**
 
-| Tank | File | Slot | Role | Max Power | Range | ECM |
-|------|------|------|------|-----------|-------|-----|
-| BlueStrike | `BlueStrike.cs` | 0 | Attacker | 3.0 | 250 px | — |
-| BlueSharp | `BlueSharp.cs` | 1 | Support | 3.0 | 300 px | — |
-| BlueRush | `BlueRush.cs` | 2 | Attacker | 2.5 | 180 px | — |
-| BlueGuard | `BlueGuard.cs` | 3 | Defender | 2.0 | 200 px | — |
-| BlueEcm | `BlueEcm.cs` | 4 | EcmSpecialist | 1.5 | 150 px | Jam |
+| Tank | Cortex file | Slot | Role | Max Power | Range | ECM |
+|------|-------------|------|------|-----------|-------|-----|
+| BlueStrike | `Blue/BlueStrikeCortex.cs` | 0 | Attacker | 3.0 | 250 px | — |
+| BlueSharp | `Blue/BlueSharpCortex.cs` | 1 | Support | 3.0 | 300 px | — |
+| BlueRush | `Blue/BlueRushCortex.cs` | 2 | Attacker | 2.5 | 180 px | — |
+| BlueGuard | `Blue/BlueGuardCortex.cs` | 3 | Defender | 2.0 | 200 px | — |
+| BlueEcm | `Blue/BlueEcmCortex.cs` | 4 | EcmSpecialist | 1.5 | 150 px | Jam |
 
 For NvN matches larger than 5 per side, additional `BlueTrooper` instances fill slots 5, 6, …
 

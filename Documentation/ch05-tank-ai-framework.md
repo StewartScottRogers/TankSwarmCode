@@ -6,13 +6,22 @@
 
 ## Overview
 
-The AI framework has two layers in `TankSwarmCode.SwarmTank`:
+The AI framework spans two projects:
 
-- **`SwarmTankBase`** (`SwarmTank.cs`) — the base class for all tank AI. It implements `ISwarmTank`, maintains `RadarMap`, exposes the command API (`SetAhead`, `SetFire`, `Broadcast`, etc.), and provides default no-op lifecycle hooks. Subclass this directly for full control over your AI logic.
+**`TankSwarmCode.SwarmTank`** — the stable contracts layer, never changes:
 
-- **`SwarmTankCortexCradleBase`** (`SwarmTankCortexCradleBase.cs`) — a concrete AI layer built on top of `SwarmTankBase`. All built-in Red and Blue tanks subclass `SwarmTankCortexCradleBase`. It provides a complete team-coordination brain: leader election, epoch-based strategy selection, coordinated volley scheduling, ally health tracking, and automatic ECM handling. You configure it with a `TankConfiguration` record rather than implementing strategy logic from scratch. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full `SwarmTankCortexCradleBase` reference.
+- **`SwarmTankBase`** — the engine-facing base class. Implements `ISwarmTank`, maintains `RadarMap`, exposes the command API (`SetAhead`, `SetFire`, `Broadcast`, etc.), and provides default no-op lifecycle hooks.
+- **`ITankContext`** — the interface through which a cortex observes and commands its tank. Tank shells implement this; cortexes program against it.
+- **`IAiCortex`** — the contract every AiCortex implementation must fulfil: `OnStart`, `OnTick`, `OnSwarmMessage`, `OnRoundEnded`.
 
-For a custom tank you can subclass either: `SwarmTankBase` for full control, or `SwarmTankCortexCradleBase` to inherit the coordination brain and override only the `TankConfiguration`.
+**`TankSwarmCode.AiCortex`** — the only project that changes between research iterations:
+
+- **`SwarmCoordinator`** — per-team shared brain. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full coordination brain reference.
+- **`TankNavigation`** — stateless movement and firing helpers.
+- **`BlueCortexBase`** / **`RedCortexBase`** — abstract base classes with default team coordination logic; override any method to diverge.
+- Concrete cortexes (`BlueEcmCortex`, `RedGhostCortex`, …) — each declares only its `TankConfiguration`.
+
+Tank shells (`BlueEcm`, `RedGhost`, …) inherit from `SwarmTankBase`, implement `ITankContext`, and hold a single `IAiCortex` field. They delegate every lifecycle call to the cortex. The shell code is permanently frozen after wiring.
 
 ---
 
@@ -46,9 +55,39 @@ All events fire within the same tick they occur, before `OnTick` on the subseque
 
 ---
 
+## ITankContext
+
+`ITankContext` is the interface every cortex depends on. Tank shells implement it as thin pass-throughs to the underlying `SwarmTankBase` members.
+
+### Read-only properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Name` | `string` | This tank's unique name |
+| `SwarmId` | `int` | Team identifier |
+| `Role` | `TankRole` | Current role (get/set) |
+| `State` | `TankState` | Full immutable snapshot updated each tick |
+| `Arena` | `IArenaContext` | Read-only arena view |
+| `RadarMap` | `IReadOnlyDictionary<string, RadarContact>` | Known contacts from own scans and ally broadcasts |
+| `BuildingWallMap` | `IReadOnlyDictionary<string, BuildingEcho>` | Known building wall faces |
+
+### Command methods
+
+| Method | Description |
+|--------|-------------|
+| `SetAhead(double distance)` / `SetBack(double distance)` | Movement |
+| `SetTurnRight(double degrees)` / `SetTurnLeft(double degrees)` | Body rotation |
+| `SetTurnGunRight(double degrees)` / `SetTurnGunLeft(double degrees)` | Gun rotation |
+| `SetTurnRadarRight(double degrees)` / `SetTurnRadarLeft(double degrees)` | Radar rotation |
+| `SetFire(double power)` | Fire gun (power ∈ [0.1, 3.0]) |
+| `SetEcm(EcmMode mode)` | Activate ECM mode |
+| `Broadcast(SwarmMessage message)` | Queue a swarm message |
+
+---
+
 ## Properties Available to AI
 
-These read-only properties are always current (updated each tick by the engine):
+These read-only properties on `ITankContext` are always current (updated each tick by the engine):
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -95,10 +134,10 @@ Commands are **buffered**: calling a setter stores the intent. At the end of the
 ### Movement
 
 ```csharp
-SetAhead(double distance)        // move forward
-SetBack(double distance)         // move backward
-SetTurnRight(double degrees)     // turn body clockwise
-SetTurnLeft(double degrees)      // turn body counter-clockwise
+ctx.SetAhead(double distance)        // move forward
+ctx.SetBack(double distance)         // move backward
+ctx.SetTurnRight(double degrees)     // turn body clockwise
+ctx.SetTurnLeft(double degrees)      // turn body counter-clockwise
 ```
 
 Movement and turning can be combined in the same tick — the tank arcs while turning.
@@ -106,9 +145,9 @@ Movement and turning can be combined in the same tick — the tank arcs while tu
 ### Gun
 
 ```csharp
-SetTurnGunRight(double degrees)
-SetTurnGunLeft(double degrees)
-SetFire(double power)            // power in [0.1, 3.0]
+ctx.SetTurnGunRight(double degrees)
+ctx.SetTurnGunLeft(double degrees)
+ctx.SetFire(double power)            // power in [0.1, 3.0]
 ```
 
 `SetFire` is silently ignored when the tank is jamming (`Jam` or `JamAndSpoof`) or when the tank lacks sufficient energy.
@@ -116,18 +155,18 @@ SetFire(double power)            // power in [0.1, 3.0]
 ### Radar
 
 ```csharp
-SetTurnRadarRight(double degrees)
-SetTurnRadarLeft(double degrees)
+ctx.SetTurnRadarRight(double degrees)
+ctx.SetTurnRadarLeft(double degrees)
 ```
 
-To spin the radar continuously, call `SetTurnRadarRight(double.MaxValue)` every tick — the engine clamps it to 45°/tick.
+To spin the radar continuously, call `ctx.SetTurnRadarRight(double.MaxValue)` every tick — the engine clamps it to 45°/tick.
 
 Radar commands have no effect while jamming — the radar is physically offline.
 
 ### ECM
 
 ```csharp
-SetEcm(EcmMode mode)   // Off / Jam / Spoof / Burnthrough / JamAndSpoof
+ctx.SetEcm(EcmMode mode)   // Off / Jam / Spoof / Burnthrough / JamAndSpoof
 ```
 
 Activates an ECM mode for the current tick. The engine deducts the energy cost in the ECM phase and applies the effect during radar processing. See [Chapter 13: ECM System](ch13-ecm-system.md).
@@ -143,7 +182,7 @@ Activates an ECM mode for the current tick. The engine deducts the energy cost i
 ### Swarm Communication
 
 ```csharp
-Broadcast(SwarmMessage message)
+ctx.Broadcast(SwarmMessage message)
 ```
 
 Queues a message for delivery to all living, non-jamming allies at the end of the current tick. See [Chapter 6: Swarm Communication](ch06-swarm-communication.md).
@@ -405,19 +444,19 @@ if (gunAligned && shotClear)
     SetFire(power);
 ```
 
-### `IsWallInLineOfFire(Vector2D target)` — `SwarmTankCortexCradleBase` only
+### `TankNavigation.IsWallInLineOfFire(ITankContext ctx, Vector2D target)`
 
 ```csharp
-internal bool IsWallInLineOfFire(Vector2D target)
+internal static bool IsWallInLineOfFire(ITankContext ctx, Vector2D target)
 ```
 
-Available on `SwarmTankCortexCradleBase` subclasses. Returns `true` if any wall segment in `BuildingWallMap` intersects the line from this tank's position to `target`. Uses a parametric segment-segment intersection test — parallel walls return `false`.
-
-`SwarmTankCortexCradleBase` calls this automatically before every `SetFire` in `LinearPredictionFire` and the scheduled volley path. Override `OnScannedBuilding` and call `base.OnScannedBuilding(e)` to keep `BuildingWallMap` current, which in turn keeps the wall check accurate.
+Available via `TankNavigation` in `TankSwarmCode.AiCortex`. Returns `true` if any wall segment in `ctx.BuildingWallMap` intersects the line from the tank's position to `target`. `BlueCortexBase` and `RedCortexBase` call this automatically before every scheduled volley fire and inside `LinearPredictionFire`.
 
 ---
 
-## Minimal Tank Example
+## Minimal Tank Example (SwarmTankBase)
+
+For a solo tank or custom implementation that doesn't use the AiCortex framework:
 
 ```csharp
 using TankSwarmCode.SwarmTank;
@@ -480,7 +519,7 @@ public class SimpleTank : SwarmTankBase
 }
 ```
 
-For a complete working example with linear-prediction firing and swarm messaging, see [Chapter 10: Building Your Own Tank](ch10-custom-tank.md).
+For a complete swarm implementation using the AiCortex framework, see [Chapter 10: Building Your Own Tank](ch10-custom-tank.md).
 
 ---
 
