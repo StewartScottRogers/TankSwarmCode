@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 87 complete
+2026-04-20 — Iteration 88 complete
 
 ## Current Iteration
-**88** — pending
+**89** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -128,11 +128,44 @@ Rate of improvement: ~4pp Red per +0.5 MaxFP (from 1.5→2.0). Need ~13pp more t
 
 Diminishing returns: 1.0→2.0 = +11pp Red; 2.0→4.0 = +6pp Red. Rate slowing. Need ~7pp more. Next: MaxFP=6.0 to see if curve continues or plateaus near 43%.
 
-**Next hypothesis (iter-88):** MaxFP=6.0, PR=150, seed 1000. Predict: ~46–48% Red. If close to balance → binary-search fine-tune. If plateau → different parameter needed.
+**New arch MaxFP sweep (iters 84–88):**
+| MaxFP | PR  | Seed | Red%  | Blue% | Notes |
+|-------|-----|------|-------|-------|-------|
+| 1.0   | 150 | 1000 | 26%   | 74%   | iter-85 |
+| 1.5   | 150 | 1000 | 33%   | 66%   | iter-84 baseline |
+| 2.0   | 150 | 1000 | 37%   | 63%   | iter-86 |
+| 4.0   | 150 | 1000 | 43%   | 57%   | iter-87 |
+| 6.0   | 150 | 1000 | 58%   | 42%   | iter-88 — OVER-CORRECTED |
+
+Balance crossover is between MaxFP=4.0 (43% Red) and MaxFP=6.0 (58% Red). Binary search midpoint: **MaxFP=5.0**.
+
+**Next hypothesis (iter-89):** MaxFP=5.0, PR=150, seed 1000. Predict: ~50-51% Red (midpoint).
 
 ---
 
 ## Iteration Log
+
+### Iter 88 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ COMPLETED — MaxFP=6.0 = Red 58% — OVER-CORRECTED; balance crossover between MaxFP=4.0 and 6.0
+
+**Hypothesis:** MaxFP=6.0, PR=150, seed 1000. Predict: ~46–48% Red (continuation of trend).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=6.0, PR=150 (new arch)
+
+**Results:**
+- Red 117 (58%) / Blue 83 (42%) — **RED-DOMINANT** (prediction WRONG — over-corrected)
+- RedArrow: MVP (113/117 = 97% WinSurv)
+- RedHammer: Top attacker (rate 7.73) — extremely high
+- BlueStrike: Blue MVP (79/83 = 95%) but Hider (rate 0.10) — barely firing
+- BlueEcm: ECM, Rate/100t: 0.54 — nearly silent
+- ALL Blue tank decisive kills = 0 (all Blue wins are timeout-only)
+- First kill victim: Blue in 73% of matches — Red kills Blue first
+
+**Key finding:** MaxFP=6.0 drastically over-corrects. BlueEcm burns energy too fast at 6.0 power, depleting before winning timeouts. All Blue wins are pure timeouts. RedHammer becomes a damage machine (7.73 rate). The balance crossover is between MaxFP=4.0 (Red 43%) and MaxFP=6.0 (Red 58%). Binary search: MaxFP=5.0 next.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 87 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-20
