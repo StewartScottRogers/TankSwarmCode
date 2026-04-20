@@ -1,5 +1,5 @@
 using TankSwarmCode.Arena;
-using TankSwarmCode.SwarmTank.Interfaces;
+using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTanks.Blue;
 using TankSwarmCode.SwarmTanks.Red;
 

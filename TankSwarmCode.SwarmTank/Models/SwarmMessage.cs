@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
+using TankSwarmCode.SwarmTank.Enums;
 
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>
 /// A message broadcast by one swarm member to all allies in the same swarm.

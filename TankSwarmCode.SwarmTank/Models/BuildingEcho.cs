@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>
 /// Radar echo returned when a sweep hits a building. Contains only the wall faces

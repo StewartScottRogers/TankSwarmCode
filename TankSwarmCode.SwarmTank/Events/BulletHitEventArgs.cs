@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.SwarmTank.Interfaces.Events;
+namespace TankSwarmCode.SwarmTank.Events;
 
 /// <summary>Fired when a bullet fired by this tank strikes an enemy.</summary>
 public sealed class BulletHitEventArgs : EventArgs

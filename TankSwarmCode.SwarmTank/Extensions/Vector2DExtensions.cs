@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.SwarmTank;
+namespace TankSwarmCode.SwarmTank.Extensions;
 
 public static class Vector2DExtensions
 {

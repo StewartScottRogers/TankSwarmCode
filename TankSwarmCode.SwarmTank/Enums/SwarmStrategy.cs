@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Enums;
+namespace TankSwarmCode.SwarmTank.Enums;
 
 /// <summary>Collective tactical mode broadcast by the swarm leader each epoch.</summary>
 public enum SwarmStrategy

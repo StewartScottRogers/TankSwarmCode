@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Enums;
+namespace TankSwarmCode.SwarmTank.Enums;
 
 /// <summary>Defines the tactical role a tank plays within its swarm.</summary>
 public enum TankRole

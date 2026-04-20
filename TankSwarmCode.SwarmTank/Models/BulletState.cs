@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>Immutable snapshot of an in-flight bullet.</summary>
 public record BulletState

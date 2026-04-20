@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Enums;
+namespace TankSwarmCode.SwarmTank.Enums;
 
 /// <summary>
 /// Electronic Counter-Measures mode a tank can activate each tick.

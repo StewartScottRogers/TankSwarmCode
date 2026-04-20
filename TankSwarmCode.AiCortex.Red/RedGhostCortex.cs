@@ -1,11 +1,12 @@
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.AiCortex.Red.Library;
+using TankSwarmCode.SwarmTank.Enums;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.AiCortex.Red;
 
 public sealed class RedGhostCortex : RedCortexBase
 {
-    protected override TankConfiguration Config { get; } = new()
+    protected override TankConfiguration TankConfiguration { get; } = new()
     {
         FormationSlot = 3,
         MaxFirePower = 0.1,

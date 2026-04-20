@@ -1,10 +1,10 @@
 ﻿using System.Drawing.Drawing2D;
 using TankSwarmCode.Arena;
 using TankSwarmCode.Arena.Interfaces;
-using TankSwarmCode.SwarmTank.Interfaces;
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Events;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank;
+using TankSwarmCode.SwarmTank.Enums;
+using TankSwarmCode.SwarmTank.Events;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.Gui;
 
@@ -68,7 +68,7 @@ public partial class ArenaUserControl : UserControl
     private readonly Dictionary<string, RectangleF> _closeBtnBounds = new(StringComparer.Ordinal);
     private readonly Dictionary<string, RectangleF> _ecmBtnBounds   = new(StringComparer.Ordinal);
     // ECM mode currently forced via the panel button (null = let tank AI decide)
-    private readonly Dictionary<string, TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode?> _ecmOverrides = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, EcmMode?> _ecmOverrides = new(StringComparer.Ordinal);
 
     // Per-tank combat stats accumulated each tick (same logic as CLI)
     private readonly Dictionary<string, double> _damageTaken  = new(StringComparer.Ordinal);
@@ -1755,10 +1755,10 @@ public partial class ArenaUserControl : UserControl
         // Ordered rows displayed in the panel body (label, value)
         string ecmLabel = tank.ActiveEcm switch
         {
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam         => "JAM \u26a1",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof       => "SPOOF \ud83d\udc7b",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof => "JAM+SPOOF \u26a1\ud83d\udc7b",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough => "ECCM \ud83d\udcf6",
+            EcmMode.Jam         => "JAM \u26a1",
+            EcmMode.Spoof       => "SPOOF \ud83d\udc7b",
+            EcmMode.JamAndSpoof => "JAM+SPOOF \u26a1\ud83d\udc7b",
+            EcmMode.Burnthrough => "ECCM \ud83d\udcf6",
             _                                                             => "Off"
         };
         (string Label, string Value)[] rows =
@@ -1857,11 +1857,11 @@ public partial class ArenaUserControl : UserControl
         _ecmOverrides.TryGetValue(tank.Name, out var ecmOv);
         string ecmBtnLabel = ecmOv switch
         {
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off         => "ECM: OFF",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam         => "ECM: JAM \u26a1",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof       => "ECM: SPOOF \ud83d\udc7b",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof => "ECM: JAM+SPOOF \u26a1\ud83d\udc7b",
-            TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough => "ECM: ECCM \ud83d\udcf6",
+            EcmMode.Off         => "ECM: OFF",
+            EcmMode.Jam         => "ECM: JAM \u26a1",
+            EcmMode.Spoof       => "ECM: SPOOF \ud83d\udc7b",
+            EcmMode.JamAndSpoof => "ECM: JAM+SPOOF \u26a1\ud83d\udc7b",
+            EcmMode.Burnthrough => "ECM: ECCM \ud83d\udcf6",
             _                                                             => "ECM: Auto (AI)"
         };
 
@@ -2246,14 +2246,14 @@ public partial class ArenaUserControl : UserControl
     private void DrawEcmAura(Graphics g, TankState tank,
                              float x, float y)
     {
-        if (tank.ActiveEcm == TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off) return;
+        if (tank.ActiveEcm == EcmMode.Off) return;
 
         int half = TankBodySize / 2;
         Color tankColor = SwarmColours[Math.Abs(tank.SwarmId) % SwarmColours.Length];
 
         switch (tank.ActiveEcm)
         {
-            case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam:
+            case EcmMode.Jam:
             {
                 // Static pixel burst — dots scatter randomly just outside the hull,
                 // repositioning at ~16 fps to look like analog interference noise.
@@ -2277,7 +2277,7 @@ public partial class ArenaUserControl : UserControl
                 break;
             }
 
-            case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof:
+            case EcmMode.Spoof:
             {
                 // A faint ghost copy of the hull that slowly orbits the tank — a decoy echo.
                 float phase = (float)(DateTime.UtcNow.Ticks % (long)(TimeSpan.TicksPerSecond * 3.0))
@@ -2335,7 +2335,7 @@ public partial class ArenaUserControl : UserControl
                 break;
             }
 
-            case TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough:
+            case EcmMode.Burnthrough:
             {
                 // A short focused arc + centre beam line extending from the hull in the radar direction,
                 // suggesting concentrated beam energy cutting through jamming.
@@ -2366,7 +2366,7 @@ public partial class ArenaUserControl : UserControl
 
     /// <summary>
     /// Draws all active ECM ghost echoes as semi-transparent phantom tank silhouettes.
-    /// Ghost echoes are projected by tanks in <see cref="TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof"/>
+    /// Ghost echoes are projected by tanks in <see cref="EcmMode.Spoof"/>
     /// mode and injected into enemy radar scans.  Rendering them here gives spectators
     /// (and players watching via sensor-view) a visual sense of the deception field.
     /// </summary>
@@ -2419,15 +2419,15 @@ public partial class ArenaUserControl : UserControl
     /// Advances the ECM override through the cycle:
     /// Auto (null) → Off → Jam → Spoof → Burnthrough → Auto (null).
     /// </summary>
-    private static TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode? CycleEcmOverride(
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode? current) => current switch
+    private static EcmMode? CycleEcmOverride(
+        EcmMode? current) => current switch
     {
-        null                                                                  => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Off               => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Jam               => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Spoof             => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.JamAndSpoof       => TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough,
-        TankSwarmCode.SwarmTank.Interfaces.Enums.EcmMode.Burnthrough       => null,
+        null                                                                  => EcmMode.Off,
+        EcmMode.Off               => EcmMode.Jam,
+        EcmMode.Jam               => EcmMode.Spoof,
+        EcmMode.Spoof             => EcmMode.JamAndSpoof,
+        EcmMode.JamAndSpoof       => EcmMode.Burnthrough,
+        EcmMode.Burnthrough       => null,
         _                                                                   => null,
     };
 

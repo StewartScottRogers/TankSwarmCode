@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces;
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank;
+using TankSwarmCode.SwarmTank.Enums;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.Arena;
 

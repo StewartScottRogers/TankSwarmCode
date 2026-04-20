@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.SwarmTank.Interfaces;
+namespace TankSwarmCode.SwarmTank;
 
 /// <summary>
 /// Read-only view of the arena that a tank can query from within its AI methods.

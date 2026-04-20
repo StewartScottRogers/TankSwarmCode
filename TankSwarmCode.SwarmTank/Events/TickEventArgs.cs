@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Events;
+namespace TankSwarmCode.SwarmTank.Events;
 
 /// <summary>Fired once per simulation tick for every living tank.</summary>
 public sealed class TickEventArgs : EventArgs

@@ -1,7 +1,7 @@
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Enums;
+using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.SwarmTank.Interfaces;
+namespace TankSwarmCode.SwarmTank;
 
 public interface ITankContext
 {

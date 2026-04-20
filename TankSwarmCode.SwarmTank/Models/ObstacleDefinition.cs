@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>Renamed to <see cref="BuildingDefinition"/>.</summary>
 [System.Obsolete("Use BuildingDefinition instead.")]

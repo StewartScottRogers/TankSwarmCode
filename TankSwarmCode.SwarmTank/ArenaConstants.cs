@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces;
+namespace TankSwarmCode.SwarmTank;
 
 /// <summary>
 /// Robocode-derived physics constants shared by the engine and tank AI.

@@ -1,10 +1,11 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.AiCortex.Blue.Library;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.AiCortex.Blue;
 
 public sealed class BlueSharpCortex : BlueCortexBase
 {
-    protected override TankConfiguration Config { get; } = new()
+    protected override TankConfiguration TankConfiguration { get; } = new()
     {
         FormationSlot = 1,
         MaxFirePower = 3.0,

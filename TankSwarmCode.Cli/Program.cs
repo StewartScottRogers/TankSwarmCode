@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TankSwarmCode.Arena;
-using TankSwarmCode.SwarmTank.Interfaces;
+using TankSwarmCode.SwarmTank;
 
 const int DefaultMaxTicks = 5000;
 const double DefaultArenaWidth = 800;

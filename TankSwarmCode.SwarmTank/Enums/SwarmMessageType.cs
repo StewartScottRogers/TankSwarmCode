@@ -1,4 +1,6 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Enums;
+using TankSwarmCode.SwarmTank.Models;
+
+namespace TankSwarmCode.SwarmTank.Enums;
 
 /// <summary>Well-known swarm message types used for coordinated behaviour.</summary>
 public enum SwarmMessageType
@@ -33,7 +35,7 @@ public enum SwarmMessageType
     EcmAlert,
 
     /// Automatic radar sighting broadcast. The message's
-    /// <see cref="TankSwarmCode.SwarmTank.Interfaces.Models.SwarmMessage.RadarContact"/>
+    /// <see cref="SwarmMessage.RadarContact"/>
     /// carries the full contact snapshot.
     /// Emitted by the base class whenever the radar sweeps over an enemy;
     /// received contacts are merged into the recipient's <c>RadarMap</c>
@@ -70,7 +72,7 @@ public enum SwarmMessageType
 
     /// <summary>
     /// Automatic building echo broadcast. The message's
-    /// <see cref="TankSwarmCode.SwarmTank.Interfaces.Models.SwarmMessage.BuildingEcho"/>
+    /// <see cref="SwarmMessage.BuildingEcho"/>
     /// carries the wall-face data reflected by the radar.
     /// Emitted by the base class on <see cref="ISwarmTank.OnScannedBuilding"/>;
     /// received echoes are merged into the recipient's <c>BuildingWallMap</c>.

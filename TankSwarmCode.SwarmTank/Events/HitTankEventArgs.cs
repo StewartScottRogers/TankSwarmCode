@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.SwarmTank.Interfaces.Events;
+namespace TankSwarmCode.SwarmTank.Events;
 
 /// <summary>Fired when this tank physically collides with another tank.</summary>
 public sealed class HitTankEventArgs : EventArgs

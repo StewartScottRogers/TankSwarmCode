@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Events;
+using TankSwarmCode.SwarmTank.Events;
 
-namespace TankSwarmCode.SwarmTank.Interfaces;
+namespace TankSwarmCode.SwarmTank;
 
 public interface IAiCortex
 {

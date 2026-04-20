@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>
 /// Data returned when a tank's radar sweeps over an enemy.

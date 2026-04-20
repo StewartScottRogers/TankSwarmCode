@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>Immutable 2-D position or direction vector using double precision.</summary>
 public readonly record struct Vector2D(double X, double Y)

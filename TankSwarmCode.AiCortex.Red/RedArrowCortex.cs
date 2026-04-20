@@ -1,10 +1,11 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.AiCortex.Red.Library;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.AiCortex.Red;
 
 public sealed class RedArrowCortex : RedCortexBase
 {
-    protected override TankConfiguration Config { get; } = new()
+    protected override TankConfiguration TankConfiguration { get; } = new()
     {
         FormationSlot = 2,
         MaxFirePower = 1.5,

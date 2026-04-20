@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
+using TankSwarmCode.SwarmTank.Enums;
 
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>
 /// Immutable snapshot of a tank's state at a given tick.

@@ -1,7 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces;
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Events;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Enums;
+using TankSwarmCode.SwarmTank.Events;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.SwarmTank;
 

@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Events;
+namespace TankSwarmCode.SwarmTank.Events;
 
 /// <summary>Fired for every surviving tank when a round finishes.</summary>
 public sealed class RoundEndedEventArgs : EventArgs

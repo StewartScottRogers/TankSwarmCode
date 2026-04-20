@@ -1,4 +1,4 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Models;
 
 namespace TankSwarmCode.Arena;
 

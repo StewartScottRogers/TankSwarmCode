@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.SwarmTank.Interfaces.Events;
+namespace TankSwarmCode.SwarmTank.Events;
 
 /// <summary>Fired when the tank's radar sweep reflects off a building wall.</summary>
 public sealed class ScannedBuildingEventArgs : EventArgs

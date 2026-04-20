@@ -1,4 +1,4 @@
-namespace TankSwarmCode.SwarmTank.Interfaces.Events;
+namespace TankSwarmCode.SwarmTank.Events;
 
 /// <summary>Fired when this tank collides with an arena wall.</summary>
 public sealed class HitWallEventArgs : EventArgs

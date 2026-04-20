@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
+using TankSwarmCode.SwarmTank.Enums;
 
-namespace TankSwarmCode.SwarmTank.Interfaces.Models;
+namespace TankSwarmCode.SwarmTank.Models;
 
 /// <summary>
 /// Captures all actions a tank wishes to perform in the current tick.

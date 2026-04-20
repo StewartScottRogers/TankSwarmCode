@@ -1,6 +1,6 @@
-using TankSwarmCode.SwarmTank.Interfaces;
+using TankSwarmCode.SwarmTank;
 
-namespace TankSwarmCode.AiCortex.Red;
+namespace TankSwarmCode.AiCortex.Red.Library;
 
 public static class CortexFactory
 {
