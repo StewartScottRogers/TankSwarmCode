@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 83 complete
+2026-04-20 — Iteration 84 complete
 
 ## Current Iteration
-**84** — pending
+**85** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -54,6 +54,16 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 
 **SEED 3000 DIP AT PR=180 IS DEEP — UNEXPECTED (iter-83):** PR=180 seed 3000 = 36% Red, BlueEcm NOT Linchpin, RedGhost also NOT Linchpin. The dip deepens dramatically between PR=171 (48%) and PR=180 (36%) — a 12pp drop in Red win rate over 9 PR units. At seed 2000, PR=180 = 49% (shallow). BlueSharp is now MVP (114/127 = 90% WinSurv) rather than BlueEcm. RedGhost lost Linchpin role that was present at PR=168–171. The seed 3000 dip structure is markedly different from seed 2000 — shallower near PR=168–171 but much deeper at PR=180. Need to find where the drop occurs: probing PR=175 next.
 
+**⚠️ ARCHITECTURAL CHANGE DETECTED (iter-84): ALL PRIOR RESEARCH INVALIDATED.** The codebase underwent a major architectural refactoring between iter-82 and iter-83 (composition+cortex rewrite, randomized spawns, arena edge avoidance, radar building echo, DLL structure split). This fundamentally altered tank behavior:
+
+- **Old arch baseline** (MaxFP=1.5, PR=150, seed 1000): Red 56% / Blue 44% — Red-dominant
+- **New arch baseline** (MaxFP=1.5, PR=150, seed 1000, iter-84): Red 33% / Blue 66% — Blue-dominant
+- **BlueSharp** is now MVP (117/132 = 89% WinSurv), not BlueEcm. BlueGuard is top attacker (4.29 rate).
+- **BlueEcm** has rate 1.83 (was 8–12 in old arch). The volley-fire composition approach fires far less frequently than the old scan-and-fire inheritance approach.
+- All prior PR curve, Linchpin threshold, balance boundary findings were from the old architecture. **They do not apply to the current code.**
+
+The old balance fix (BlueEcm MaxFP=1.0) was tuned against a BlueEcm-centric balance model. In the new arch, BlueSharp drives wins — the fix is irrelevant. Research must restart from scratch with the new architecture baseline.
+
 **INTERIOR PR CURVE (MaxFP=1.0) — DIP FULLY CHARACTERIZED (seed 1000 OLD ENGINE), CROSS-SEED PARTIAL (seed 2000 full gradient, seed 1000 post-engine dip eliminated, seed 3000 partial):**
 
 | BlueEcm PR | Red%  | Blue% | Linchpin? | Seed | Engine |
@@ -87,11 +97,46 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 | 217        | 49%   | 51%   | No (iter-44)  | 1000 | old |
 | 238        | 49%   | 51%   | Yes (iter-58) | 1000 | old |
 
-**Next hypothesis:** Probe PR=175 at seed 3000 (new engine). PR=171 = 48% shallow; PR=180 = 36% very deep. The drop is 12pp over 9 units. PR=175 is the midpoint. Predict: gradient (somewhere between 36% and 48% Red, no Linchpin). If sharp step → PR=172–174 is the transition; if gradient → expect ~42% at PR=175.
+**NOTE:** The PR table above (iters 48–83) was generated with the OLD architecture. All those values are INVALID for the current codebase. New arch data points so far (iter-84):
+- MaxFP=1.5, PR=150, seed 1000: Red 33% / Blue 66% (new arch baseline)
+- MaxFP=1.0, PR=175, seed 3000: Red 68% / Blue 32% (new arch — Red-dominant, expected Blue-dominant; low BlueEcm rate 0.37 indicates volley-fire not triggering at this PR)
+
+**Next hypothesis (iter-85):** Establish new architecture balance at MaxFP=1.0, PR=150 (the old fix applied in new arch). Old arch: MaxFP=1.0 balanced 51%/49%. New arch baseline: MaxFP=1.5 = Blue 66%. Predict: MaxFP=1.0 will further tilt Blue (BlueEcm fires even less → BlueSharp dominates more). This will tell us if the old fix is counterproductive, neutral, or coincidentally helpful in the new arch. Run: seed 1000, 200 matches.
 
 ---
 
 ## Iteration Log
+
+### Iter 84 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ COMPLETED — Architectural change detected; all prior research invalidated; new baseline established
+
+**Hypothesis:** PR=175 seed 3000 (new engine) will be intermediate gradient between PR=171 (48%) and PR=180 (36%). Predict: ~42% Red, no Linchpin.
+
+**Run 1:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=175 (new arch)
+
+**Results (Run 1):**
+- Red 135 (68%) / Blue 65 (32%) — **DEEPLY RED-DOMINANT** (prediction WRONG — 180° opposite of expected)
+- BlueEcm: Survivor (71/135 losses), ECM, Rate/100t: 0.37 — **NO Linchpin**, NOT MVP
+- BlueSharp: **MVP (63/65 = 97% WinSurv)**
+- RedBlade: Top attacker (3.74 rate), RedHammer/RedArrow co-MVPs for Red
+- All Blue tanks have very low combat rates (0.34–0.77 range); Red tanks have normal rates (3.09–3.74)
+
+**Anomaly detected:** 68% Red at PR=175 vs 36% Red at PR=180 (iter-83) is a 32pp swing in OPPOSITE direction over just 5 PR units. Also, BlueEcm rate dropped to 0.37 (from 1.14 at PR=180, and 6–12 in old arch). This triggered a baseline investigation.
+
+**Run 2 (Baseline check):** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), MaxFP=1.5, PR=150 (master state)
+
+**Results (Run 2 — new arch baseline):**
+- Red 67 (33%) / Blue 132 (66%) — **BLUE-DOMINANT** (expected Red-dominant per old arch ~56%)
+- BlueSharp: **MVP (117/132 = 89% WinSurv)**
+- BlueGuard: Top attacker (4.29 rate)
+- BlueEcm: Survivor, ECM, Rate/100t: 1.83 (drastically lower than old arch 8–12)
+- RedGhost: Survivor, ECM, NOT MVP, NOT Linchpin
+
+**Key finding:** The codebase refactoring (composition/cortex, randomized spawns, arena edge avoidance, radar building echo, DLL split) between iter-82 and iter-83 REVERSED the base balance: old arch Red 56% → new arch Blue 66%. BlueSharp is now the dominant win carrier. The entire old research program (PR curves, Linchpin thresholds, balance boundaries, the MaxFP=1.0 fix) is based on the old architecture and does NOT apply to the current code. Research must restart with new architecture dynamics.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 83 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-20
