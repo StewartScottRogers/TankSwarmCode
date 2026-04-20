@@ -1,6 +1,6 @@
-# Karpathy Loop — Automated Balance Research
+# Red Engineering — Research Reference
 
-A hypothesis-driven experiment cycle for tank balance investigation using the CLI.
+A hypothesis-driven experiment cycle for Red swarm improvement.
 
 ## The Loop
 
@@ -8,74 +8,69 @@ A hypothesis-driven experiment cycle for tank balance investigation using the CL
 Hypothesize → CLI run → Analyze → Update hypothesis → repeat
 ```
 
-Each iteration is one Claude session. The loop terminates when the hypothesis is confirmed, refuted, or redirected.
+Goal: raise Red win rate. Every iteration must have a measurable success criterion.
 
 ---
 
 ## 1. Hypothesize
 
-State a concrete, falsifiable claim about tank behavior or balance before running anything.
+State a concrete, falsifiable claim before running anything.
 
-Bad: "Check if RedGhost is good."  
-Good: "RedGhost carries Red wins via ECM outlasting, not combat (timeout rate, not dmg output)."
+Bad: "Try making RedArrow faster."
+Good: "Increasing RedArrow's MaxFirePower from 2.0 to 2.5 will raise its Rate/100t by ≥1.5 and increase Red win rate by ≥3pp without reducing Ghost's solo carry below 10%."
 
 Success criteria must be measurable:
-- win-survival rate (WinSurv column)
-- combat rate per 100t (Rate/100t)
-- solo carry count (Solo carry insight)
-- role assignments (ECM, MVP, Hider, etc.)
+- Red win rate (primary)
+- Per-tank WinSurv and Rate/100t
+- Solo carry count and %
+- Role assignments (MVP, Linchpin, ECM, Hider, etc.)
 
 ---
 
 ## 2. Design the Experiment
 
-Pick parameters that give clean signal:
-
 | Parameter | Research default | Notes |
 |---|---|---|
-| `--batch` | 100–200 | ≥100 for stable percentages |
+| `--batch` | 200 | Stable percentages require ≥100 |
 | `--parallel` | 8 | Matches available CPU cores |
 | `--seed` | 1000 | Fixed for reproducibility |
 | `--on-timeout` | `energy` | Eliminates draws; reveals true balance |
 | `--format` | `table` | Summary stats auto-included |
 
 Arena size affects ECM effectiveness:
-- Default (800×600): ECM tanks can hide, high draw rates without `energy` policy
+- Default (800×600): room to hide and maneuver
 - Cramped (350×250): buffs close-quarters, nerfs hiding strategies
+
+Cross-seed validation: if a change shows +5pp at seed 1000, verify at seed 2000 before treating it as confirmed.
 
 ---
 
 ## 3. Run
 
 ```bash
-# Standard 200-match benchmark
-TankSwarmCode.Cli \
-  --bot1 ..\TankSwarmCode.SwarmTanks.Red\bin\Release\net9.0\publish\Red.dll \
-  --bot2 ..\TankSwarmCode.SwarmTanks.Blue\bin\Release\net9.0\publish\Blue.dll \
+dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- \
+  --bot1 TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Red.dll \
+  --bot2 TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Blue.dll \
   --batch 200 --parallel 8 --seed 1000 \
   --on-timeout energy \
   --format table
-
-# Cramped arena variant (ECM stress test)
-TankSwarmCode.Cli ... --width 350 --height 250
-
-# CSV export for external analysis
-TankSwarmCode.Cli ... --format csv > results.csv
 ```
+
+If DLLs are stale: `dotnet publish` both projects before running.
 
 ---
 
 ## 4. Analyze
 
-Read the summary table bottom-up:
+Read the output bottom-up:
 
-1. **Win tally** — overall balance (aim for 45–55% each side)
-2. **Win quality** — Blue decisive vs Red timeout pattern? `(N% via TO)` fires when >20%
-3. **Decisive med** — Blue 150–220t blitz vs Red 350–550t grind is the baseline
-4. **Per-tank WinSurv** — `N/W (XE)` shows which tanks survive wins and at what energy
-5. **Insights** — ECM, Solo carry, All-in, Fragile, Linchpin fire when thresholds are met
-6. **Win combos** — who solos? `⚑TO-only` means all solo wins are timeout grinds
-7. **First kills** — Primary target fires at 1.5× swarm avg; reveals targeting patterns
+1. **Win tally** — Red % vs Blue %
+2. **Win quality** — `(N% via TO)` fires when >20% of wins are timeouts
+3. **Decisive med** — how fast are decisive wins?
+4. **Per-tank WinSurv** — `N/W` shows which tanks survive Red wins
+5. **Insights** — MVP, Solo carry, Linchpin, ECM, Hider, All-in, Expendable, Fragile
+6. **Win combos** — which Red tanks solo? which combos close out matches?
+7. **First kills** — which Blue tank does Red kill first most often?
 
 ### Key thresholds
 
@@ -93,28 +88,42 @@ Read the summary table bottom-up:
 
 ---
 
-## 5. Known Baselines
+## 5. Red Swarm — Current Baselines (New Architecture)
 
-From prior runs (200 matches, default arena, `--on-timeout energy`, seed 1000):
+**Established iter-84. All old-arch data is invalid.**
 
-**RedGhost (ECM):** 60–80% win-survival, solo-carries 35–50% of Red's wins via timeout outlasting. All-in — every survival is a win. Jams + spoofs, combat rate near 0.
+**New-arch baseline** (seed 1000, 200 matches, MaxFP=1.5, PR=150):
+- **Red 34% / Blue 66%** — we are losing badly
 
-**BlueEcm (ECM):** 40–65% win-survival, solo wins 20–30%. Burnthrough mode cuts enemy jamming; switches to Jam for suppression.
+### Red Tank Battle Intel
 
-**Blue tempo:** Decisive wins average 150–220t. BlueRush drives fast kills.  
-**Red tempo:** Decisive wins average 350–550t. RedGhost grinds via ECM.
+| Tank | Role | Rate/100t | WinSurv | Notes |
+|------|------|-----------|---------|-------|
+| RedGhost | ECM | 0.18 | unknown | Nearly silent — cortex not using ECM; was solo carry in old arch |
+| RedArrow | Scout | unknown | unknown | New-arch behavior not yet characterized |
+| RedBlade | Attacker | unknown | unknown | New-arch behavior not yet characterized |
+| RedHammer | Attacker | unknown | unknown | New-arch behavior not yet characterized |
 
-**ECM draw rate:** Without `--on-timeout energy`, ECM causes 25–30% draws. Always use `energy` policy for balance research.
+RedGhost was the entire foundation of old Red wins (solo carry 32–48%, Linchpin). In new arch its rate dropped to 0.18 — the composition cortex is not activating its ECM. This is the most urgent problem to fix.
 
-**Small arena:** 350×250 boosts BlueRush combat rate, cuts BlueEcm survival — nerfs ECM hiding, buffs close-quarters.
+### Enemy Battle Intel (from CLI output only)
+
+Observed from battle reports — **not derived from Blue source code**:
+
+| Blue Tank | Observed behavior |
+|-----------|------------------|
+| BlueSharp | MVP in 89% of Blue wins (seed 1000). Primary threat — must be killed. |
+| BlueGuard | Top attacker, rate 4.29. Driving Red kills. |
+| BlueEcm | Rate 1.83, passive role in current battles |
+| BlueRush / BlueStrike | Role unknown in new arch — not highlighted in current reports |
 
 ---
 
 ## 6. Iterate
 
-After analysis:
-- **Hypothesis confirmed** → document in memory, adjust tank params if overcorrection needed
-- **Hypothesis refuted** → refine the hypothesis, re-run with new parameters
-- **New question raised** → start the loop again with the new hypothesis
+After each run:
+- **Confirmed** → commit, document, push to next hypothesis
+- **Refuted** → revert, form tighter hypothesis, try again
+- **Inconclusive** → run at second seed (2000) before deciding
 
-For tank config changes (e.g., adjusting `MaxFirePower`, `PreferredRange`, `RetreatEnergyThreshold`), always record a before/after batch at the same seed so the delta is clean.
+Always compare at the same seed. Always rebuild both DLLs before a comparison run.

@@ -18,6 +18,7 @@
     <File Path="Claude--dangerously-skip-permissions.cmd" />
     <File Path="README.md" />
     <File Path="TheKarpathyLoop.png" />
+    <File Path="War.cmd" />
   </Folder>
   <Project Path="Documentation/Documentation.shproj" Id="077cdfac-1e54-47ed-87fb-188e5052fbae" />
   <Project Path="Research/Research.shproj" Id="f19ca849-4160-4b0f-9c68-880650266a95" />
@@ -26,5 +27,5 @@
   <Project Path="TankSwarmCode.Cli.Engineering/TankSwarmCode.Cli.Engineering.shproj" Id="038d9c79-bffb-4e29-b84b-8e82f3378d09" />
   <Project Path="TankSwarmCode.Cli/TankSwarmCode.Cli.csproj" />
   <Project Path="TankSwarmCode.Gui/TankSwarmCode.Gui.csproj" />
-<Project Path="TankSwarmCode.SwarmTank/TankSwarmCode.SwarmTank.csproj" Id="5b4e4794-f61c-41b4-a6b8-d379ee891ca4" />
+  <Project Path="TankSwarmCode.SwarmTank/TankSwarmCode.SwarmTank.csproj" Id="5b4e4794-f61c-41b4-a6b8-d379ee891ca4" />
 </Solution>

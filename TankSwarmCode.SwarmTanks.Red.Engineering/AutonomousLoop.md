@@ -1,53 +1,77 @@
-# Autonomous Karpathy Loop — Red Engineering Research Iteration
+# Autonomous Karpathy Loop — Red Engineering
 
 **Run autonomously. Do not ask questions. Do not wait for input. Make all decisions yourself.**
 
-## Context
+## Mission
 
-This is one iteration of the Karpathy Loop for Red Engineering research. Each iteration follows the cycle: Hypothesize → Run CLI → Analyze → Record → Next.
+You are **Red Engineering**. Your only goal is to **kill Blue**. Win rate is the only metric that matters.
 
-You are running from the **repo root** (the parent of `TankSwarmCode.SwarmTanks.Red.Engineering`).
+You are currently losing. The new architecture baseline is **Red 34% / Blue 66%** (seed 1000, 200 matches). Blue wins two out of three battles. That ends now.
 
-Read `TankSwarmCode.SwarmTanks.Red.Engineering/AutoResearch.md` for the research framework, thresholds, baselines, and CLI parameter reference.
+You do not know why Blue is winning at the source-code level — you know only what the battle reports tell you. Use that intelligence. Fix your tanks. Win.
 
-Read `AutonomousLoopState.md` for the current iteration count and next hypothesis.
+---
 
-## Focus
+## Boundaries
 
-Red Engineering owns the Red swarm. Research goals, in priority order:
+**You own:**
+- `TankSwarmCode.SwarmTanks.Red/` — tank shell files (RedGhost, RedArrow, RedBlade, RedHammer, RedTrooper)
+- `TankSwarmCode.AiCortex.Red/` — cortex implementations (RedGhostCortex, RedArrowCortex, etc.)
+- `TankSwarmCode.AiCortex.Red/Library/` — RedCortexBase, CortexFactory, TankNavigation, SwarmCoordinator
 
-1. **Validate balance holds** — confirm the 51%/49% fix (BlueEcm MaxFirePower=1.0, iter-11) generalises across seeds.
-2. **Improve Red combat tanks** — RedArrow and RedBlade are parameter-insensitive to the changes tested so far; find a lever that moves their win contribution.
-3. **Protect Ghost's hider role** — Ghost (MaxFirePower=0.1, RetreatEnergyThreshold=40) is Red's structural advantage. Do not weaken it. Test only additive improvements to other tanks.
+**You do not touch:**
+- Anything in `TankSwarmCode.SwarmTanks.Blue/`
+- Anything in `TankSwarmCode.AiCortex.Blue/`
+- Shared engine, arena, or interface projects
 
-## Red Swarm Profile (from research log)
+---
 
-| Tank | Role | Key stat | Notes |
-|------|------|----------|-------|
-| RedGhost | ECM, MVP, Hider | WinSurv 54%, solo carry 32% | MaxFirePower=0.1 — passive hider, structural carry |
-| RedArrow | Combat | First kills 35–36 | Retreat threshold (20→35) had zero effect; first-blood is positional |
-| RedBlade | Combat | Combo with Ghost | Blade+Ghost combo ~16% of Red wins in cramped arena |
-| RedStrike | Combat | — | Contributes to early pressure; not individually analysed |
+## Intelligence Sources
 
-## Suggested Next Hypotheses (pick the first untested one)
+**Allowed:**
+- CLI battle output — win %, per-tank WinSurv, Rate/100t, insights (MVP, Linchpin, Solo carry, ECM), win combos, first-kill counts
+- Your own source code
+- Your own state file: `TankSwarmCode.SwarmTanks.Red.Engineering/LoopState.md`
+- Documentation in `Documentation/` and `TankSwarmCode.SwarmTanks.Red.Engineering/`
 
-1. **Cross-seed validation:** The 51%/49% balance (seed 1000, 200 matches) holds at seed 2000. Success: Red 45–55% at seed 2000.
-2. **Arrow PreferredRange sweep:** Reducing RedArrow's `PreferredRange` by 20% increases first kills from 35 to ≥42 and raises Red win rate by ≥2pp. Success: first-kill count increases, win rate shifts in Red's favour.
-3. **Blade combat buff:** Increasing RedBlade's `MaxFirePower` or reducing its `RetreatEnergyThreshold` raises Blade solo carry from its current low baseline to ≥15% of Red wins without harming Ghost's carry. Success: Blade appears in Solo carry insights, Red win rate stays ≥48%.
+**Off limits:**
+- Blue's source code
+- Blue's state file
+- Any assumption about what Blue's engineers have changed — you only know what the battlefield shows
+
+---
+
+## Scope of Changes
+
+You may change anything in your own projects:
+
+| Change type | Example |
+|---|---|
+| TankConfiguration tuning | Adjust `MaxFirePower`, `PreferredRange`, `RetreatEnergyThreshold` |
+| Cortex strategy logic | Rewrite targeting, movement, ECM behaviour in a `*Cortex.cs` file |
+| New tank class | Add `RedViper.cs` to `TankSwarmCode.SwarmTanks.Red/` + register in `CortexFactory` |
+| Remove a tank | Delete tank + cortex files if a slot is dead weight |
+| Swarm coordination | Change `SwarmCoordinator.cs` or `RedCortexBase.cs` |
+
+New tank shells follow the existing pattern: implement `SwarmTankBase`, `ITankContext`, delegate all events to `_cortex = CortexFactory.For("TankName")`.
 
 ---
 
 ## Iteration Protocol
 
-### 1. Load prior state
+### 1. Load state
 
-Read `AutonomousLoopState.md` on `master`. Use the `nextHypothesis` field. If none, use hypothesis #1 from the list above.
+Read `TankSwarmCode.SwarmTanks.Red.Engineering/LoopState.md`. Use the `nextHypothesis` field.
 
 ### 2. Set hypothesis
 
-State the concrete, falsifiable claim with measurable success criteria before touching any code.
+State a concrete, falsifiable claim with measurable success criteria. Goal is always to raise Red win rate.
 
-### 3. Create iteration branch
+Good: "RedGhost fires at rate 0.18 — the cortex is not using ECM aggressively. Increasing ECM engagement will raise RedGhost's rate to ≥2.0 and increase Red win rate by ≥3pp."
+
+Bad: "Make RedGhost better."
+
+### 3. Create branch
 
 ```
 git checkout master
@@ -55,11 +79,11 @@ git pull
 git checkout -b research/iter-{N}-{slug}
 ```
 
-All work from this point happens on this branch. Never commit directly to `master`.
+Slug = 2–4 words from the hypothesis (lowercase, hyphens). All work on this branch.
 
-### 4. Run baseline benchmark
+### 4. Run baseline
 
-Before changing any code, capture the current baseline:
+Before changing any code:
 
 ```
 dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- \
@@ -68,87 +92,132 @@ dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- \
   --batch 200 --parallel 8 --seed 1000 --on-timeout energy --format table
 ```
 
-If either DLL is missing, publish it first:
+If either DLL is missing, publish first:
 
 ```
 dotnet publish TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj -c Release
 dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj -c Release
 ```
 
-### 5. Make code changes (if the hypothesis requires them)
+Record baseline Red win %.
 
-If the hypothesis is purely observational (e.g. cross-seed validation), skip to step 6.
+### 5. Make changes
 
-If the hypothesis requires a code change:
-- Make the minimal change to the relevant `TankConfiguration` value.
-- **Rebuild BOTH DLLs after any change.** Stale DLLs have contaminated runs before (iter-7, iter-9).
-- Re-run the benchmark.
+Apply the minimum change needed to test the hypothesis. Changes may touch:
+- `TankSwarmCode.SwarmTanks.Red/` (tank shells, new tank files)
+- `TankSwarmCode.AiCortex.Red/` (cortex logic)
+- `TankSwarmCode.AiCortex.Red/Library/` (base classes, factory, coordination)
+
+**Rebuild BOTH DLLs after any change.** Stale DLLs produce contaminated results.
+
+```
+dotnet publish TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj -c Release
+dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj -c Release
+```
+
+Re-run the benchmark at the same seed.
 
 ### 6. Analyze
 
-Evaluate against the hypothesis using the thresholds in `TankSwarmCode.SwarmTanks.Red.Engineering/AutoResearch.md`.
+See `TankSwarmCode.SwarmTanks.Red.Engineering/AutoResearch.md` for thresholds and interpretation.
 
-Verdict: **Confirmed** / **Refuted** / **Inconclusive**.
+Focus on:
+- Did Red win rate increase?
+- Which Red tank's stats improved?
+- What changed in win combos / solo carry breakdown?
+- Did a specific Blue tank become easier or harder to kill?
 
-Also check:
-- Did Ghost's WinSurv or solo carry drop? If so, the change harmed Red's structural carry — Refuted regardless of win rate.
-- Did BlueEcm's MaxFirePower remain at 1.0? If not, note the contamination.
+Verdict: **Confirmed** (win rate up, hypothesis correct) / **Refuted** (win rate flat or down) / **Inconclusive** (signal unclear, need more runs or different seed).
+
+### 6a. Escalation rule
+
+Check the last 3 iterations in `LoopState.md`. If all 3 were **Refuted** or if Red win rate has not improved across 3 consecutive iterations:
+
+**Stop incremental tuning. Go radical.**
+
+Options:
+- Rewrite a cortex from scratch — change the whole decision pattern, not just parameters
+- Create a new tank class with a completely different role
+- Redesign swarm coordination in `SwarmCoordinator.cs` — change how Red tanks work together
+- Retire a tank that contributes nothing and replace it with something aggressive
+
+The current approach is not working. A bold wrong answer is more useful than a careful wrong answer — it reveals new information.
 
 ### 7. Update documentation
 
-If code changed, update the minimum set of docs:
+If code changed, update the minimum set:
 
-| Code area changed | Documentation to update |
+| Changed | Update |
 |---|---|
-| `TankConfiguration` values in any Red tank | `Documentation/ch09-builtin-tanks.md` roster table + tank section; `TankSwarmCode.SwarmTanks.Red.Engineering/README.md` |
-| New tank class added or removed | `ch09`, `ch01`, `ch02`, Red Engineering README |
-| `SwarmTankCortexCradleBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Red Engineering README |
+| `TankConfiguration` in any Red tank | `TankSwarmCode.SwarmTanks.Red.Engineering/README.md` roster table |
+| Cortex strategy logic | `TankSwarmCode.SwarmTanks.Red.Engineering/README.md` tactics section |
+| New tank added | README + `Documentation/ch09-builtin-tanks.md` Red section only |
+| Tank removed | Same |
 
-Do not update docs for code that did not change.
+Do not touch Blue documentation.
 
-### 8. Commit code + docs
+### 8. Commit
 
 ```
-git add <changed-source-files> <changed-doc-files>
+git add <changed-red-source-files> <changed-doc-files>
 git commit -m "[iter-{N}] <what changed and why>"
 ```
 
+Code and docs in one commit. Never commit code without its doc update.
+
 ### 9. Apply verdict
 
-#### If Confirmed or Inconclusive
+#### Confirmed or Inconclusive
 
-Leave the branch as-is. Human reviews and decides whether to merge to `master`.
+Leave the branch. Human reviews and decides whether to merge.
 
-#### If Refuted
+#### Refuted
 
-Revert the code + docs commit:
+Revert the change commit:
 
 ```
 git revert HEAD --no-edit
 ```
 
-The revert preserves the audit trail. Human can discard the branch afterward.
+Rebuild both DLLs to clear stale binaries:
+
+```
+dotnet publish TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj -c Release
+dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj -c Release
+```
 
 ### 10. Record findings
 
-Update `AutonomousLoopState.md` **on the iteration branch**:
-
-- `iteration`: incremented count
-- `branch`: branch name
-- `hypothesis`: what was tested
-- `keyMetrics`: Red win %, Ghost WinSurv, Ghost solo carry, affected tank stats
-- `verdict`: Confirmed / Refuted / Inconclusive
-- `notes`: surprises, Ghost impact, anything non-obvious
-- `nextHypothesis`: next concrete, falsifiable claim
+Write a research file `TankSwarmCode.SwarmTanks.Red.Engineering/Research/iter-{NNNN}-{slug}.md`:
 
 ```
-git add AutonomousLoopState.md
+## Hypothesis
+## Code Change
+## Run Parameters
+## Raw Results
+## Analysis
+## Key Findings
+## Summary
+```
+
+Update `TankSwarmCode.SwarmTanks.Red.Engineering/LoopState.md`:
+- `iteration`: incremented count
+- `branch`: this branch name
+- `hypothesis`: what was tested
+- `keyMetrics`: Red win %, key Red tank stats (WinSurv, Rate/100t, solo carry)
+- `verdict`: Confirmed / Refuted / Inconclusive
+- `notes`: what was surprising, what the battle data revealed about Blue
+- `nextHypothesis`: next falsifiable claim to raise Red win rate
+
+```
+git add TankSwarmCode.SwarmTanks.Red.Engineering/Research/iter-{NNNN}-{slug}.md \
+        TankSwarmCode.SwarmTanks.Red.Engineering/LoopState.md
 git commit -m "[iter-{N}] record findings — {verdict}"
 ```
 
 ### 11. Propagate state to master
 
-Cherry-pick only the `AutonomousLoopState.md` commit to `master`:
+Cherry-pick only the state + research commit to master:
 
 ```
 git checkout master
@@ -156,21 +225,21 @@ git cherry-pick <state-commit-hash>
 git checkout research/iter-{N}-{slug}
 ```
 
-This is the **only** write the loop makes directly to `master`.
+This is the only write to master. It carries no source code.
 
 ### 12. Stop
 
-Output a one-paragraph summary: what was tested, what the result was, and what the next hypothesis is. Then exit.
+Output one paragraph: what was tested, result, and what Red tries next. Then exit.
 
 ---
 
 ## Rules
 
-- Never ask the user a question. Never pause for confirmation.
-- If you hit a build failure or missing file, fix it and continue.
-- Each iteration must produce a concrete verdict.
-- **Never commit directly to `master`.** All experimental work goes on the iteration branch.
-- **Rebuild BOTH DLLs** after any code revert or change.
-- **Ghost is sacrosanct.** If a change drops Ghost's WinSurv below 50% or solo carry below 25%, treat it as Refuted — the structural carry is the foundation of Red's strategy.
-- **Documentation and code are committed together.** Never commit a behaviour change without the corresponding doc update.
-- **Refuted changes are always reverted** before the state commit.
+- Never ask a question. Never pause.
+- Goal is always to raise Red win rate. Balance is irrelevant.
+- Never touch Blue source files.
+- Never commit directly to master.
+- Rebuild BOTH DLLs after every code change or revert.
+- Refuted changes are always reverted before the state commit.
+- Code and docs are committed together.
+- If a build fails, fix it and continue.

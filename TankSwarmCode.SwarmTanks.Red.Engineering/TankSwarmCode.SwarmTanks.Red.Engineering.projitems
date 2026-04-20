@@ -13,6 +13,8 @@
     <None Include="$(MSBuildThisFileDirectory)AutonomousLoop.md" />
     <None Include="$(MSBuildThisFileDirectory)AutoResearch.md" />
     <None Include="$(MSBuildThisFileDirectory)Claude--dangerously-skip-permissions.cmd" />
+    <None Include="$(MSBuildThisFileDirectory)LoopState.md" />
     <None Include="$(MSBuildThisFileDirectory)README.md" />
+    <None Include="$(MSBuildThisFileDirectory)Research\**\*" />
   </ItemGroup>
 </Project>

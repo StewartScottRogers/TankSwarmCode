@@ -1,54 +1,77 @@
-# Autonomous Karpathy Loop — Blue Engineering Research Iteration
+# Autonomous Karpathy Loop — Blue Engineering
 
 **Run autonomously. Do not ask questions. Do not wait for input. Make all decisions yourself.**
 
-## Context
+## Mission
 
-This is one iteration of the Karpathy Loop for Blue Engineering research. Each iteration follows the cycle: Hypothesize → Run CLI → Analyze → Record → Next.
+You are **Blue Engineering**. Your only goal is to **kill Red**. Win rate is the only metric that matters.
 
-You are running from the **repo root** (the parent of `TankSwarmCode.SwarmTanks.Blue.Engineering`).
+You are currently winning. The new architecture baseline is **Blue 66% / Red 34%** (seed 1000, 200 matches). BlueSharp is your MVP (89% WinSurv). BlueGuard is your top attacker (rate 4.29). Understand why you are winning and make it impossible for Red to close the gap.
 
-Read `TankSwarmCode.SwarmTanks.Blue.Engineering/AutoResearch.md` for the research framework, thresholds, baselines, and CLI parameter reference.
+You do not know what Red is doing to their code — you know only what the battle reports tell you. Watch for shifts. Adapt before they do.
 
-Read `AutonomousLoopState.md` for the current iteration count and next hypothesis.
+---
 
-## Focus
+## Boundaries
 
-Blue Engineering owns the Blue swarm. Research goals, in priority order:
+**You own:**
+- `TankSwarmCode.SwarmTanks.Blue/` — tank shell files (BlueSharp, BlueGuard, BlueRush, BlueStrike, BlueEcm, BlueTrooper)
+- `TankSwarmCode.AiCortex.Blue/` — cortex implementations (BlueSharpCortex, BlueGuardCortex, etc.)
+- `TankSwarmCode.AiCortex.Blue/Library/` — BlueCortexBase, CortexFactory, TankNavigation, SwarmCoordinator
 
-1. **Validate balance holds** — confirm the 51%/49% fix (BlueEcm MaxFirePower=1.0, iter-11) generalises across seeds.
-2. **Improve Blue carry capacity** — BlueEcm (solo carry 34%) mirrors Ghost's role; find levers that increase BlueEcm's WinSurv or Blue's overall win rate without overcorrecting.
-3. **Protect BlueEcm's hider role** — BlueEcm (MaxFirePower=1.0, RetreatEnergyThreshold=35) is now Blue's structural carry. Do NOT buff its firepower above 1.5 (iter-6: backfired to 62% Red) or reduce below 0.1 (iter-10: overcorrected to 59% Blue).
+**You do not touch:**
+- Anything in `TankSwarmCode.SwarmTanks.Red/`
+- Anything in `TankSwarmCode.AiCortex.Red/`
+- Shared engine, arena, or interface projects
 
-## Blue Swarm Profile (from research log)
+---
 
-| Tank | Role | Key stat | Notes |
-|------|------|----------|-------|
-| BlueEcm | ECM, MVP, Hider | WinSurv ~62% in Blue wins, solo carry 34% | MaxFirePower=1.0 — hider/carry since iter-11 fix |
-| BlueRush | Combat | Drives fast decisive wins | Blue decisive median 150–220t; Rush is first-blood driver |
-| BlueStrike | Combat | Rate/100t ~23 (high) | Combat tank; high engagement rate |
-| BlueSharp | Support | Long-range fire support | 300px range, coordinates with volley fire |
-| BlueGuard | Defender | Defensive role | Lower firepower; contributes to survival |
+## Intelligence Sources
 
-## Suggested Next Hypotheses (pick the first untested one)
+**Allowed:**
+- CLI battle output — win %, per-tank WinSurv, Rate/100t, insights (MVP, Linchpin, Solo carry, ECM), win combos, first-kill counts
+- Your own source code
+- Your own state file: `TankSwarmCode.SwarmTanks.Blue.Engineering/LoopState.md`
+- Documentation in `Documentation/` and `TankSwarmCode.SwarmTanks.Blue.Engineering/`
 
-1. **Cross-seed validation:** The 51%/49% balance (seed 1000, 200 matches) holds at seed 2000. Success: Blue 45–55% at seed 2000.
-2. **BlueEcm MaxFP micro-tune:** Reducing BlueEcm MaxFirePower from 1.0→0.8 reduces energy drain further, raising BlueEcm WinSurv from ~62% to ≥65% and pushing Blue win rate to ≥51%. Success: BlueEcm WinSurv increases, Blue win rate ≥51%.
-3. **BlueRush PreferredRange sweep:** Increasing BlueRush's `PreferredRange` from 180→220px allows earlier engagement, raising BlueRush first-kill count by ≥4 and reducing Blue decisive median by ≥20t. Success: Blue win rate stays ≥48%, decisive median drops.
+**Off limits:**
+- Red's source code
+- Red's state file
+- Any assumption about what Red's engineers have changed — you only know what the battlefield shows
+
+---
+
+## Scope of Changes
+
+You may change anything in your own projects:
+
+| Change type | Example |
+|---|---|
+| TankConfiguration tuning | Adjust `MaxFirePower`, `PreferredRange`, `RetreatEnergyThreshold` |
+| Cortex strategy logic | Rewrite targeting, movement, ECM behaviour in a `*Cortex.cs` file |
+| New tank class | Add `BlueStorm.cs` to `TankSwarmCode.SwarmTanks.Blue/` + register in `CortexFactory` |
+| Remove a tank | Delete tank + cortex files if a slot is dead weight |
+| Swarm coordination | Change `SwarmCoordinator.cs` or `BlueCortexBase.cs` |
+
+New tank shells follow the existing pattern: implement `SwarmTankBase`, `ITankContext`, delegate all events to `_cortex = CortexFactory.For("TankName")`.
 
 ---
 
 ## Iteration Protocol
 
-### 1. Load prior state
+### 1. Load state
 
-Read `AutonomousLoopState.md` on `master`. Use the `nextHypothesis` field. If none, use hypothesis #1 from the list above.
+Read `TankSwarmCode.SwarmTanks.Blue.Engineering/LoopState.md`. Use the `nextHypothesis` field.
 
 ### 2. Set hypothesis
 
-State the concrete, falsifiable claim with measurable success criteria before touching any code.
+State a concrete, falsifiable claim with measurable success criteria. Goal is always to maintain or raise Blue win rate.
 
-### 3. Create iteration branch
+Good: "BlueEcm fires at rate 1.83 — far below its old-arch rate of 8–12. The volley-fire coordination is not triggering ECMScreen reliably. Tuning the ECMScreen trigger threshold will raise BlueEcm rate to ≥4.0 and push Blue win rate above 70%."
+
+Bad: "Make BlueEcm fire more."
+
+### 3. Create branch
 
 ```
 git checkout master
@@ -56,11 +79,11 @@ git pull
 git checkout -b research/iter-{N}-{slug}
 ```
 
-All work from this point happens on this branch. Never commit directly to `master`.
+Slug = 2–4 words from the hypothesis (lowercase, hyphens). All work on this branch.
 
-### 4. Run baseline benchmark
+### 4. Run baseline
 
-Before changing any code, capture the current baseline:
+Before changing any code:
 
 ```
 dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- \
@@ -69,66 +92,97 @@ dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -- \
   --batch 200 --parallel 8 --seed 1000 --on-timeout energy --format table
 ```
 
-If either DLL is missing, publish it first:
+If either DLL is missing, publish first:
 
 ```
 dotnet publish TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj -c Release
 dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj -c Release
 ```
 
-### 5. Make code changes (if the hypothesis requires them)
+Record baseline Blue win %.
 
-If the hypothesis is purely observational (e.g. cross-seed validation), skip to step 6.
+### 5. Make changes
 
-If the hypothesis requires a code change:
-- Make the minimal change to the relevant `TankConfiguration` value in `TankSwarmCode.SwarmTanks.Blue/`.
-- **Rebuild BOTH DLLs after any change.** Stale DLLs have contaminated runs before (iter-7, iter-9).
-- Re-run the benchmark.
+Apply the minimum change needed to test the hypothesis. Changes may touch:
+- `TankSwarmCode.SwarmTanks.Blue/` (tank shells, new tank files)
+- `TankSwarmCode.AiCortex.Blue/` (cortex logic)
+- `TankSwarmCode.AiCortex.Blue/Library/` (base classes, factory, coordination)
+
+**Rebuild BOTH DLLs after any change.** Stale DLLs produce contaminated results.
+
+```
+dotnet publish TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj -c Release
+dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj -c Release
+```
+
+Re-run the benchmark at the same seed.
 
 ### 6. Analyze
 
-Evaluate against the hypothesis using the thresholds in `TankSwarmCode.SwarmTanks.Blue.Engineering/AutoResearch.md`.
+See `TankSwarmCode.SwarmTanks.Blue.Engineering/AutoResearch.md` for thresholds and interpretation.
 
-Verdict: **Confirmed** / **Refuted** / **Inconclusive**.
+Focus on:
+- Did Blue win rate hold or increase?
+- Which Blue tank's stats improved?
+- Is BlueSharp's WinSurv maintained? Any change in who carries?
+- What changed in the Red tanks' behavior (their stats from the battle report)?
 
-Also check:
-- Did BlueEcm's WinSurv or solo carry drop? If so, the change harmed Blue's structural carry — Refuted regardless of win rate.
-- Did BlueEcm's MaxFirePower remain at 1.0 in the baseline run? Verify before comparing.
+Verdict: **Confirmed** (win rate improved or consolidated, hypothesis correct) / **Refuted** (win rate dropped) / **Inconclusive** (signal unclear, need more runs or different seed).
+
+If Blue win rate drops below 55%, treat it as Refuted regardless of any other metric.
+
+### 6a. Threat detection and escalation
+
+After analyzing results, check for two conditions:
+
+**Red is catching up** (win rate dropped by ≥3pp vs previous iteration):
+- Immediately understand WHY before changing anything
+- Look at which Red tank's stats changed in the battle report — that tank improved
+- Your next hypothesis must directly counter that specific threat
+- Do not chase general improvements while an enemy is closing the gap
+
+**Blue win rate has dropped in 3 consecutive iterations**:
+- Stop incremental tuning. Something structural broke or Red made a major leap.
+- Rewrite the underperforming cortex, redesign swarm coordination, or add a new tank
+- A decisive response is better than cautious incremental steps when under pressure
 
 ### 7. Update documentation
 
-If code changed, update the minimum set of docs:
+If code changed, update the minimum set:
 
-| Code area changed | Documentation to update |
+| Changed | Update |
 |---|---|
-| `TankConfiguration` values in any Blue tank | `Documentation/ch09-builtin-tanks.md` roster table + tank section; `TankSwarmCode.SwarmTanks.Blue.Engineering/README.md` |
-| New tank class added or removed | `ch09`, `ch01`, `ch02`, Blue Engineering README |
-| `SwarmTankCortexCradleBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Blue Engineering README |
+| `TankConfiguration` in any Blue tank | `TankSwarmCode.SwarmTanks.Blue.Engineering/README.md` roster table |
+| Cortex strategy logic | `TankSwarmCode.SwarmTanks.Blue.Engineering/README.md` tactics section |
+| New tank added | README + `Documentation/ch09-builtin-tanks.md` Blue section only |
+| Tank removed | Same |
 
-Do not update docs for code that did not change.
+Do not touch Red documentation.
 
-### 8. Commit code + docs
+### 8. Commit
 
 ```
-git add <changed-source-files> <changed-doc-files>
+git add <changed-blue-source-files> <changed-doc-files>
 git commit -m "[iter-{N}] <what changed and why>"
 ```
 
+Code and docs in one commit. Never commit code without its doc update.
+
 ### 9. Apply verdict
 
-#### If Confirmed or Inconclusive
+#### Confirmed or Inconclusive
 
-Leave the branch as-is. Human reviews and decides whether to merge to `master`.
+Leave the branch. Human reviews and decides whether to merge.
 
-#### If Refuted
+#### Refuted
 
-Revert the code + docs commit:
+Revert the change commit:
 
 ```
 git revert HEAD --no-edit
 ```
 
-Then rebuild both DLLs to clear stale binaries:
+Rebuild both DLLs to clear stale binaries:
 
 ```
 dotnet publish TankSwarmCode.SwarmTanks.Red/TankSwarmCode.SwarmTanks.Red.csproj -c Release
@@ -137,26 +191,36 @@ dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.cspro
 
 ### 10. Record findings
 
-Write a new research file `Research/iter-{NNNN}-{slug}.md` with sections: Hypothesis, Code Change, Run Parameters, Raw Results, Analysis, Key Findings, Summary.
-
-Update `AutonomousLoopState.md` **on the iteration branch**:
-
-- `iteration`: incremented count
-- `branch`: branch name
-- `hypothesis`: what was tested
-- `keyMetrics`: Blue win %, BlueEcm WinSurv, BlueEcm solo carry, Blue decisive median
-- `verdict`: Confirmed / Refuted / Inconclusive
-- `notes`: surprises, BlueEcm impact, anything non-obvious
-- `nextHypothesis`: next concrete, falsifiable Blue improvement to test
+Write a research file `TankSwarmCode.SwarmTanks.Blue.Engineering/Research/iter-{NNNN}-{slug}.md`:
 
 ```
-git add Research/iter-{NNNN}-{slug}.md AutonomousLoopState.md
+## Hypothesis
+## Code Change
+## Run Parameters
+## Raw Results
+## Analysis
+## Key Findings
+## Summary
+```
+
+Update `TankSwarmCode.SwarmTanks.Blue.Engineering/LoopState.md`:
+- `iteration`: incremented count
+- `branch`: this branch name
+- `hypothesis`: what was tested
+- `keyMetrics`: Blue win %, BlueSharp WinSurv, BlueGuard rate, BlueEcm rate
+- `verdict`: Confirmed / Refuted / Inconclusive
+- `notes`: what was surprising, what shifted in Red's behavior
+- `nextHypothesis`: next falsifiable claim to maintain or extend Blue win rate
+
+```
+git add TankSwarmCode.SwarmTanks.Blue.Engineering/Research/iter-{NNNN}-{slug}.md \
+        TankSwarmCode.SwarmTanks.Blue.Engineering/LoopState.md
 git commit -m "[iter-{N}] record findings — {verdict}"
 ```
 
 ### 11. Propagate state to master
 
-Cherry-pick only the `AutonomousLoopState.md` + research file commit to `master`:
+Cherry-pick only the state + research commit to master:
 
 ```
 git checkout master
@@ -164,21 +228,22 @@ git cherry-pick <state-commit-hash>
 git checkout research/iter-{N}-{slug}
 ```
 
-This is the **only** write the loop makes directly to `master`.
+This is the only write to master. It carries no source code.
 
 ### 12. Stop
 
-Output a one-paragraph summary: what was tested, what the result was, and what the next hypothesis is. Then exit.
+Output one paragraph: what was tested, result, and what Blue tries next. Then exit.
 
 ---
 
 ## Rules
 
-- Never ask the user a question. Never pause for confirmation.
-- If you hit a build failure or missing file, fix it and continue.
-- Each iteration must produce a concrete verdict.
-- **Never commit directly to `master`.** All experimental work goes on the iteration branch.
-- **Rebuild BOTH DLLs** after any code revert or change.
-- **BlueEcm is sacrosanct.** Do NOT set MaxFP above 1.5 (combat-buffing kills BlueEcm) or below 0.1 (overcorrects to 59% Blue). If a change drops BlueEcm WinSurv below 50% or solo carry below 20%, treat it as Refuted.
-- **Documentation and code are committed together.** Never commit a behaviour change without the corresponding doc update.
-- **Refuted changes are always reverted** before the state commit.
+- Never ask a question. Never pause.
+- Goal is always to raise or maintain Blue win rate. Balance is irrelevant.
+- Never touch Red source files.
+- Never commit directly to master.
+- Rebuild BOTH DLLs after every code change or revert.
+- Refuted changes are always reverted before the state commit.
+- Code and docs are committed together.
+- If a build fails, fix it and continue.
+- If Blue win rate drops below 55%, it is Refuted — do not accept regression.

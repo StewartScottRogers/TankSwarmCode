@@ -1,3 +1,15 @@
+# Autonomous Loop State — Legacy Balance Research Archive
+
+> **WAR MODE ACTIVE.** The adversarial war loop has superseded this file.
+> Red and Blue now fight independently with separate state:
+> - **Red:** `TankSwarmCode.SwarmTanks.Red.Engineering/LoopState.md`
+> - **Blue:** `TankSwarmCode.SwarmTanks.Blue.Engineering/LoopState.md`
+> - **Run the war:** `War.cmd` at repo root
+>
+> Everything below is the archived balance research log (iters 1–89, old architecture).
+
+---
+
 # Autonomous Loop State
 
 ## Last Updated

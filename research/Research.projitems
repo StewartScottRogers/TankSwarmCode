@@ -8,16 +8,4 @@
   <PropertyGroup Label="Configuration">
     <Import_RootNamespace>Research</Import_RootNamespace>
   </PropertyGroup>
-  <ItemGroup>
-    <None Include="$(MSBuildThisFileDirectory)iter-0010-blueecm-firepower-nerf.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0011-blueecm-fp-calibrate.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0002-ghost-cramped-arena.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0003-ghost-ecm-nerf.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0004-jam-drop-nerf.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0005-ghost-no-ecm.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0006-blueecm-combat-buff.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0007-arrow-retreat-nerf.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0008-ghost-replace-arrow-clone.md" />
-    <None Include="$(MSBuildThisFileDirectory)iter-0009-blueecm-hider-buff.md" />
-  </ItemGroup>
 </Project>
