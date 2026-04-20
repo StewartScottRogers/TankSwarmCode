@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 86 complete
+2026-04-20 — Iteration 87 complete
 
 ## Current Iteration
-**87** — pending
+**88** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -118,11 +118,43 @@ Pattern: Higher MaxFP → less Blue-dominant. MaxFP=1.5 → MaxFP=1.0 = 8pp more
 
 Rate of improvement: ~4pp Red per +0.5 MaxFP (from 1.5→2.0). Need ~13pp more to reach 50%. Binary search target: try MaxFP=4.0 (~33% + 4*(4pp) = ~49% Red predicted if linear).
 
-**Next hypothesis (iter-87):** MaxFP=4.0, PR=150, seed 1000. Predict: ~49% Red (linear extrapolation). If over-corrects → binary search back. If under → need higher MaxFP.
+**New arch MaxFP sweep (iters 84–87):**
+| MaxFP | PR  | Seed | Red%  | Blue% | Notes |
+|-------|-----|------|-------|-------|-------|
+| 1.0   | 150 | 1000 | 26%   | 74%   | iter-85 — worst for Red |
+| 1.5   | 150 | 1000 | 33%   | 66%   | iter-84 baseline |
+| 2.0   | 150 | 1000 | 37%   | 63%   | iter-86 |
+| 4.0   | 150 | 1000 | 43%   | 57%   | iter-87; BlueGuard becomes MVP; no Linchpins |
+
+Diminishing returns: 1.0→2.0 = +11pp Red; 2.0→4.0 = +6pp Red. Rate slowing. Need ~7pp more. Next: MaxFP=6.0 to see if curve continues or plateaus near 43%.
+
+**Next hypothesis (iter-88):** MaxFP=6.0, PR=150, seed 1000. Predict: ~46–48% Red. If close to balance → binary-search fine-tune. If plateau → different parameter needed.
 
 ---
 
 ## Iteration Log
+
+### Iter 87 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ COMPLETED — MaxFP=4.0 = Red 43%; BlueGuard becomes MVP; no Blue Linchpins
+
+**Hypothesis:** MaxFP=4.0, PR=150, seed 1000. Predict: ~49% Red (linear extrapolation from prior sweep).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=4.0, PR=150 (new arch)
+
+**Results:**
+- Red 87 (43%) / Blue 113 (57%) — **BLUE-DOMINANT** (closer! prediction overshot — 43%, not 49%)
+- BlueGuard: **MVP (96/113 = 85% WinSurv)** — role shift from BlueSharp at lower MaxFP
+- BlueSharp: Survivor only (53/87 losses)
+- BlueStrike: Hider (rate 1.63)
+- BlueEcm: Survivor, ECM, Rate/100t: 1.90 (higher than previous iterations)
+- No Blue Linchpins at MaxFP=4.0 (vs 4 Linchpins at MaxFP=1.0)
+- RedHammer: Red MVP (79/87)
+
+**Key finding:** MaxFP=4.0 gives Red 43% — further improvement but diminishing returns (+6pp for +2.0 MaxFP, vs +4pp for +0.5 MaxFP earlier). No Blue Linchpins — team cohesion broken. BlueGuard replaces BlueSharp as MVP. Still 7pp short of 50/50. Try MaxFP=6.0 next.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 86 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-20
