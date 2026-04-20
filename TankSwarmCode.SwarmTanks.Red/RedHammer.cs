@@ -7,7 +7,7 @@ public sealed class RedHammer : SwarmBrainBaseRed
 {
     public RedHammer() { SwarmId = 1; Role = TankRole.Attacker; }
     public override string Name => "RedHammer";
-    protected override TankConfig Config { get; } = new()
+    protected internal override TankConfig Config { get; } = new()
     {
         FormationSlot = 0,
         MaxFirePower = 3.0,

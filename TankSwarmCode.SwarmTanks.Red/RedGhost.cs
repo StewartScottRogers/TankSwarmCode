@@ -7,7 +7,7 @@ public sealed class RedGhost : SwarmBrainBaseRed
 {
     public RedGhost() { SwarmId = 1; Role = TankRole.EcmSpecialist; }
     public override string Name => "RedGhost";
-    protected override TankConfig Config { get; } = new()
+    protected internal override TankConfig Config { get; } = new()
     {
         FormationSlot = 3,
         MaxFirePower = 0.1,

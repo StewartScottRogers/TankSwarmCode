@@ -16,8 +16,7 @@
   <Project Path="TankSwarmCode.Cli.Engineering/TankSwarmCode.Cli.Engineering.shproj" Id="038d9c79-bffb-4e29-b84b-8e82f3378d09" />
   <Project Path="TankSwarmCode.Cli/TankSwarmCode.Cli.csproj" />
   <Project Path="TankSwarmCode.Gui/TankSwarmCode.Gui.csproj" />
-  <Project Path="TankSwarmCode.SwarmTank.Interfaces/TankSwarmCode.SwarmTank.Interfaces.csproj" Id="249030bd-c1c8-4699-94f1-1c1975a0f18d" />
-  <Project Path="TankSwarmCode.SwarmTank/TankSwarmCode.SwarmTank.csproj" Id="5b4e4794-f61c-41b4-a6b8-d379ee891ca4" />
+<Project Path="TankSwarmCode.SwarmTank/TankSwarmCode.SwarmTank.csproj" Id="5b4e4794-f61c-41b4-a6b8-d379ee891ca4" />
   <Project Path="TankSwarmCode.SwarmTanks.Blue.Engineering/TankSwarmCode.SwarmTanks.Blue.Engineering.shproj" Id="6531f24e-9e37-4b42-8bfa-781b5fc54386" />
   <Project Path="TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.csproj" Id="be78a83d-584a-4e89-bdac-f64806767d51" />
   <Project Path="TankSwarmCode.SwarmTanks.Red.Engineering/TankSwarmCode.SwarmTanks.Red.Engineering.shproj" Id="3d32ee64-dba8-4cf5-9fd5-aa5ceb81091a" />

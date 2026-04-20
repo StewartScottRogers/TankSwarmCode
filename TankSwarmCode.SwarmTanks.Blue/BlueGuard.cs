@@ -7,7 +7,7 @@ public sealed class BlueGuard : SwarmBrainBaseBlue
 {
     public BlueGuard() { SwarmId = 2; Role = TankRole.Defender; }
     public override string Name => "BlueGuard";
-    protected override TankConfig Config { get; } = new()
+    protected internal override TankConfig Config { get; } = new()
     {
         FormationSlot = 3,
         MaxFirePower = 2.0,

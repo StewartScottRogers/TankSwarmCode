@@ -7,7 +7,7 @@ public sealed class RedArrow : SwarmBrainBaseRed
 {
     public RedArrow() { SwarmId = 1; Role = TankRole.Scout; }
     public override string Name => "RedArrow";
-    protected override TankConfig Config { get; } = new()
+    protected internal override TankConfig Config { get; } = new()
     {
         FormationSlot = 2,
         MaxFirePower = 1.5,
