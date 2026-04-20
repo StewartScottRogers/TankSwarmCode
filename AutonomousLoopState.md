@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 88 complete
+2026-04-20 — Iteration 89 complete
 
 ## Current Iteration
-**89** — pending
+**90** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -139,11 +139,45 @@ Diminishing returns: 1.0→2.0 = +11pp Red; 2.0→4.0 = +6pp Red. Rate slowing. 
 
 Balance crossover is between MaxFP=4.0 (43% Red) and MaxFP=6.0 (58% Red). Binary search midpoint: **MaxFP=5.0**.
 
-**Next hypothesis (iter-89):** MaxFP=5.0, PR=150, seed 1000. Predict: ~50-51% Red (midpoint).
+**INITIAL FIX CANDIDATE (iter-89): MaxFP=5.0 achieves Red 46% at seed 1000 — within balanced range (45–55%).**
+
+New arch MaxFP sweep (iters 84–89):
+| MaxFP | PR  | Seed | Red%  | Blue% | Notes |
+|-------|-----|------|-------|-------|-------|
+| 1.0   | 150 | 1000 | 26%   | 74%   | iter-85 |
+| 1.5   | 150 | 1000 | 33%   | 66%   | iter-84 baseline |
+| 2.0   | 150 | 1000 | 37%   | 63%   | iter-86 |
+| 4.0   | 150 | 1000 | 43%   | 57%   | iter-87 |
+| 5.0   | 150 | 1000 | **46%** | **54%** | iter-89 — BALANCED ✅ |
+| 6.0   | 150 | 1000 | 58%   | 42%   | iter-88 — over-corrected |
+
+**Next hypothesis (iter-90):** Validate MaxFP=5.0 at seed 2000. Predict: balanced (45–55% Red). Must triple-seed validate before declaring fix confirmed.
 
 ---
 
 ## Iteration Log
+
+### Iter 89 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ INITIAL FIX CANDIDATE — MaxFP=5.0 = Red 46% (balanced); needs cross-seed validation
+
+**Hypothesis:** MaxFP=5.0, PR=150, seed 1000. Predict: ~50–51% Red (binary search midpoint between 43% and 58%).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=5.0, PR=150 (new arch)
+
+**Results:**
+- Red 92 (46%) / Blue 108 (54%) — **BALANCED** ✅ (within 45–55% target)
+- BlueGuard: Co-MVP (98/108 = 91% WinSurv)
+- BlueEcm: Co-MVP (97/108 = 90% WinSurv), ECM, Rate/100t: 0.92
+- BlueSharp: Hider (rate 0.60)
+- ALL Blue wins are timeout-only (0 decisive kills for all Blue tanks)
+- RedBlade: Red MVP (87/92), RedHammer: Top attacker (4.76 rate)
+- No Blue or Red Linchpins
+
+**Key finding:** MaxFP=5.0 achieves balanced win rate (46% Red) in the new architecture. Balance mechanism differs from old arch: Blue wins purely by energy outlasting (0 decisive Blue kills); Red has active combat. This is a viable fix candidate. Needs triple-seed validation.
+**Code:** MaxFP=5.0 retained for cross-seed validation.
+
+---
 
 ### Iter 88 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-20
