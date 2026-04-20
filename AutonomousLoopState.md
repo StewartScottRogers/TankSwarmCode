@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 84 complete
+2026-04-20 — Iteration 85 complete
 
 ## Current Iteration
-**85** — pending
+**86** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -101,11 +101,42 @@ The old balance fix (BlueEcm MaxFP=1.0) was tuned against a BlueEcm-centric bala
 - MaxFP=1.5, PR=150, seed 1000: Red 33% / Blue 66% (new arch baseline)
 - MaxFP=1.0, PR=175, seed 3000: Red 68% / Blue 32% (new arch — Red-dominant, expected Blue-dominant; low BlueEcm rate 0.37 indicates volley-fire not triggering at this PR)
 
-**Next hypothesis (iter-85):** Establish new architecture balance at MaxFP=1.0, PR=150 (the old fix applied in new arch). Old arch: MaxFP=1.0 balanced 51%/49%. New arch baseline: MaxFP=1.5 = Blue 66%. Predict: MaxFP=1.0 will further tilt Blue (BlueEcm fires even less → BlueSharp dominates more). This will tell us if the old fix is counterproductive, neutral, or coincidentally helpful in the new arch. Run: seed 1000, 200 matches.
+**New arch MaxFP sweep (iters 84–85):**
+| MaxFP | PR  | Seed | Red%  | Blue% | Notes |
+|-------|-----|------|-------|-------|-------|
+| 1.5   | 150 | 1000 | 33%   | 66%   | iter-84 baseline |
+| 1.0   | 150 | 1000 | 26%   | 74%   | iter-85 — worse for Red |
+
+Pattern: Higher MaxFP → less Blue-dominant. MaxFP=1.5 → MaxFP=1.0 = 8pp more Blue-dominant. To reach 50/50, need to continue increasing MaxFP beyond 1.5. Next: MaxFP=2.0 at seed 1000.
+
+**Next hypothesis (iter-86):** MaxFP=2.0, PR=150, seed 1000. Predict: Blue win rate drops further from 66% (e.g., ~60%). If pattern is linear, each +0.5 MaxFP gives ~8pp toward Red. To reach 50/50 from 66% at MaxFP=1.5, need ~+2pp per unit → ~MaxFP=3.0. Predict MaxFP=2.0 → ~58% Blue.
 
 ---
 
 ## Iteration Log
+
+### Iter 85 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ COMPLETED — MaxFP=1.0 makes imbalance WORSE (Blue 74%); old fix counterproductive in new arch
+
+**Hypothesis:** MaxFP=1.0 at PR=150, seed 1000. Old arch: this balanced 51/49. New arch: predict MaxFP=1.0 will further tilt Blue (BlueEcm fires less → BlueSharp dominates).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=150 (new arch)
+
+**Results:**
+- Red 53 (26%) / Blue 147 (74%) — **DEEPLY BLUE-DOMINANT** (prediction CORRECT direction)
+- BlueSharp: Co-MVP (142/147 = 97% WinSurv), **Linchpin (alive:85%/dead:15%)**
+- BlueGuard: Hider (1.24 rate), **Linchpin (alive:84%/dead:21%)**
+- BlueStrike: Co-MVP (141/147), **Linchpin (alive:85%/dead:17%)**
+- BlueEcm: **Linchpin (alive:86%/dead:23%)**, ECM, Rate/100t: 1.33
+- BlueRush: Top attacker (2.12 rate)
+- RedGhost: ECM, rate 0.15 (barely firing)
+- Red: NO Linchpins; RedHammer is Red's only MVP (47/53)
+
+**Key finding:** Old fix (MaxFP=1.0) WORSENS Blue dominance: 66% → 74% Blue. Four Blue tanks are simultaneously Linchpin — team cohesion is extreme. Blue wins 82% of the time with full team intact. The direction reversal vs old arch is confirmed: in new arch, higher MaxFP = less Blue-dominant. To reach 50/50, need MaxFP > 1.5. Next: probe MaxFP=2.0.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 84 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-20
