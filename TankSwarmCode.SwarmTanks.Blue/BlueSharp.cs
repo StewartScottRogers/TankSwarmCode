@@ -7,7 +7,7 @@ public sealed class BlueSharp : SwarmBrainBaseBlue
 {
     public BlueSharp() { SwarmId = 2; Role = TankRole.Support; }
     public override string Name => "BlueSharp";
-    protected internal override TankConfig Config { get; } = new()
+    protected internal override TankConfig TankConfig { get; } = new()
     {
         FormationSlot = 1,
         MaxFirePower = 3.0,

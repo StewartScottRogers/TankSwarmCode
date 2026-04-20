@@ -44,19 +44,19 @@ internal static class SwarmBrainBaseNavigationExtensions
         if (focusPoint.HasValue)
         {
             double radarBearing = brain.State.Position.BearingTo(focusPoint.Value);
-            if (!double.IsFinite(radarBearing)) { brain.SetTurnRadarRight(brain._radarSpin); return; }
+            if (!double.IsFinite(radarBearing)) { brain.SetTurnRadarRight(brain.RadarSpin); return; }
             double radarDiff = (radarBearing - brain.State.RadarHeading).RelativeBearing();
             brain.SetTurnRadarRight(Math.Clamp(radarDiff * 1.5, -45, 45));
         }
         else
         {
-            brain.SetTurnRadarRight(brain._radarSpin);
+            brain.SetTurnRadarRight(brain.RadarSpin);
         }
     }
 
     internal static void LinearPredictionFire(this SwarmBrainBase brain, RadarContact target)
     {
-        double power = Math.Min(brain.Config.MaxFirePower, brain.State.Energy * 0.1);
+        double power = Math.Min(brain.TankConfig.MaxFirePower, brain.State.Energy * 0.1);
         if (power < 0.1 || brain.State.Energy < 5)
             return;
 

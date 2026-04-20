@@ -7,7 +7,7 @@ public sealed class BlueEcm : SwarmBrainBaseBlue
 {
     public BlueEcm() { SwarmId = 2; Role = TankRole.EcmSpecialist; }
     public override string Name => "BlueEcm";
-    protected internal override TankConfig Config { get; } = new()
+    protected internal override TankConfig TankConfig { get; } = new()
     {
         FormationSlot = 4,
         MaxFirePower = 1.5,

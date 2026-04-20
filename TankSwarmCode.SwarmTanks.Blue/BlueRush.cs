@@ -7,7 +7,7 @@ public sealed class BlueRush : SwarmBrainBaseBlue
 {
     public BlueRush() { SwarmId = 2; Role = TankRole.Attacker; }
     public override string Name => "BlueRush";
-    protected internal override TankConfig Config { get; } = new()
+    protected internal override TankConfig TankConfig { get; } = new()
     {
         FormationSlot = 2,
         MaxFirePower = 2.5,

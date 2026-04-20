@@ -27,5 +27,5 @@ public sealed class RedTrooper : SwarmBrainBaseRed
     }
 
     public override string Name => $"Red{_config.FormationSlot}";
-    protected internal override TankConfig Config => _config;
+    protected internal override TankConfig TankConfig => _config;
 }

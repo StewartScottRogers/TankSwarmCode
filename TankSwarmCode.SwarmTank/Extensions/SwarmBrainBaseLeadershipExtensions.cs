@@ -12,7 +12,7 @@ internal static class SwarmBrainBaseLeadershipExtensions
         SwarmBrainBase.AllyEntry? best = null;
         string bestName = string.Empty;
 
-        foreach (KeyValuePair<string, SwarmBrainBase.AllyEntry> kv in brain._allyMap)
+        foreach (KeyValuePair<string, SwarmBrainBase.AllyEntry> kv in brain.AllyEntryMap)
         {
             if (kv.Value.LastSeen < brain.Arena.TickNumber - SwarmBrainBase.AllyStaleTicks)
                 continue;
@@ -32,8 +32,8 @@ internal static class SwarmBrainBaseLeadershipExtensions
     internal static void RunEpochLogic(this SwarmBrainBase brain)
     {
         SwarmStrategy strategy = brain.SelectStrategy();
-        brain._activeStrategy = strategy;
-        brain._strategyEpoch++;
+        brain.ActiveSwarmStrategy = strategy;
+        brain.StrategyEpoch++;
 
         RadarContact? priorityTarget = null;
         long freshCutoff = brain.Arena.TickNumber - SwarmBrainBase.AllyStaleTicks;
@@ -45,17 +45,17 @@ internal static class SwarmBrainBaseLeadershipExtensions
                 priorityTarget = c;
         }
 
-        brain._priorityTargetName = priorityTarget?.Name ?? string.Empty;
+        brain.PriorityTargetName = priorityTarget?.Name ?? string.Empty;
 
         string strategyJson = JsonSerializer.Serialize(
-            new SwarmBrainBase.StrategyPayload(strategy.ToString(), brain._priorityTargetName, brain._strategyEpoch),
-            SwarmBrainBase.JsonOptions);
+            new SwarmBrainBase.StrategyPayload(strategy.ToString(), brain.PriorityTargetName, brain.StrategyEpoch),
+            SwarmBrainBase.JsonSerializerOptions);
 
         brain.Broadcast(new SwarmMessage
         {
             SenderName = brain.Name,
             Type = SwarmMessageType.StrategyCommand,
-            TargetName = brain._priorityTargetName,
+            TargetName = brain.PriorityTargetName,
             CustomData = strategyJson,
             Timestamp = brain.Arena.TickNumber
         });
@@ -64,13 +64,13 @@ internal static class SwarmBrainBaseLeadershipExtensions
             && brain.GetAliveAllyCount() >= 2
             && priorityTarget != null
             && brain.State.Position.DistanceTo(priorityTarget.Position) <= SwarmBrainBase.VolleyRange
-            && brain.Arena.TickNumber - brain._lastVolleyTick >= SwarmBrainBase.VolleyIntervalTicks)
+            && brain.Arena.TickNumber - brain.LastVolleyTick >= SwarmBrainBase.VolleyIntervalTicks)
         {
             long fireAtTick = brain.Arena.TickNumber + 20;
-            brain._lastVolleyTick = brain.Arena.TickNumber;
+            brain.LastVolleyTick = brain.Arena.TickNumber;
 
             string volleyJson = JsonSerializer.Serialize(
-                new SwarmBrainBase.VolleyPayload(fireAtTick), SwarmBrainBase.JsonOptions);
+                new SwarmBrainBase.VolleyPayload(fireAtTick), SwarmBrainBase.JsonSerializerOptions);
 
             brain.Broadcast(new SwarmMessage
             {
@@ -81,7 +81,7 @@ internal static class SwarmBrainBaseLeadershipExtensions
                 Timestamp = brain.Arena.TickNumber
             });
 
-            brain._scheduledFireTick = fireAtTick;
+            brain.ScheduledFireTick = fireAtTick;
         }
     }
 
@@ -96,15 +96,15 @@ internal static class SwarmBrainBaseLeadershipExtensions
         int allyCount = brain.GetAliveAllyCount() + 1; // +1 = self
 
         double totalEnergy = brain.State.Energy;
-        foreach (SwarmBrainBase.AllyEntry entry in brain._allyMap.Values)
+        foreach (SwarmBrainBase.AllyEntry entry in brain.AllyEntryMap.Values)
         {
-            if (entry.LastSeen >= freshCutoff && brain._allyMap.ContainsKey(brain.Name) && !ReferenceEquals(entry, brain._allyMap[brain.Name]))
+            if (entry.LastSeen >= freshCutoff && brain.AllyEntryMap.ContainsKey(brain.Name) && !ReferenceEquals(entry, brain.AllyEntryMap[brain.Name]))
                 totalEnergy += entry.Energy;
         }
         // Recompute properly: sum all alive ally energies + self
         double sumEnergy = brain.State.Energy;
         int countForAvg = 1;
-        foreach (KeyValuePair<string, SwarmBrainBase.AllyEntry> kv in brain._allyMap)
+        foreach (KeyValuePair<string, SwarmBrainBase.AllyEntry> kv in brain.AllyEntryMap)
         {
             if (kv.Key == brain.Name) continue;
             if (kv.Value.LastSeen >= freshCutoff)
@@ -115,7 +115,7 @@ internal static class SwarmBrainBaseLeadershipExtensions
         }
         double avgAllyEnergy = sumEnergy / countForAvg;
 
-        if (brain.State.Energy < brain.Config.RetreatEnergyThreshold && allyCount == 1)
+        if (brain.State.Energy < brain.TankConfig.RetreatEnergyThreshold && allyCount == 1)
             return SwarmStrategy.Scatter;
 
         if (avgAllyEnergy < 30.0)
@@ -145,7 +145,7 @@ internal static class SwarmBrainBaseLeadershipExtensions
         {
             Type = SwarmMessageType.AllyPing,
             SenderName = brain.Name,
-            CustomData = $"{brain.Config.FormationSlot}:{brain.State.Energy:F1}",
+            CustomData = $"{brain.TankConfig.FormationSlot}:{brain.State.Energy:F1}",
             Timestamp = brain.Arena.TickNumber
         });
     }
@@ -153,6 +153,6 @@ internal static class SwarmBrainBaseLeadershipExtensions
     internal static int GetAliveAllyCount(this SwarmBrainBase brain)
     {
         long freshCutoff = brain.Arena.TickNumber - SwarmBrainBase.AllyStaleTicks;
-        return brain._allyMap.Values.Count(e => e.LastSeen >= freshCutoff) - 1; // subtract self
+        return brain.AllyEntryMap.Values.Count(e => e.LastSeen >= freshCutoff) - 1; // subtract self
     }
 }

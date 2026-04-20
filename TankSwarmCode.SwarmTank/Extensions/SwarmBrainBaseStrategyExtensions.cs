@@ -7,14 +7,14 @@ namespace TankSwarmCode.SwarmTank;
 internal static class SwarmBrainBaseStrategyExtensions
 {
     internal static bool IsEnemyEcmActive(this SwarmBrainBase brain)
-        => brain.Arena.TickNumber - brain._enemyEcmAlertTick < 20;
+        => brain.Arena.TickNumber - brain.EnemyEcmAlertTick < 20;
 
     internal static void HandleEcm(this SwarmBrainBase brain)
     {
-        if (brain.Config.HasEcm)
+        if (brain.TankConfig.HasEcm)
         {
-            if (brain._activeStrategy == SwarmStrategy.ECMScreen)
-                brain.SetEcm(brain.Config.OffensiveEcmMode);
+            if (brain.ActiveSwarmStrategy == SwarmStrategy.ECMScreen)
+                brain.SetEcm(brain.TankConfig.OffensiveEcmMode);
             else if (brain.IsEnemyEcmActive())
                 brain.SetEcm(EcmMode.Burnthrough);
             else
@@ -33,7 +33,7 @@ internal static class SwarmBrainBaseStrategyExtensions
     {
         RadarContact? target = brain.GetStrategyTarget();
 
-        switch (brain._activeStrategy)
+        switch (brain.ActiveSwarmStrategy)
         {
             case SwarmStrategy.Wolfpack:
                 if (target != null) brain.ExecuteWolfpack(target); else brain.Scout();
@@ -58,8 +58,8 @@ internal static class SwarmBrainBaseStrategyExtensions
 
     internal static RadarContact? GetStrategyTarget(this SwarmBrainBase brain)
     {
-        if (!string.IsNullOrEmpty(brain._priorityTargetName)
-            && brain.RadarMap.TryGetValue(brain._priorityTargetName, out RadarContact? named)
+        if (!string.IsNullOrEmpty(brain.PriorityTargetName)
+            && brain.RadarMap.TryGetValue(brain.PriorityTargetName, out RadarContact? named)
             && brain.Arena.TickNumber - named.Timestamp < 30)
         {
             return named;
@@ -69,7 +69,7 @@ internal static class SwarmBrainBaseStrategyExtensions
 
     internal static void ExecuteWolfpack(this SwarmBrainBase brain, RadarContact target)
     {
-        brain.NavigateTo(target.Position, brain.Config.PreferredRange);
+        brain.NavigateTo(target.Position, brain.TankConfig.PreferredRange);
         brain.MaintainRadar(target.Position);
         brain.LinearPredictionFire(target);
     }
@@ -77,7 +77,7 @@ internal static class SwarmBrainBaseStrategyExtensions
     internal static void ExecuteEncircle(this SwarmBrainBase brain, RadarContact target)
     {
         int aliveCount = brain.GetAliveAllyCount() + 1;
-        int mySlot = brain.Config.FormationSlot % aliveCount;
+        int mySlot = brain.TankConfig.FormationSlot % aliveCount;
         double orbitAngleDeg = mySlot * (360.0 / aliveCount);
         Vector2D orbitPoint = target.Position.PolarOffset(orbitAngleDeg, SwarmBrainBase.OrbitRadius);
 
@@ -91,7 +91,7 @@ internal static class SwarmBrainBaseStrategyExtensions
 
     internal static void ExecutePincer(this SwarmBrainBase brain, RadarContact target)
     {
-        double groupAngle = brain.Config.FormationSlot <= 1 ? 0.0 : 180.0;
+        double groupAngle = brain.TankConfig.FormationSlot <= 1 ? 0.0 : 180.0;
         Vector2D approachPoint = target.Position.PolarOffset(groupAngle, 200.0);
         brain.NavigateTo(approachPoint, 50.0);
         brain.MaintainRadar(target.Position);
@@ -100,7 +100,7 @@ internal static class SwarmBrainBaseStrategyExtensions
 
     internal static void ExecuteECMScreen(this SwarmBrainBase brain, RadarContact target)
     {
-        if (brain.Config.HasEcm)
+        if (brain.TankConfig.HasEcm)
         {
             // ECM already set by HandleEcm(); keep safe distance
             brain.NavigateTo(target.Position, 120.0);
@@ -135,7 +135,7 @@ internal static class SwarmBrainBaseStrategyExtensions
         {
             brain.SetAhead(200);
         }
-        brain.SetTurnRadarRight(brain._radarSpin);
+        brain.SetTurnRadarRight(brain.RadarSpin);
     }
 
     internal static void Scout(this SwarmBrainBase brain)
