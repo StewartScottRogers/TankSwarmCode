@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-19 — Iteration 82 complete
+2026-04-20 — Iteration 83 complete
 
 ## Current Iteration
-**83** — pending
+**84** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -52,6 +52,8 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 
 **SEED 3000 DIP EXTENDS TO AT LEAST PR=171 (iter-82):** PR=171 seed 3000 = 48% Red, BlueEcm NOT Linchpin — same shallow behavior as PR=170 (both 48%, no Linchpin). The dip at seed 3000 continues past PR=171 with unchanged depth. Upper boundary is above PR=171. Probing PR=180 next to binary-search the upper boundary.
 
+**SEED 3000 DIP AT PR=180 IS DEEP — UNEXPECTED (iter-83):** PR=180 seed 3000 = 36% Red, BlueEcm NOT Linchpin, RedGhost also NOT Linchpin. The dip deepens dramatically between PR=171 (48%) and PR=180 (36%) — a 12pp drop in Red win rate over 9 PR units. At seed 2000, PR=180 = 49% (shallow). BlueSharp is now MVP (114/127 = 90% WinSurv) rather than BlueEcm. RedGhost lost Linchpin role that was present at PR=168–171. The seed 3000 dip structure is markedly different from seed 2000 — shallower near PR=168–171 but much deeper at PR=180. Need to find where the drop occurs: probing PR=175 next.
+
 **INTERIOR PR CURVE (MaxFP=1.0) — DIP FULLY CHARACTERIZED (seed 1000 OLD ENGINE), CROSS-SEED PARTIAL (seed 2000 full gradient, seed 1000 post-engine dip eliminated, seed 3000 partial):**
 
 | BlueEcm PR | Red%  | Blue% | Linchpin? | Seed | Engine |
@@ -73,6 +75,7 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 | 171        | 46%   | 54%   | No (iter-75)  | 2000 | new |
 | 171        | **48%**| **52%**| **No (iter-82)** | 3000 | **new** |
 | 172        | 47%   | 53%   | No (iter-74)  | 2000 | new |
+| 180        | **36%**| **64%**| **No (iter-83)** | 3000 | **new** |
 | 175        | 48%   | 52%   | No (iter-73)  | 2000 | new |
 | 180        | 49%   | 51%   | No (iter-70)  | 2000 | new |
 | 190        | 44%   | 56%   | No (iter-61)  | 1000 | old |
@@ -84,11 +87,41 @@ All three former dip points are now balanced plateau behavior. The old dip (PR=1
 | 217        | 49%   | 51%   | No (iter-44)  | 1000 | old |
 | 238        | 49%   | 51%   | Yes (iter-58) | 1000 | old |
 
-**Next hypothesis:** Probe PR=180 at seed 3000 (new engine). The dip at seed 3000 extends at least to PR=171 (48%, no Linchpin — same as PR=170). PR=180 is a midpoint binary search toward the old seed-1000/2000 upper boundary region (~PR=190). At seed 2000, PR=180 = 49% (still dip). Predict for seed 3000: if dip is narrower than seed 2000, PR=180 may be back on plateau (Linchpin YES). If dip matches seed 2000 breadth → PR=180 = ~49%, no Linchpin.
+**Next hypothesis:** Probe PR=175 at seed 3000 (new engine). PR=171 = 48% shallow; PR=180 = 36% very deep. The drop is 12pp over 9 units. PR=175 is the midpoint. Predict: gradient (somewhere between 36% and 48% Red, no Linchpin). If sharp step → PR=172–174 is the transition; if gradient → expect ~42% at PR=175.
 
 ---
 
 ## Iteration Log
+
+### Iter 83 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ COMPLETED — PR=180 seed 3000 (new engine) = 36% Red, BlueEcm NOT Linchpin, RedGhost NOT Linchpin; dip deepens dramatically at PR=180 vs PR=171 (48%)
+
+**Hypothesis:** PR=180 at seed 3000 is a midpoint binary search for upper dip boundary. At seed 2000, PR=180 = 49% (shallow). Predict: if seed 3000 dip is narrower → plateau (Linchpin YES); if similar breadth → ~49% no Linchpin.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=180 (new engine)
+
+**Results:**
+- Red 73 (36%) / Blue 127 (64%) — **DEEPLY BLUE-DOMINANT** (prediction WRONG — expected ~49% or plateau)
+- BlueEcm: Survivor (33/73 losses), ECM, Rate/100t: 1.14 — **NO Linchpin**
+- RedGhost: Survivor (76/127 losses), ECM, Rate/100t: 0.18 — **NO Linchpin** (lost Linchpin role vs PR=168–171!)
+- BlueSharp: **MVP (114/127 = 90% WinSurv)** — dominant role unlike prior dip runs
+
+**Seed 3000 dip structure (updated):**
+
+| PR  | Seed | Red%  | BlueEcm Linchpin? | RedGhost Linchpin? | Category |
+|-----|------|-------|-------------------|--------------------|----------|
+| 167 | 3000 | 53%   | YES (iter-79)     | NO                 | Plateau |
+| 168 | 3000 | 50%   | NO (iter-81)      | YES                | Structural dip (balanced wins) |
+| 169 | 3000 | 45%   | NO (iter-80)      | YES (alive:100%)   | Deep dip floor |
+| 170 | 3000 | 48%   | NO (iter-78)      | YES (alive:95%)    | Shallow dip |
+| 171 | 3000 | 48%   | NO (iter-82)      | YES (alive:93%)    | Shallow dip |
+| 180 | 3000 | 36%   | NO (iter-83)      | NO                 | Very deep — different regime |
+
+**Key finding:** PR=180 is dramatically more Blue-dominant (36%) than PR=171 (48%). RedGhost lost Linchpin at PR=180 — the ECM/Linchpin dynamic that defined PR=168–171 has broken down. BlueSharp is MVP instead of BlueEcm. The seed 3000 dip has an unusual shape: shallow near lower boundary (PR=168–171, ~48%) but much deeper at PR=180 (36%). Need to find the step location: probing PR=175 next.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 82 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-19
