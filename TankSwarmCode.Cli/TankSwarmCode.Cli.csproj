@@ -11,7 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TankSwarmCode.Arena\TankSwarmCode.Arena.csproj" />
     <ProjectReference Include="..\TankSwarmCode.Arena.Interfaces\TankSwarmCode.Arena.Interfaces.csproj" />
-    <ProjectReference Include="..\TankSwarmCode.SwarmTank.Interfaces\TankSwarmCode.SwarmTank.Interfaces.csproj" />
+    <ProjectReference Include="..\TankSwarmCode.SwarmTank\TankSwarmCode.SwarmTank.csproj" />
   </ItemGroup>
 
 </Project>

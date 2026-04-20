@@ -8,7 +8,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TankSwarmCode.SwarmTank\TankSwarmCode.SwarmTank.csproj" />
-    <ProjectReference Include="..\TankSwarmCode.SwarmTank.Interfaces\TankSwarmCode.SwarmTank.Interfaces.csproj" />
   </ItemGroup>
 
 </Project>
