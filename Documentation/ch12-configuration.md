@@ -6,7 +6,7 @@
 
 ## Physics Constants (`ArenaConstants.cs`)
 
-All physics values are defined in `TankSwarmCode.SwarmTank.Interfaces/ArenaConstants.cs`. They apply to every tank in every round. Changing a value here affects the entire simulation — all projects reference this file.
+All physics values are defined in `TankSwarmCode.SwarmTank/ArenaConstants.cs`. They apply to every tank in every round. Changing a value here affects the entire simulation — all projects reference this file.
 
 ### Movement
 
@@ -176,7 +176,7 @@ ECM
 
 ## Modifying Constants
 
-`ArenaConstants.cs` is in the `TankSwarmCode.SwarmTank.Interfaces` project, which all other projects reference. Changing a value here affects the entire simulation immediately.
+`ArenaConstants.cs` is in the `TankSwarmCode.SwarmTank` project, which all other projects reference. Changing a value here affects the entire simulation immediately.
 
 **When tuning physics**, keep these relationships in mind:
 

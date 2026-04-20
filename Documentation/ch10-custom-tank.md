@@ -37,9 +37,9 @@ Every tank is a class that inherits from `SwarmTankBase`. Set identity in the co
 
 ```csharp
 using TankSwarmCode.SwarmTank;
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Events;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Interfaces.Enums;   // TankRole, EcmMode, SwarmMessageType
+using TankSwarmCode.SwarmTank.Interfaces.Events;  // ScannedTankEventArgs, TickEventArgs, …
+using TankSwarmCode.SwarmTank.Interfaces.Models;  // TankState, RadarContact, Vector2D, …
 
 public class MyTank : SwarmTankBase
 {

@@ -421,9 +421,9 @@ Available on `SwarmBrainBase` subclasses. Returns `true` if any wall segment in 
 
 ```csharp
 using TankSwarmCode.SwarmTank;
-using TankSwarmCode.SwarmTank.Interfaces.Enums;
-using TankSwarmCode.SwarmTank.Interfaces.Events;
-using TankSwarmCode.SwarmTank.Interfaces.Models;
+using TankSwarmCode.SwarmTank.Interfaces.Enums;   // TankRole, EcmMode, SwarmMessageType
+using TankSwarmCode.SwarmTank.Interfaces.Events;  // ScannedTankEventArgs, TickEventArgs, …
+using TankSwarmCode.SwarmTank.Interfaces.Models;  // TankState, RadarContact, Vector2D, …
 
 public class SimpleTank : SwarmTankBase
 {

@@ -125,8 +125,6 @@ TankSwarmCode.Arena/
 
 TankSwarmCode.SwarmTank/
   SwarmTank.cs                    SwarmTankBase — subclass this to write AI
-
-TankSwarmCode.SwarmTank.Interfaces/
   ISwarmTank.cs                   Tank contract (engine ↔ AI boundary)
   IArenaContext.cs                Arena read-only interface exposed to tanks
   ArenaConstants.cs               All physics constants

@@ -8,7 +8,7 @@
 
 TankSwarmCode is split into narrow, purpose-built projects that keep the public API separate from the implementation:
 
-- **AI authors** only reference `TankSwarmCode.SwarmTank` and `TankSwarmCode.SwarmTank.Interfaces` — they never touch the engine or renderer.
+- **AI authors** only reference `TankSwarmCode.SwarmTank` — they never touch the engine or renderer.
 - **Engine changes** are isolated to `TankSwarmCode.Arena` and do not require AI code to be recompiled.
 - **The renderer** is a separate WinForms layer that consumes read-only snapshots, so it cannot mutate simulation state.
 
@@ -21,10 +21,10 @@ TankSwarmCode.Gui (WinForms host / renderer)
     │
     ├── TankSwarmCode.Arena
     │       ├── TankSwarmCode.Arena.Interfaces
-    │       └── TankSwarmCode.SwarmTank.Interfaces
+    │       │       └── TankSwarmCode.SwarmTank
+    │       └── TankSwarmCode.SwarmTank
     │
     ├── TankSwarmCode.SwarmTank
-    │       └── TankSwarmCode.SwarmTank.Interfaces
     │
     ├── TankSwarmCode.SwarmTanks.Red
     │       └── TankSwarmCode.SwarmTank
@@ -34,9 +34,11 @@ TankSwarmCode.Gui (WinForms host / renderer)
 
 TankSwarmCode.Cli (headless runner)
     │
-    └── TankSwarmCode.Arena
-            ├── TankSwarmCode.Arena.Interfaces
-            └── TankSwarmCode.SwarmTank.Interfaces
+    ├── TankSwarmCode.Arena
+    │       ├── TankSwarmCode.Arena.Interfaces
+    │       │       └── TankSwarmCode.SwarmTank
+    │       └── TankSwarmCode.SwarmTank
+    └── TankSwarmCode.SwarmTank
 ```
 
 Neither the Red nor Blue swarm projects reference the Arena project — they cannot call engine internals. The CLI loads swarm DLLs at runtime via reflection; it does not reference them at compile time.
@@ -45,7 +47,7 @@ Neither the Red nor Blue swarm projects reference the Arena project — they can
 
 ## Layered Architecture
 
-### Layer 1 — Public Interfaces & Models (`TankSwarmCode.SwarmTank.Interfaces`)
+### Layer 1 — Public Interfaces & Models (`TankSwarmCode.SwarmTank`)
 
 Everything AI authors see lives here:
 

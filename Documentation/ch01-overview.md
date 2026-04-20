@@ -68,9 +68,8 @@ Any tank can activate an ECM mode each tick at an energy cost. ECM modes interfe
 
 ```
 TankSwarmCode.slnx
-├── TankSwarmCode.SwarmTank.Interfaces   — public API (contracts, models, events, enums)
 ├── TankSwarmCode.Arena.Interfaces       — arena control contract (IArena)
-├── TankSwarmCode.SwarmTank              — SwarmTankBase abstract class
+├── TankSwarmCode.SwarmTank              — public API (contracts, models, events, enums) + SwarmTankBase
 ├── TankSwarmCode.Arena                  — ArenaEngine physics & runtime state
 ├── TankSwarmCode.SwarmTanks.Red         — Red Swarm AI (6 tanks)
 ├── TankSwarmCode.SwarmTanks.Blue        — Blue Swarm AI (7 tanks)

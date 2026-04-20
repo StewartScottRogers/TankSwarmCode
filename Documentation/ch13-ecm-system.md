@@ -293,7 +293,7 @@ When an override is active, the button is highlighted purple with bold text. The
 
 ## Constants Reference
 
-All ECM constants are in `ArenaConstants` (`TankSwarmCode.SwarmTank.Interfaces/ArenaConstants.cs`):
+All ECM constants are in `ArenaConstants` (`TankSwarmCode.SwarmTank/ArenaConstants.cs`):
 
 | Constant | Value | Description |
 |----------|-------|-------------|

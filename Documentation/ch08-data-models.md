@@ -4,7 +4,7 @@
 
 ---
 
-All models live in `TankSwarmCode.SwarmTank.Interfaces/Models/`. They are **immutable records** with `init`-only properties — AI code always receives snapshots, never mutable engine objects.
+All models live in `TankSwarmCode.SwarmTank/Models/`. They are **immutable records** with `init`-only properties — AI code always receives snapshots, never mutable engine objects.
 
 ---
 
