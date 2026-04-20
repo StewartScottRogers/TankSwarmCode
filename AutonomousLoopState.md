@@ -1,10 +1,10 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 85 complete
+2026-04-20 — Iteration 86 complete
 
 ## Current Iteration
-**86** — pending
+**87** — pending
 
 ## Status
 **BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
@@ -109,11 +109,41 @@ The old balance fix (BlueEcm MaxFP=1.0) was tuned against a BlueEcm-centric bala
 
 Pattern: Higher MaxFP → less Blue-dominant. MaxFP=1.5 → MaxFP=1.0 = 8pp more Blue-dominant. To reach 50/50, need to continue increasing MaxFP beyond 1.5. Next: MaxFP=2.0 at seed 1000.
 
-**Next hypothesis (iter-86):** MaxFP=2.0, PR=150, seed 1000. Predict: Blue win rate drops further from 66% (e.g., ~60%). If pattern is linear, each +0.5 MaxFP gives ~8pp toward Red. To reach 50/50 from 66% at MaxFP=1.5, need ~+2pp per unit → ~MaxFP=3.0. Predict MaxFP=2.0 → ~58% Blue.
+**New arch MaxFP sweep (iters 84–86):**
+| MaxFP | PR  | Seed | Red%  | Blue% | Notes |
+|-------|-----|------|-------|-------|-------|
+| 1.0   | 150 | 1000 | 26%   | 74%   | iter-85 — worst for Red |
+| 1.5   | 150 | 1000 | 33%   | 66%   | iter-84 baseline |
+| 2.0   | 150 | 1000 | 37%   | 63%   | iter-86 — improving |
+
+Rate of improvement: ~4pp Red per +0.5 MaxFP (from 1.5→2.0). Need ~13pp more to reach 50%. Binary search target: try MaxFP=4.0 (~33% + 4*(4pp) = ~49% Red predicted if linear).
+
+**Next hypothesis (iter-87):** MaxFP=4.0, PR=150, seed 1000. Predict: ~49% Red (linear extrapolation). If over-corrects → binary search back. If under → need higher MaxFP.
 
 ---
 
 ## Iteration Log
+
+### Iter 86 — `research/iter-000082-blueecm-pr171-seed3000`
+**Date:** 2026-04-20
+**Status:** ✅ COMPLETED — MaxFP=2.0 = Red 37% (improved from 33%); +4pp Red per +0.5 MaxFP
+
+**Hypothesis:** MaxFP=2.0, PR=150, seed 1000. Predict: ~58% Blue (pattern from baseline).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=2.0, PR=150 (new arch)
+
+**Results:**
+- Red 74 (37%) / Blue 126 (63%) — **BLUE-DOMINANT** (prediction correct direction; 63% not 58%)
+- BlueSharp: MVP (117/126 = 93%), **Linchpin (alive:77%/dead:19%)**
+- BlueGuard: Hider (0.83 rate)
+- BlueEcm: NOT Linchpin now (was Linchpin at lower MaxFP), ECM, Rate/100t: 0.99
+- RedHammer: Red MVP (65/74), Top attacker (3.83)
+- Red: NO Linchpins
+
+**Key finding:** MaxFP increase helps Red (+4pp per +0.5 MaxFP from baseline). BlueEcm loses Linchpin status at MaxFP=2.0. BlueSharp remains the dominant Blue win-carrier regardless of BlueEcm params. Still very far from 50/50. Binary search: try MaxFP=4.0 next.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
 
 ### Iter 85 — `research/iter-000082-blueecm-pr171-seed3000`
 **Date:** 2026-04-20
