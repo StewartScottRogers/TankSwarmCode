@@ -185,7 +185,7 @@ There is no per-tick message limit. Messages are only delivered to tanks that ar
 
 ### Epoch leader pattern (both swarms)
 
-`SwarmCoordinator` (in `TankSwarmCode.AiCortex`) elects a leader every 40 ticks — the living tank with the lowest `FormationSlot`. The leader broadcasts a `StrategyCommand` message (containing the chosen strategy name and the priority target's name) and, when conditions are met, a `VolleyFire` message (containing the tick at which all tanks should fire simultaneously). Non-leader tanks receive and apply these messages, focusing the entire swarm on the same target with a coordinated salvo. There is no central "commander" class — any tank can become leader if its predecessors die.
+`SwarmCoordinator` (in `TankSwarmCode.AiCortex.Blue` and `TankSwarmCode.AiCortex.Red` respectively) elects a leader every 40 ticks — the living tank with the lowest `FormationSlot`. The leader broadcasts a `StrategyCommand` message (containing the chosen strategy name and the priority target's name) and, when conditions are met, a `VolleyFire` message (containing the tick at which all tanks should fire simultaneously). Non-leader tanks receive and apply these messages, focusing the entire swarm on the same target with a coordinated salvo. There is no central "commander" class — any tank can become leader if its predecessors die.
 
 ### Ally ping heartbeat (both swarms)
 

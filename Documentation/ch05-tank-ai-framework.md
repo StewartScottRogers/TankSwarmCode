@@ -14,11 +14,12 @@ The AI framework spans two projects:
 - **`ITankContext`** — the interface through which a cortex observes and commands its tank. Tank shells implement this; cortexes program against it.
 - **`IAiCortex`** — the contract every AiCortex implementation must fulfil: `OnStart`, `OnTick`, `OnSwarmMessage`, `OnRoundEnded`.
 
-**`TankSwarmCode.AiCortex`** — the only project that changes between research iterations:
+**`TankSwarmCode.AiCortex.Blue`** and **`TankSwarmCode.AiCortex.Red`** — the only projects that change between research iterations. Each team has its own self-contained project:
 
 - **`SwarmCoordinator`** — per-team shared brain. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full coordination brain reference.
 - **`TankNavigation`** — stateless movement and firing helpers.
 - **`BlueCortexBase`** / **`RedCortexBase`** — abstract base classes with default team coordination logic; override any method to diverge.
+- **`CortexFactory`** — maps tank name strings to cortex instances (each project's factory handles only its own team).
 - Concrete cortexes (`BlueEcmCortex`, `RedGhostCortex`, …) — each declares only its `TankConfiguration`.
 
 Tank shells (`BlueEcm`, `RedGhost`, …) inherit from `SwarmTankBase`, implement `ITankContext`, and hold a single `IAiCortex` field. They delegate every lifecycle call to the cortex. The shell code is permanently frozen after wiring.
@@ -450,7 +451,7 @@ if (gunAligned && shotClear)
 internal static bool IsWallInLineOfFire(ITankContext ctx, Vector2D target)
 ```
 
-Available via `TankNavigation` in `TankSwarmCode.AiCortex`. Returns `true` if any wall segment in `ctx.BuildingWallMap` intersects the line from the tank's position to `target`. `BlueCortexBase` and `RedCortexBase` call this automatically before every scheduled volley fire and inside `LinearPredictionFire`.
+Available via `TankNavigation` in `TankSwarmCode.AiCortex.Blue` and `TankSwarmCode.AiCortex.Red`. Returns `true` if any wall segment in `ctx.BuildingWallMap` intersects the line from the tank's position to `target`. `BlueCortexBase` and `RedCortexBase` call this automatically before every scheduled volley fire and inside `LinearPredictionFire`.
 
 ---
 

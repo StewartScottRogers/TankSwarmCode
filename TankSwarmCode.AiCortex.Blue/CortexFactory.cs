@@ -1,8 +1,6 @@
-using TankSwarmCode.AiCortex.Blue;
-using TankSwarmCode.AiCortex.Red;
 using TankSwarmCode.SwarmTank.Interfaces;
 
-namespace TankSwarmCode.AiCortex;
+namespace TankSwarmCode.AiCortex.Blue;
 
 public static class CortexFactory
 {
@@ -14,11 +12,6 @@ public static class CortexFactory
         "BlueRush"    => new BlueRushCortex(),
         "BlueStrike"  => new BlueStrikeCortex(),
         "BlueTrooper" => new BlueTrooperCortex(slot),
-        "RedGhost"    => new RedGhostCortex(),
-        "RedBlade"    => new RedBladeCortex(),
-        "RedArrow"    => new RedArrowCortex(),
-        "RedHammer"   => new RedHammerCortex(),
-        "RedTrooper"  => new RedTrooperCortex(slot),
         _ => throw new ArgumentException($"Unknown tank type: {tankName}", nameof(tankName))
     };
 }

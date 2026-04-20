@@ -1,4 +1,4 @@
-using TankSwarmCode.AiCortex;
+using TankSwarmCode.AiCortex.Blue;
 using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;

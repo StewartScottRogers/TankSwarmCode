@@ -10,11 +10,11 @@ Two fully implemented swarms ship with the project. They serve as reference impl
 
 ## Architecture: AiCortex Pattern
 
-All built-in tanks use the composition pattern introduced by `TankSwarmCode.AiCortex`. Each tank type is two things:
+All built-in tanks use the composition pattern. Each tank type is two things:
 
 1. **A frozen shell** (in `TankSwarmCode.SwarmTanks.Blue` or `.Red`) — a thin `SwarmTankBase` subclass that implements `ITankContext` and delegates every lifecycle call to a single `IAiCortex` field. The shell code never changes.
 
-2. **A cortex** (in `TankSwarmCode.AiCortex`) — an `IAiCortex` implementation that contains all AI logic and owns its `TankConfiguration`. This is the only file that changes between research iterations.
+2. **A cortex** (in `TankSwarmCode.AiCortex.Blue` or `TankSwarmCode.AiCortex.Red`) — an `IAiCortex` implementation that contains all AI logic and owns its `TankConfiguration`. This is the only file that changes between research iterations.
 
 ### Tank shell (frozen)
 
@@ -132,10 +132,10 @@ Walls accumulate in `BuildingWallMap` from both direct radar echoes and `Buildin
 
 | Tank | Cortex file | Slot | Role | Max Power | Range | ECM |
 |------|-------------|------|------|-----------|-------|-----|
-| RedHammer | `Red/RedHammerCortex.cs` | 0 | Attacker | 3.0 | 200 px | — |
-| RedBlade | `Red/RedBladeCortex.cs` | 1 | Attacker | 2.5 | 160 px | — |
-| RedArrow | `Red/RedArrowCortex.cs` | 2 | Scout | 1.5 | 220 px | — |
-| RedGhost | `Red/RedGhostCortex.cs` | 3 | EcmSpecialist | 0.1 | 150 px | JamAndSpoof |
+| RedHammer | `RedHammerCortex.cs` | 0 | Attacker | 3.0 | 200 px | — |
+| RedBlade | `RedBladeCortex.cs` | 1 | Attacker | 2.5 | 160 px | — |
+| RedArrow | `RedArrowCortex.cs` | 2 | Scout | 1.5 | 220 px | — |
+| RedGhost | `RedGhostCortex.cs` | 3 | EcmSpecialist | 0.1 | 150 px | JamAndSpoof |
 
 For NvN matches larger than 4 per side, additional `RedTrooper` instances fill slots 4, 5, …
 
@@ -205,11 +205,11 @@ RedGhost has a high retreat threshold (40 energy) because once below that level 
 
 | Tank | Cortex file | Slot | Role | Max Power | Range | ECM |
 |------|-------------|------|------|-----------|-------|-----|
-| BlueStrike | `Blue/BlueStrikeCortex.cs` | 0 | Attacker | 3.0 | 250 px | — |
-| BlueSharp | `Blue/BlueSharpCortex.cs` | 1 | Support | 3.0 | 300 px | — |
-| BlueRush | `Blue/BlueRushCortex.cs` | 2 | Attacker | 2.5 | 180 px | — |
-| BlueGuard | `Blue/BlueGuardCortex.cs` | 3 | Defender | 2.0 | 200 px | — |
-| BlueEcm | `Blue/BlueEcmCortex.cs` | 4 | EcmSpecialist | 1.5 | 150 px | Jam |
+| BlueStrike | `BlueStrikeCortex.cs` | 0 | Attacker | 3.0 | 250 px | — |
+| BlueSharp | `BlueSharpCortex.cs` | 1 | Support | 3.0 | 300 px | — |
+| BlueRush | `BlueRushCortex.cs` | 2 | Attacker | 2.5 | 180 px | — |
+| BlueGuard | `BlueGuardCortex.cs` | 3 | Defender | 2.0 | 200 px | — |
+| BlueEcm | `BlueEcmCortex.cs` | 4 | EcmSpecialist | 1.5 | 150 px | Jam |
 
 For NvN matches larger than 5 per side, additional `BlueTrooper` instances fill slots 5, 6, …
 

@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TankSwarmCode.AiCortex.Blue\TankSwarmCode.AiCortex.Blue.csproj" />
     <ProjectReference Include="..\TankSwarmCode.SwarmTank\TankSwarmCode.SwarmTank.csproj" />
   </ItemGroup>
 

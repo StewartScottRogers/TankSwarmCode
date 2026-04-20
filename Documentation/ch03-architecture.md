@@ -8,7 +8,7 @@
 
 TankSwarmCode is split into narrow, purpose-built projects that keep the public API separate from the implementation:
 
-- **AI authors** only reference `TankSwarmCode.SwarmTank` (for interfaces) and `TankSwarmCode.AiCortex` (for the cortex framework) — they never touch the engine or renderer.
+- **AI authors** only reference `TankSwarmCode.SwarmTank` (for interfaces) and their team's cortex project (`TankSwarmCode.AiCortex.Blue` or `TankSwarmCode.AiCortex.Red`) — they never touch the engine or renderer.
 - **Engine changes** are isolated to `TankSwarmCode.Arena` and do not require AI code to be recompiled.
 - **The renderer** is a separate WinForms layer that consumes read-only snapshots, so it cannot mutate simulation state.
 
@@ -27,12 +27,12 @@ TankSwarmCode.Gui (WinForms host / renderer)
     ├── TankSwarmCode.SwarmTank
     │
     ├── TankSwarmCode.SwarmTanks.Red
-    │       ├── TankSwarmCode.AiCortex
+    │       ├── TankSwarmCode.AiCortex.Red
     │       │       └── TankSwarmCode.SwarmTank
     │       └── TankSwarmCode.SwarmTank
     │
     └── TankSwarmCode.SwarmTanks.Blue
-            ├── TankSwarmCode.AiCortex
+            ├── TankSwarmCode.AiCortex.Blue
             │       └── TankSwarmCode.SwarmTank
             └── TankSwarmCode.SwarmTank
 
@@ -76,14 +76,16 @@ Everything AI authors see lives here:
 
 Tank shells (e.g. `BlueEcm`, `RedGhost`) subclass `SwarmTankBase` and implement `ITankContext` — the interface through which they expose their engine state and commands to the cortex. The shell has no AI logic of its own; it delegates every lifecycle call to its `IAiCortex`.
 
-### Layer 3 — AiCortex (`TankSwarmCode.AiCortex`)
+### Layer 3 — AiCortex (`TankSwarmCode.AiCortex.Blue` and `TankSwarmCode.AiCortex.Red`)
 
-All AI logic lives here. This is the only project that changes between research iterations.
+All AI logic lives here. These are the only projects that change between research iterations. Each team has its own self-contained project; there is no shared AiCortex project.
+
+Both projects expose the same types (in their respective namespaces `TankSwarmCode.AiCortex.Blue` / `TankSwarmCode.AiCortex.Red`):
 
 - **`SwarmCoordinator`** — per-team shared brain (one instance per swarm, accessed via `SwarmCoordinator.ForTeam(swarmId)`). Owns all team-wide state: `AllyEntryMap`, `ActiveSwarmStrategy`, `PriorityTargetName`, epoch counter, ECM alert tracking. Implements leader election, strategy selection, volley scheduling, ECM mode switching, and all six epoch strategies.
 - **`TankNavigation`** — stateless static helpers: `NavigateTo`, `MaintainRadar`, `LinearPredictionFire`, `IsWallInLineOfFire`, `FurthestArenaCorner`.
-- **`CortexFactory`** — maps tank name strings to concrete `IAiCortex` instances. The single seam for swapping cortex implementations.
-- **`Blue/BlueCortexBase`** and **`Red/RedCortexBase`** — abstract base classes with virtual `OnTick` and `OnSwarmMessage` implementations. Each concrete cortex (e.g. `BlueEcmCortex`) inherits from the appropriate base and only declares a `TankConfiguration`.
+- **`CortexFactory`** — maps tank name strings to concrete `IAiCortex` instances. The single seam for swapping cortex implementations. Each project's factory only handles its own team's tank names.
+- **`BlueCortexBase`** / **`RedCortexBase`** — abstract base classes with virtual `OnTick` and `OnSwarmMessage` implementations. Each concrete cortex (e.g. `BlueEcmCortex`) inherits from the appropriate base and only declares a `TankConfiguration`.
 
 ### Layer 4 — Physics Engine (`TankSwarmCode.Arena`)
 

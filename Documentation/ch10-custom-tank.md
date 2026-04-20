@@ -30,11 +30,12 @@ You have two options:
 
 **Option A — AiCortex pattern (recommended for swarm tanks)**
 
-Add a reference to `TankSwarmCode.AiCortex` as well as `TankSwarmCode.SwarmTank`. Write a thin tank shell that inherits `SwarmTankBase` and implements `ITankContext`, delegating every lifecycle call to an `IAiCortex` instance. Then write the cortex itself — inheriting from `BlueCortexBase` or `RedCortexBase` (or implementing `IAiCortex` directly for a custom team). This gives you access to `SwarmCoordinator`, `TankNavigation`, and the full epoch strategy system with no duplication. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full AiCortex API.
+Add a reference to the appropriate team cortex project (`TankSwarmCode.AiCortex.Blue` or `TankSwarmCode.AiCortex.Red`) as well as `TankSwarmCode.SwarmTank`. Write a thin tank shell that inherits `SwarmTankBase` and implements `ITankContext`, delegating every lifecycle call to an `IAiCortex` instance. Then write the cortex itself — inheriting from `BlueCortexBase` or `RedCortexBase` (or implementing `IAiCortex` directly for a custom team). This gives you access to `SwarmCoordinator`, `TankNavigation`, and the full epoch strategy system with no duplication. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full AiCortex API.
 
 ```xml
 <!-- YourSwarm.csproj — add alongside SwarmTank reference -->
-<ProjectReference Include="..\TankSwarmCode.AiCortex\TankSwarmCode.AiCortex.csproj" />
+<ProjectReference Include="..\TankSwarmCode.AiCortex.Blue\TankSwarmCode.AiCortex.Blue.csproj" />
+<!-- or .Red for the Red team -->
 ```
 
 **Option B — SwarmTankBase directly**

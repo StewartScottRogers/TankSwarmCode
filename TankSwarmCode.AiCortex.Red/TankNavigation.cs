@@ -2,7 +2,7 @@ using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
-namespace TankSwarmCode.AiCortex;
+namespace TankSwarmCode.AiCortex.Red;
 
 internal static class TankNavigation
 {

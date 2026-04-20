@@ -6,7 +6,7 @@ using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Events;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
-namespace TankSwarmCode.AiCortex;
+namespace TankSwarmCode.AiCortex.Red;
 
 public sealed class SwarmCoordinator
 {
