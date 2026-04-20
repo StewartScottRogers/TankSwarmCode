@@ -72,8 +72,35 @@ internal static class SwarmBrainBaseNavigationExtensions
         double gunDiff = (desiredGunBearing - brain.State.GunHeading).RelativeBearing();
         brain.SetTurnGunRight(Math.Clamp(gunDiff, -ArenaConstants.MaxGunTurnRate, ArenaConstants.MaxGunTurnRate));
 
-        if (Math.Abs(gunDiff) < 5.0)
+        if (Math.Abs(gunDiff) < 5.0 && !brain.IsWallInLineOfFire(predictedPos))
             brain.SetFire(power);
+    }
+
+    // Returns true if any known wall segment crosses the line from this tank to the target point.
+    internal static bool IsWallInLineOfFire(this SwarmBrainBase brain, Vector2D target)
+    {
+        double ax = brain.State.Position.X, ay = brain.State.Position.Y;
+        double bx = target.X,              by = target.Y;
+
+        foreach (BuildingEcho echo in brain.BuildingWallMap.Values)
+            foreach (WallSegment wall in echo.Walls)
+                if (SegmentsIntersect(ax, ay, bx, by,
+                                      wall.Start.X, wall.Start.Y,
+                                      wall.End.X,   wall.End.Y))
+                    return true;
+        return false;
+    }
+
+    private static bool SegmentsIntersect(double ax, double ay, double bx, double by,
+                                          double cx, double cy, double dx, double dy)
+    {
+        double d1x = bx - ax, d1y = by - ay;
+        double d2x = dx - cx, d2y = dy - cy;
+        double cross = d1x * d2y - d1y * d2x;
+        if (Math.Abs(cross) < 1e-10) return false; // parallel — no crossing
+        double t = ((cx - ax) * d2y - (cy - ay) * d2x) / cross;
+        double u = ((cx - ax) * d1y - (cy - ay) * d1x) / cross;
+        return t >= 0 && t <= 1 && u >= 0 && u <= 1;
     }
 
     internal static Vector2D FurthestArenaCorner(this SwarmBrainBase brain)

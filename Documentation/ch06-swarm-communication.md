@@ -25,6 +25,19 @@ This means **all swarm members share a unified radar picture** without any manua
 
 ---
 
+## Automatic BuildingEchoShare
+
+The third automatic channel fires when the radar sweep reflects off a building face. The base class `OnScannedBuilding` implementation automatically:
+
+1. Records the echo in the scanner's `BuildingWallMap` (keyed by wall endpoints; newer timestamp wins).
+2. Creates a `BuildingEchoShare` `SwarmMessage` containing the full `BuildingEcho`.
+3. Queues that message for delivery to every living, non-jamming ally.
+4. Each ally's base `OnSwarmMessage` merges the echo into their own `BuildingWallMap`.
+
+This means **all swarm members accumulate a shared map of building wall faces** without any manual coding. The echo only carries the 1–2 wall faces the radar could see — not the full building rectangle. Building echoes are never corrupted or dropped by ECM.
+
+---
+
 ## Automatic `Painted` Broadcast
 
 The second automatic channel is triggered when a tank is swept by an enemy radar beam. The engine fires `OnPainted(PaintedEventArgs e)` on the scanned tank. The base class implementation immediately broadcasts a `Painted` message to all allies:
@@ -70,6 +83,7 @@ The engine queues the message and delivers it to all living, non-jamming allies 
 | Value | Used By | Typical Use |
 |-------|---------|-------------|
 | `RadarShare` | Auto (base class) | Contains `RadarContact` for a detected enemy; merged into allies' `RadarMap` |
+| `BuildingEchoShare` | Auto (base class) | Contains `BuildingEcho` with wall faces reflected by radar; merged into allies' `BuildingWallMap` |
 | `Painted` | Auto (base class) | Fired when an enemy radar sweeps this tank; `Position` = painter's position, `TargetName` = painter's name |
 | `AllyPing` | `SwarmBrainBase` | Heartbeat every 15 ticks; `CustomData` = `"slot:energy"` |
 | `StrategyCommand` | `SwarmBrainBase` leader | Epoch strategy decree; `CustomData` = JSON `{ Strategy, TargetName, Epoch }` |
@@ -90,15 +104,16 @@ The engine queues the message and delivers it to all living, non-jamming allies 
 ```csharp
 public record SwarmMessage
 {
-    public string           SenderName   { get; init; }
-    public SwarmMessageType Type         { get; init; }
-    public long             Timestamp    { get; init; }   // Arena.TickNumber
+    public string           SenderName    { get; init; }
+    public SwarmMessageType Type          { get; init; }
+    public long             Timestamp     { get; init; }   // Arena.TickNumber
 
     // Optional — set only those relevant to your message type
-    public string?          TargetName   { get; init; }
-    public Vector2D?        Position     { get; init; }
-    public string?          CustomData   { get; init; }   // JSON or plain text
-    public RadarContact?    RadarContact { get; init; }   // populated by RadarShare
+    public string?          TargetName    { get; init; }
+    public Vector2D?        Position      { get; init; }
+    public string?          CustomData    { get; init; }   // JSON or plain text
+    public RadarContact?    RadarContact  { get; init; }   // populated by RadarShare
+    public BuildingEcho?    BuildingEcho  { get; init; }   // populated by BuildingEchoShare
 }
 ```
 
@@ -106,12 +121,12 @@ public record SwarmMessage
 
 ## Receiving Messages
 
-Override `OnSwarmMessage` to react to incoming messages. Always call `base.OnSwarmMessage(e)` first so `RadarShare` contacts are merged into `RadarMap` before your logic runs:
+Override `OnSwarmMessage` to react to incoming messages. Always call `base.OnSwarmMessage(e)` first so `RadarShare` contacts are merged into `RadarMap` and `BuildingEchoShare` echoes are merged into `BuildingWallMap` before your logic runs:
 
 ```csharp
 public override void OnSwarmMessage(SwarmMessageEventArgs e)
 {
-    base.OnSwarmMessage(e);   // merge RadarShare contacts
+    base.OnSwarmMessage(e);   // merge RadarShare contacts + BuildingEchoShare echoes
 
     switch (e.Message.Type)
     {
@@ -149,8 +164,9 @@ Tick N:
   │     └─ Broadcast() calls queue messages
   ├─ ... physics phases ...
   ├─ ProcessRadarScans()
-  │     └─ OnScannedTank() → RadarShare messages queued
-  │     └─ OnPainted()     → Painted messages queued
+  │     └─ OnScannedTank()     → RadarShare messages queued
+  │     └─ OnScannedBuilding() → BuildingEchoShare messages queued
+  │     └─ OnPainted()         → Painted messages queued
   ├─ DeliverSwarmMessages()
   │     — from non-jamming senders only
   │     — delivered only to non-jamming, living allies

@@ -28,6 +28,13 @@ public record SwarmMessage
     /// </summary>
     public RadarContact? RadarContact { get; init; }
 
+    /// <summary>
+    /// Optional: building wall echo carried by a
+    /// <see cref="Enums.SwarmMessageType.BuildingEchoShare"/> message.
+    /// The base class populates this automatically from <see cref="ISwarmTank.OnScannedBuilding"/>.
+    /// </summary>
+    public BuildingEcho? BuildingEcho { get; init; }
+
     /// <summary>Tick number when this message was created.</summary>
     public long Timestamp { get; init; }
 }

@@ -785,8 +785,6 @@ public partial class ArenaUserControl : UserControl
         if (_focusedTank is not null)
         {
             DrawSensorView(g);
-            // Buildings on top of sensor-view ghosts so walls look solid
-            DrawBuildings(g);
         }
         else
         {
@@ -892,6 +890,8 @@ public partial class ArenaUserControl : UserControl
             DrawGhostContact(g, contact, currentTick, direct);
         }
 
+        DrawBuildingWallEchoes(g, focused, currentTick);
+
         // Focused tank: full rendering + its own effects if dead
         if (focused.State.IsAlive)
         {
@@ -911,6 +911,36 @@ public partial class ArenaUserControl : UserControl
                 float intensity = Math.Clamp((ageMs - BurnStartMs) / BurnRampMs, 0f, 1f);
                 DrawBurningFlame(g, focused.State, intensity);
             }
+        }
+    }
+
+    /// <summary>
+    /// Draws building wall echoes known to the focused tank — cyan for direct echoes,
+    /// teal for echoes relayed by an ally. Both fade with staleness over 100 ticks.
+    /// </summary>
+    private void DrawBuildingWallEchoes(Graphics g, ISwarmTank focused, long currentTick)
+    {
+        foreach (BuildingEcho echo in focused.BuildingWallMap.Values)
+        {
+            long ticksAgo = Math.Max(0, currentTick - echo.Timestamp);
+            float freshness = Math.Max(0.15f, 1f - ticksAgo / 100f);
+            bool direct = string.Equals(echo.ScannedBy, focused.Name, StringComparison.Ordinal);
+
+            Color wallColor = direct ? Color.Cyan : Color.MediumAquamarine;
+            int alpha = (int)(200 * freshness);
+
+            using Pen wallPen = new(Color.FromArgb(alpha, wallColor), 2.5f);
+            foreach (WallSegment wall in echo.Walls)
+                g.DrawLine(wallPen, (float)wall.Start.X, (float)wall.Start.Y,
+                                    (float)wall.End.X,   (float)wall.End.Y);
+
+            // Small crosshair at the nearest echo return point
+            const int CR = 3;
+            float ex = (float)echo.NearestPoint.X;
+            float ey = (float)echo.NearestPoint.Y;
+            using Pen crossPen = new(Color.FromArgb(alpha, wallColor), 1.5f);
+            g.DrawLine(crossPen, ex - CR, ey, ex + CR, ey);
+            g.DrawLine(crossPen, ex, ey - CR, ex, ey + CR);
         }
     }
 
@@ -2435,7 +2465,7 @@ public partial class ArenaUserControl : UserControl
             .ToList();
 
         int dynamicRows = swarms.Count;
-        int staticRows = 5; // outer ring, inner ring, scan flash, velocity arrow, fade
+        int staticRows = 7; // outer ring, inner ring, scan flash, velocity arrow, fade, wall echo ×2
         int totalRows = dynamicRows + 1 + staticRows; // +1 separator row
 
         int panelW = ColW + PadX * 2;
@@ -2502,6 +2532,8 @@ public partial class ArenaUserControl : UserControl
         LegendRow(Color.FromArgb(120, Color.LightGray),   "Fade — contact freshness");
         LegendRow(Color.FromArgb(200, Color.White),       "Label — detected tank name");
         LegendRow(Color.FromArgb(120, Color.LightGray),   "Arc width — detection range");
+        LegendRow(Color.Cyan,                             "Wall echo — direct scan (sensor view)");
+        LegendRow(Color.MediumAquamarine,                 "Wall echo — relayed by ally (sensor view)");
     }
 
     // ── Resize ────────────────────────────────────────────────────────────────

@@ -26,6 +26,7 @@ Arena starts
     ┌── tick N ──────────────────────────────────────────────────────────────
     │   OnTick(TickEventArgs e)      — main AI logic, runs every tick
     │   (if radar contact)       ─► OnScannedTank(ScannedTankEventArgs e)
+    │   (if building echo)       ─► OnScannedBuilding(ScannedBuildingEventArgs e)
     │   (if painted by enemy)    ─► OnPainted(PaintedEventArgs e)
     │   (if hit by bullet)       ─► OnHitByBullet(HitByBulletEventArgs e)
     │   (if hit wall)            ─► OnHitWall(HitWallEventArgs e)
@@ -54,6 +55,7 @@ These read-only properties are always current (updated each tick by the engine):
 | `State` | `TankState` | Full immutable snapshot of this tank's current state |
 | `Arena` | `IArenaContext` | Read-only view of the arena (dimensions, bullets, buildings) |
 | `RadarMap` | `IReadOnlyDictionary<string, RadarContact>` | Known tank positions — both enemies and allies — from own scans and ally broadcasts |
+| `BuildingWallMap` | `IReadOnlyDictionary<string, BuildingEcho>` | Known building wall faces from own radar echoes and ally `BuildingEchoShare` broadcasts; cleared each round |
 
 ### Commonly Used `State` Fields
 
@@ -202,6 +204,42 @@ To check whether the scanned tank is an ally: `e.Result.SwarmId == SwarmId`.
 
 ---
 
+### `OnScannedBuilding(ScannedBuildingEventArgs e)`
+
+```csharp
+public virtual void OnScannedBuilding(ScannedBuildingEventArgs e) { }
+```
+
+Fired when the radar sweep reflects off a building wall. Not fired while jamming.
+
+The single field is `e.Echo` (`BuildingEcho`):
+
+| `e.Echo` Field | Description |
+|----------------|-------------|
+| `Walls` | 1–2 `WallSegment` records — only the faces visible from the scanner |
+| `Bearing` | Relative bearing to the nearest hit point, (−180, 180] |
+| `Distance` | Distance to the nearest hit point in pixels |
+| `NearestPoint` | World-space coordinates of the echo return point |
+| `ScannedBy` | Name of the tank whose radar made this scan |
+| `Timestamp` | Tick when the echo was recorded |
+
+The base class implementation stores the echo in `BuildingWallMap` and broadcasts a `BuildingEchoShare` message to all allies. Always call `base.OnScannedBuilding(e)` to keep the map current.
+
+```csharp
+public override void OnScannedBuilding(ScannedBuildingEventArgs e)
+{
+    base.OnScannedBuilding(e);   // record in BuildingWallMap and broadcast
+
+    // Example: use the echo distance and bearing for obstacle awareness
+    if (e.Echo.Distance < 60)
+    {
+        // Building is close — consider a manoeuvre
+    }
+}
+```
+
+---
+
 ### `OnPainted(PaintedEventArgs e)`
 
 ```csharp
@@ -299,7 +337,7 @@ Fired for each message delivered from an ally this tick. Not fired while the tan
 |-------|-------------|
 | `e.Message` | `SwarmMessage` from the ally |
 
-The base class implementation merges incoming `RadarShare` contacts into `RadarMap` before your override runs. Always call `base.OnSwarmMessage(e)` to keep the map current.
+The base class implementation merges incoming `RadarShare` contacts into `RadarMap` and `BuildingEchoShare` echoes into `BuildingWallMap` before your override runs. Always call `base.OnSwarmMessage(e)` to keep both maps current.
 
 ---
 
@@ -345,6 +383,37 @@ protected RadarContact? GetFreshestContact(int staleAfterTicks = 30, bool includ
 ```
 
 Same as above but can optionally include allied contacts (for situational awareness, not targeting).
+
+---
+
+## Building Awareness
+
+### `BuildingWallMap`
+
+`IReadOnlyDictionary<string, BuildingEcho>` — the shared map of building wall faces known to this tank. Populated automatically from `OnScannedBuilding` echoes and `BuildingEchoShare` messages from allies. Cleared at the start of each round because buildings regenerate at new positions.
+
+Use this map to avoid firing through obstacles:
+
+```csharp
+bool shotClear = !BuildingWallMap.Values
+    .SelectMany(echo => echo.Walls)
+    .Any(wall => SegmentsIntersect(
+        State.Position, predictedTarget,
+        wall.Start, wall.End));
+
+if (gunAligned && shotClear)
+    SetFire(power);
+```
+
+### `IsWallInLineOfFire(Vector2D target)` — `SwarmBrainBase` only
+
+```csharp
+internal bool IsWallInLineOfFire(Vector2D target)
+```
+
+Available on `SwarmBrainBase` subclasses. Returns `true` if any wall segment in `BuildingWallMap` intersects the line from this tank's position to `target`. Uses a parametric segment-segment intersection test — parallel walls return `false`.
+
+`SwarmBrainBase` calls this automatically before every `SetFire` in `LinearPredictionFire` and the scheduled volley path. Override `OnScannedBuilding` and call `base.OnScannedBuilding(e)` to keep `BuildingWallMap` current, which in turn keeps the wall check accurate.
 
 ---
 

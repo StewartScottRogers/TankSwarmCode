@@ -34,6 +34,9 @@ public abstract class SwarmTankBase : ISwarmTank
     // Shared radar picture: keyed by enemy tank name, merged from own scans and ally RadarShare messages.
     private readonly Dictionary<string, RadarContact> _radarMap = new(StringComparer.Ordinal);
 
+    // Shared building wall map: keyed by wall face identity, merged from own echoes and ally BuildingEchoShare messages.
+    private readonly Dictionary<string, BuildingEcho> _buildingWallMap = new(StringComparer.Ordinal);
+
     // ── Identity ─────────────────────────────────────────────────────────────
 
     /// <summary>
@@ -56,6 +59,9 @@ public abstract class SwarmTankBase : ISwarmTank
     /// to filter by relationship.
     /// </summary>
     public IReadOnlyDictionary<string, RadarContact> RadarMap => _radarMap;
+
+    /// <inheritdoc/>
+    public IReadOnlyDictionary<string, BuildingEcho> BuildingWallMap => _buildingWallMap;
 
     // ── Action API ────────────────────────────────────────────────────────────
 
@@ -152,6 +158,20 @@ public abstract class SwarmTankBase : ISwarmTank
     }
 
     /// <inheritdoc/>
+    public virtual void OnScannedBuilding(ScannedBuildingEventArgs e)
+    {
+        MergeBuildingEcho(e.Echo);
+
+        Broadcast(new SwarmMessage
+        {
+            SenderName = Name,
+            Type = SwarmMessageType.BuildingEchoShare,
+            BuildingEcho = e.Echo,
+            Timestamp = Arena.TickNumber
+        });
+    }
+
+    /// <inheritdoc/>
     public virtual void OnPainted(PaintedEventArgs e)
     {
         // Auto-broadcast so allies know an enemy has revealed their position by painting us
@@ -186,6 +206,12 @@ public abstract class SwarmTankBase : ISwarmTank
             && e.Message.RadarContact is { } incoming)
         {
             MergeContact(incoming);
+        }
+
+        if (e.Message.Type == SwarmMessageType.BuildingEchoShare
+            && e.Message.BuildingEcho is { } incomingEcho)
+        {
+            MergeBuildingEcho(incomingEcho);
         }
     }
 
@@ -243,6 +269,18 @@ public abstract class SwarmTankBase : ISwarmTank
         }
     }
 
+    /// Merges an echo into the building wall map, keyed by wall face endpoints.
+    private void MergeBuildingEcho(BuildingEcho incoming)
+    {
+        string key = string.Join("|", incoming.Walls.Select(
+            w => $"{w.Start.X:F0},{w.Start.Y:F0}-{w.End.X:F0},{w.End.Y:F0}"));
+        if (!_buildingWallMap.TryGetValue(key, out BuildingEcho? existing)
+            || incoming.Timestamp >= existing.Timestamp)
+        {
+            _buildingWallMap[key] = incoming;
+        }
+    }
+
     // ── Engine-internal ───────────────────────────────────────────────────────
 
     /// <inheritdoc/>
@@ -253,6 +291,7 @@ public abstract class SwarmTankBase : ISwarmTank
         SwarmId = swarmId;
         Role = role;
         Arena = arenaContext;
+        _buildingWallMap.Clear(); // buildings regenerate each round
 
         // Seed initial state; the engine will overwrite this before the first tick.
         State = new TankState

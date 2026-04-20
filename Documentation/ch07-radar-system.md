@@ -35,14 +35,40 @@ This creates realistic occlusion: tanks can hide behind buildings, and scouting 
 
 ---
 
+## Building Echo Detection
+
+In the same sweep pass, the engine also checks every building to see if its nearest face falls within the sweep arc. When a building is hit the radar pulse reflects off the **facing wall faces only** — the scanner never learns about walls hidden behind the building.
+
+For each building in the sweep arc:
+
+1. The engine clamps the scanner's position onto the building's AABB to find the **nearest surface point**.
+2. The absolute bearing to that point is checked against `AngleInSweep`.
+3. If the bearing is inside the arc, the engine determines which of the four wall faces are visible from the scanner (1 face for a direct hit, 2 faces for a corner hit).
+4. A `BuildingEcho` is assembled from only those faces and delivered to the scanner via `OnScannedBuilding`.
+
+The shadow behind the building is implicit — no `OnScannedBuilding` is fired for walls the radar cannot see, and any tank hidden in that shadow is not detected by `OnScannedTank` either.
+
+### Building echo vs tank scan
+
+| | Tank scan | Building echo |
+|---|---|---|
+| **Event** | `OnScannedTank` | `OnScannedBuilding` |
+| **Data** | Full tank state (heading, velocity, energy) | Wall segments + distance + bearing |
+| **Affected by ECM** | Yes — drop/corrupt chances apply | No — buildings do not jam |
+| **Auto-broadcast** | `RadarShare` to all allies | `BuildingEchoShare` to all allies |
+| **Stored in** | `RadarMap` (keyed by tank name) | `BuildingWallMap` (keyed by wall endpoints) |
+
+---
+
 ## Scan Events
 
-A successful scan fires events on both participants:
+A successful tank scan fires events on both participants:
 
 - **Scanner** receives `OnScannedTank(ScannedTankEventArgs e)` with `e.Result` (`ScanResult`).
 - **Target** receives `OnPainted(PaintedEventArgs e)` with the painter's name and position.
+- **Scanner** additionally receives `OnScannedBuilding(ScannedBuildingEventArgs e)` for each building whose face falls in the sweep arc.
 
-Scans are filtered for ECM effects before either event fires. A dropped scan fires neither event. A corrupted scan fires `OnScannedTank` with false data on the scanner and **does** fire `OnPainted` on the target (the beam still reached it physically).
+Scans are filtered for ECM effects before either event fires. A dropped scan fires neither event. A corrupted scan fires `OnScannedTank` with false data on the scanner and **does** fire `OnPainted` on the target (the beam still reached it physically). Building echoes are never affected by ECM.
 
 ---
 
@@ -74,6 +100,23 @@ Scans are filtered for ECM effects before either event fires. A dropped scan fir
 ### Radar offline (jamming)
 
 While jamming, no new contacts are added from this tank's own radar. Because jamming also blocks incoming radio, no `RadarShare` or `Painted` messages from allies arrive either. A tank that jams for many ticks will have an entirely stale intelligence picture when it comes back online.
+
+---
+
+## BuildingWallMap
+
+`SwarmTankBase` maintains `IReadOnlyDictionary<string, BuildingEcho>` called `BuildingWallMap`, keyed by wall face identity (endpoint coordinates as a string). Entries are added or refreshed whenever:
+
+1. This tank's own radar sweep reflects off a building face (`OnScannedBuilding`).
+2. An ally broadcasts a `BuildingEchoShare` message containing a newer echo (higher `Timestamp`).
+
+**Merge rule**: same as `RadarMap` — the newer `Timestamp` wins.
+
+**Reset on round start**: buildings regenerate each round at new positions, so `BuildingWallMap` is cleared automatically by `Initialize` before each round. Tank contacts in `RadarMap` are not cleared.
+
+### Key format
+
+The map key is the wall endpoints joined as `"x0,y0-x1,y1|..."`. Because wall endpoints are derived directly from the building's AABB, the same wall face always produces the same key regardless of which tank echoed it or from which angle.
 
 ---
 

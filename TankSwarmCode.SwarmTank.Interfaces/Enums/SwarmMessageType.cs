@@ -66,5 +66,14 @@ public enum SwarmMessageType
     /// Periodic energy status ping used for leadership determination.
     /// <c>CustomData</c> carries the sender's current energy as a decimal string.
     /// </summary>
-    AllyPing
+    AllyPing,
+
+    /// <summary>
+    /// Automatic building echo broadcast. The message's
+    /// <see cref="TankSwarmCode.SwarmTank.Interfaces.Models.SwarmMessage.BuildingEcho"/>
+    /// carries the wall-face data reflected by the radar.
+    /// Emitted by the base class on <see cref="ISwarmTank.OnScannedBuilding"/>;
+    /// received echoes are merged into the recipient's <c>BuildingWallMap</c>.
+    /// </summary>
+    BuildingEchoShare
 }

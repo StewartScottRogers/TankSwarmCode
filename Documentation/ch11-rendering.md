@@ -147,6 +147,22 @@ Ghost echoes are visible to the spectator regardless of whether any scanner is a
 
 The panel updates live every tick while the tank is selected.
 
+### Hold Left Button — Sensor View
+
+**Hold left mouse button** on a tank to enter **sensor view** for that tank. The normal arena is replaced with a representation of what that tank knows:
+
+- **Ghost contacts** — every entry in the tank's `RadarMap` is drawn as a semi-transparent hull at its last-known position. Contacts fade over 50 ticks as they grow stale. Direct scans (made by this tank) show a pulsing radar halo; relayed contacts (received via `RadarShare` from an ally) do not.
+- **Building wall echoes** — every entry in the tank's `BuildingWallMap` is drawn as a coloured line segment. Actual building rectangles are **not** shown — only what the tank's radar has detected.
+  - **Cyan** — echo recorded directly by this tank's radar.
+  - **Teal (MediumAquamarine)** — echo received from an ally via `BuildingEchoShare`.
+  - Both fade over 100 ticks of staleness. A small crosshair marks the nearest echo return point on each wall.
+- **Focused tank** — drawn in full detail (or as a hulk/explosion if destroyed).
+- All other tanks, bullets, and effects are hidden — the view shows only what the selected tank knows.
+
+A banner at the top of the screen identifies the focused tank and whether it is held or pinned (double-click to pin).
+
+**Double-click** to pin the sensor view to a tank so it persists without holding the button.
+
 #### ECM Override Button
 
 At the bottom of every attached panel is an **ECM cycle button** that steps through:
@@ -229,22 +245,30 @@ ArenaUserControl.Invalidate()    — marks control dirty
     │
     ▼
 OnPaint(PaintEventArgs e)
-    ├─ DrawBackground()             — black fill + border
-    ├─ DrawAllRadarHalos()          — expanding wavefront arcs (ShowRadarReflections)
-    ├─ DrawHulkBodies()             — charred hulks (destroyed tanks)
-    ├─ DrawBullets()                — arrowhead projectiles (live) or fading sparks (deflected)
-    │     └─ DrawRicochetFlash()    — one-tick impact ring at each non-lethal hit (ShowBullets)
-    ├─ DrawGhostEchoes()            — ECM Spoof/JamAndSpoof phantoms (ShowEcmEffects)
-    ├─ DrawTanks()                  — for each alive tank:
-    │     ├─ DrawScanHalo()         — point-flash at contact moment (ShowScanHalos)
-    │     ├─ Body + treads          — filled square rotated to Heading
-    │     ├─ Cannon barrel          — 4×22 px rectangle at GunHeading (GDI+ rotation)
-    │     ├─ Turret circle          — 10 px circle centred on hull
-    │     ├─ DrawRadarSweepTrail()  — phosphor decay + arc flash (ShowRadarSweepTrails, hidden while jamming)
-    │     ├─ DrawEcmAura()          — Jam/Spoof/JamAndSpoof/Burnthrough aura (ShowEcmEffects)
-    │     └─ Energy bar + label     — (ShowEnergyBars / ShowTankLabels)
-    ├─ DrawBuildings()              — concrete-textured rectangles with windows
-    ├─ DrawExplosions()             — blast flash, fireball, shockwave, debris, smoke
+    │
+    ├─ [Normal view — no focused tank]
+    │     ├─ DrawBackground()             — black fill + border
+    │     ├─ DrawAllRadarHalos()          — expanding wavefront arcs (ShowRadarReflections)
+    │     ├─ DrawHulkBodies()             — charred hulks (destroyed tanks)
+    │     ├─ DrawBullets()                — arrowhead projectiles (live) or fading sparks (deflected)
+    │     │     └─ DrawRicochetFlash()    — one-tick impact ring at each non-lethal hit (ShowBullets)
+    │     ├─ DrawGhostEchoes()            — ECM Spoof/JamAndSpoof phantoms (ShowEcmEffects)
+    │     ├─ DrawTanks()                  — for each alive tank:
+    │     │     ├─ DrawScanHalo()         — point-flash at contact moment (ShowScanHalos)
+    │     │     ├─ Body + treads          — filled square rotated to Heading
+    │     │     ├─ Cannon barrel          — 4×22 px rectangle at GunHeading (GDI+ rotation)
+    │     │     ├─ Turret circle          — 10 px circle centred on hull
+    │     │     ├─ DrawRadarSweepTrail()  — phosphor decay + arc flash (ShowRadarSweepTrails, hidden while jamming)
+    │     │     ├─ DrawEcmAura()          — Jam/Spoof/JamAndSpoof/Burnthrough aura (ShowEcmEffects)
+    │     │     └─ Energy bar + label     — (ShowEnergyBars / ShowTankLabels)
+    │     ├─ DrawBuildings()              — concrete-textured rectangles with windows
+    │     └─ DrawExplosions()             — blast flash, fireball, shockwave, debris, smoke
+    │
+    ├─ [Sensor view — focused tank held/pinned]
+    │     ├─ DrawGhostContacts()          — RadarMap entries; cyan halo = direct, no halo = relayed; fade 50 ticks
+    │     ├─ DrawBuildingWallEchoes()     — BuildingWallMap entries; cyan = direct, teal = relayed; fade 100 ticks
+    │     └─ DrawFocusedTank()            — full tank or hulk/explosion
+    │
     ├─ DrawHud()                    — tick counter, swarm scoreboard (ShowHud)
     └─ DrawAttachedPanels()         — live state info panels (ShowInfoPanels)
 ```

@@ -670,6 +670,36 @@ public sealed class ArenaEngine : IArena
             SafeCall(() => target.Tank.DeliverPaintedEvent(paintArgs));
         }
 
+        // ── Building echo detection ─────────────────────────────────────────
+        // For each building whose nearest face falls within the sweep arc, reflect
+        // an echo back to the scanner with only the wall faces that face toward it.
+        foreach (BuildingDefinition b in _buildings)
+        {
+            double nx = Math.Clamp(scanner.X, b.X, b.X + b.Width);
+            double ny = Math.Clamp(scanner.Y, b.Y, b.Y + b.Height);
+            double bBearing = new Vector2D(scanner.X, scanner.Y).BearingTo(new Vector2D(nx, ny));
+            if (!AngleInSweep(bBearing, sweepStart, sweepEnd)) continue;
+
+            List<WallSegment> walls = [];
+            if (scanner.X < b.X)             walls.Add(new WallSegment(new Vector2D(b.X,          b.Y), new Vector2D(b.X,              b.Y + b.Height)));
+            if (scanner.X > b.X + b.Width)   walls.Add(new WallSegment(new Vector2D(b.X + b.Width, b.Y), new Vector2D(b.X + b.Width,    b.Y + b.Height)));
+            if (scanner.Y < b.Y)             walls.Add(new WallSegment(new Vector2D(b.X,          b.Y), new Vector2D(b.X + b.Width,    b.Y)));
+            if (scanner.Y > b.Y + b.Height)  walls.Add(new WallSegment(new Vector2D(b.X,          b.Y + b.Height), new Vector2D(b.X + b.Width, b.Y + b.Height)));
+            if (walls.Count == 0) continue;
+
+            double bDist = Math.Sqrt(Math.Pow(nx - scanner.X, 2) + Math.Pow(ny - scanner.Y, 2));
+            BuildingEcho echo = new()
+            {
+                Walls        = walls.AsReadOnly(),
+                Bearing      = RelativeBearing(scanner.Heading, bBearing),
+                Distance     = bDist,
+                NearestPoint = new Vector2D(nx, ny),
+                ScannedBy    = scanner.Tank.Name,
+                Timestamp    = TickNumber
+            };
+            SafeCall(() => scanner.Tank.OnScannedBuilding(new ScannedBuildingEventArgs(echo)));
+        }
+
         // ── ECM: Spoof ghost injection ──────────────────────────────────────
         // For each enemy tank running Spoof, check if any of its ghost positions
         // fall within this scanner's sweep arc and inject fake OnScannedTank events.

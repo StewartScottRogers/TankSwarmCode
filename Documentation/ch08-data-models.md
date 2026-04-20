@@ -113,6 +113,36 @@ A contact becomes stale as ticks pass. Compare `Timestamp` to `Arena.TickNumber`
 
 ---
 
+## WallSegment
+
+A single wall face reflected by a radar echo. Two world-space endpoints; no reference to the originating building.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Start` | `Vector2D` | One endpoint of the wall face (world coordinates) |
+| `End` | `Vector2D` | Other endpoint of the wall face (world coordinates) |
+
+For an axis-aligned building, each face is always axis-parallel: a left/right face has constant X, a top/bottom face has constant Y.
+
+---
+
+## BuildingEcho
+
+A radar return from a building wall, delivered by `OnScannedBuilding`. Contains only the 1–2 wall faces that face the scanner — the radar pulse cannot see around corners or through the building.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Walls` | `IReadOnlyList<WallSegment>` | 1 face for a direct hit; 2 faces for a corner hit |
+| `Bearing` | `double` | Bearing relative to scanner's body heading, (−180, 180] |
+| `Distance` | `double` | Distance from scanner to nearest hit point in pixels |
+| `NearestPoint` | `Vector2D` | World-space point where the echo was reflected (on the building surface) |
+| `ScannedBy` | `string` | Name of the tank whose radar made the original scan |
+| `Timestamp` | `long` | Tick number when this echo was recorded |
+
+Echoes are stored in `BuildingWallMap` keyed by wall endpoints and shared automatically via `BuildingEchoShare` swarm messages. The map is cleared at the start of each round because buildings regenerate at new positions. See [Chapter 7: Radar System](ch07-radar-system.md) for details.
+
+---
+
 ## BulletState
 
 An immutable snapshot of an active bullet.
@@ -145,6 +175,7 @@ Carries communication between swarm allies.
 | `Position` | `Vector2D?` | A position payload (optional) |
 | `CustomData` | `string?` | Freeform text or serialised data (optional) |
 | `RadarContact` | `RadarContact?` | Populated by the engine for `RadarShare` messages |
+| `BuildingEcho` | `BuildingEcho?` | Populated by the engine for `BuildingEchoShare` messages |
 
 ---
 
@@ -215,7 +246,11 @@ See [Chapter 13: ECM System](ch13-ecm-system.md) for full details.
 | Value | Description |
 |-------|-------------|
 | `RadarShare` | Auto-sent by base class; carries enemy `RadarContact` |
+| `BuildingEchoShare` | Auto-sent by base class; carries `BuildingEcho` with visible wall faces |
 | `Painted` | Auto-sent by base class when an enemy radar sweeps this tank |
+| `AllyPing` | Heartbeat ping; `CustomData` = `"slot:energy"` |
+| `StrategyCommand` | Leader's epoch decree; `CustomData` = JSON `{ Strategy, TargetName, Epoch }` |
+| `VolleyFire` | Coordinated fire order; `CustomData` = JSON `{ FireAtTick }` |
 | `EnemySpotted` | Manual sighting report |
 | `TargetLocked` | Designate the swarm's priority target |
 | `RequestBackup` | Signal for allies to assist |

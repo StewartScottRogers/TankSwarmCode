@@ -64,6 +64,14 @@ Every 15 ticks each tank broadcasts an `AllyPing` message containing its formati
 
 ---
 
+### Wall-Aware Firing
+
+`SwarmBrainBase` never fires through a wall it knows about. Before every shot — both in `LinearPredictionFire` and in scheduled volley fire — the brain checks every `WallSegment` in `BuildingWallMap` against the line from the tank to the target (or predicted position). If any known wall segment intersects that line, the shot is suppressed for that tick. The gun continues tracking the target so the shot fires as soon as the line of fire is clear.
+
+Walls accumulate in `BuildingWallMap` from both direct radar echoes and `BuildingEchoShare` messages relayed by allies. A tank that has never scanned a particular building face will not know to avoid shooting through it.
+
+---
+
 ### ECM Handling
 
 - **ECM-specialist tanks** (`HasEcm = true`): activate `OffensiveEcmMode` during `ECMScreen` strategy; switch to `Burnthrough` when an `EcmAlert` has been received within the last 20 ticks.

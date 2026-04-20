@@ -274,9 +274,62 @@ See [Chapter 15: Headless CLI Runner](ch15-cli.md) for all options.
 | Firing at full power from long range | Slow bullets are easy to dodge | Lower power at range for faster bullets |
 | Ignoring `RadarMap` staleness | Firing at positions the enemy vacated ticks ago | Compare `Timestamp` to `Arena.TickNumber`; discard contacts older than ~5 ticks |
 | Calling `SetFire` every tick regardless of alignment | Wastes energy | Gate `SetFire` on gun alignment tolerance |
+| Firing without checking `BuildingWallMap` | Bullet hits a known wall; energy wasted | Check `BuildingWallMap` before `SetFire`; see Building Awareness below |
 | Not calling `base.OnScannedTank(e)` | `RadarMap` never updates; no `RadarShare` to allies | Always call base first |
-| Not calling `base.OnSwarmMessage(e)` | `RadarShare` contacts are never merged | Always call base first |
+| Not calling `base.OnScannedBuilding(e)` | `BuildingWallMap` never populates; wall checks always pass | Always call base first |
+| Not calling `base.OnSwarmMessage(e)` | `RadarShare` and `BuildingEchoShare` messages are never merged | Always call base first |
 | Not handling `OnHitWall` | Tank gets trapped; takes damage each tick | Add a wall-escape routine |
+
+---
+
+## Building Awareness
+
+Override `OnScannedBuilding` to receive wall echoes each time the radar reflects off a building face. Call `base.OnScannedBuilding(e)` to keep `BuildingWallMap` current, then use the map before firing:
+
+```csharp
+public override void OnScannedBuilding(ScannedBuildingEventArgs e)
+{
+    base.OnScannedBuilding(e);   // stores echo in BuildingWallMap; broadcasts BuildingEchoShare
+}
+
+private void ChaseAndFire(RadarContact target)
+{
+    // ... compute predictedPos and gunDiff as normal ...
+
+    if (Math.Abs(gunDiff) < 8 && !IsLineBlockedByWall(target.Position))
+        SetFire(firePower);
+}
+
+private bool IsLineBlockedByWall(Vector2D target)
+{
+    double ax = State.Position.X, ay = State.Position.Y;
+    double bx = target.X,        by = target.Y;
+
+    foreach (BuildingEcho echo in BuildingWallMap.Values)
+        foreach (WallSegment wall in echo.Walls)
+            if (SegmentsIntersect(ax, ay, bx, by,
+                                  wall.Start.X, wall.Start.Y,
+                                  wall.End.X,   wall.End.Y))
+                return true;
+    return false;
+}
+
+private static bool SegmentsIntersect(double ax, double ay, double bx, double by,
+                                      double cx, double cy, double dx, double dy)
+{
+    double d1x = bx - ax, d1y = by - ay;
+    double d2x = dx - cx, d2y = dy - cy;
+    double cross = d1x * d2y - d1y * d2x;
+    if (Math.Abs(cross) < 1e-10) return false;
+    double t = ((cx - ax) * d2y - (cy - ay) * d2x) / cross;
+    double u = ((cx - ax) * d1y - (cy - ay) * d1x) / cross;
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1;
+}
+```
+
+`BuildingWallMap` accumulates faces seen by this tank and relayed by allies. A face that has never been echoed is not in the map, so the check only blocks shots through *known* walls — consistent with the tank's sensor picture.
+
+If you subclass `SwarmBrainBase` instead of `SwarmTankBase`, this check is already applied automatically before every `SetFire` call.
 
 ---
 
@@ -285,6 +338,7 @@ See [Chapter 15: Headless CLI Runner](ch15-cli.md) for all options.
 - **Radar first**: start the radar spinning in `OnStart` — you cannot shoot what you cannot see.
 - **Keep moving**: a stationary tank is easy to hit and takes wall damage if cornered.
 - **Use RadarMap, not `OnScannedTank` alone**: `RadarMap` is updated by allies too; your tank may know about enemies it has never directly scanned.
+- **Check `BuildingWallMap` before firing**: wasted shots drain energy and reveal your position. The map is free to query and populated automatically if you call `base.OnScannedBuilding(e)`.
 - **Energy management**: check `State.Energy` before firing at high power; a dead tank contributes nothing.
 - **ECM awareness**: if `Arena.GetActiveBullets()` shows a bullet heading your way, consider `SetEcm(EcmMode.Jam)` as a momentary defensive measure.
 - **Role as a contract**: set `Role` honestly — `SwarmBrainBase`'s ECM handling checks `Role == EcmSpecialist`, and any coordination logic you write can use `Role` to differentiate behaviour across swarm members.

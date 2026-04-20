@@ -65,7 +65,7 @@ public abstract class SwarmBrainBase : SwarmTankBase
             if (volleyTarget != null)
             {
                 double power = Math.Min(Config.MaxFirePower, State.Energy * 0.1);
-                if (power >= 0.1 && State.Energy >= 5)
+                if (power >= 0.1 && State.Energy >= 5 && !this.IsWallInLineOfFire(volleyTarget.Position))
                     SetFire(power);
             }
             _scheduledFireTick = -1;

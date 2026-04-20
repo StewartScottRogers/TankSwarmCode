@@ -40,6 +40,13 @@ public interface ISwarmTank
     /// </summary>
     IReadOnlyDictionary<string, RadarContact> RadarMap { get; }
 
+    /// <summary>
+    /// Read-only map of building wall echoes accumulated by this tank's radar and allies.
+    /// Keyed by wall face identity (endpoint coordinates). Merged automatically from
+    /// direct echoes and <see cref="SwarmMessageType.BuildingEchoShare"/> messages.
+    /// </summary>
+    IReadOnlyDictionary<string, BuildingEcho> BuildingWallMap { get; }
+
     // ── Action API (call inside OnTick) ─────────────────────────────────────
 
     /// <summary>Sets desired forward movement in pixels for this tick.</summary>
@@ -98,6 +105,14 @@ public interface ISwarmTank
 
     /// <summary>Called when the radar sweeps over an enemy tank.</summary>
     void OnScannedTank(ScannedTankEventArgs e);
+
+    /// <summary>
+    /// Called when the radar sweep reflects off a building wall.
+    /// The base implementation records the echo in <see cref="BuildingWallMap"/> and
+    /// broadcasts it to swarm allies as a <see cref="SwarmMessageType.BuildingEchoShare"/> message.
+    /// Override to react tactically; call <c>base.OnScannedBuilding(e)</c> to keep the map current.
+    /// </summary>
+    void OnScannedBuilding(ScannedBuildingEventArgs e);
 
     /// <summary>
     /// Called when an enemy radar beam sweeps over this tank.
