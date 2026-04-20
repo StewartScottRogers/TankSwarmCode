@@ -29,7 +29,7 @@ Add a new C# class library project to the solution. Reference the base class pac
 You have two options:
 
 - **`SwarmTankBase`** — full control; implement all AI logic yourself. Use this for bespoke strategies.
-- **`SwarmBrainBase`** — inherit the full coordination brain (leader election, epoch strategies, volley scheduling, ECM handling) and configure it via a `TankConfig` record. Use this when you want the built-in team coordination and only need to tune parameters. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the `SwarmBrainBase` API.
+- **`SwarmTankCortexCradleBase`** — inherit the full coordination brain (leader election, epoch strategies, volley scheduling, ECM handling) and configure it via a `TankConfiguration` record. Use this when you want the built-in team coordination and only need to tune parameters. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the `SwarmTankCortexCradleBase` API.
 
 The rest of this chapter uses `SwarmTankBase` to show a complete ground-up implementation.
 
@@ -329,7 +329,7 @@ private static bool SegmentsIntersect(double ax, double ay, double bx, double by
 
 `BuildingWallMap` accumulates faces seen by this tank and relayed by allies. A face that has never been echoed is not in the map, so the check only blocks shots through *known* walls — consistent with the tank's sensor picture.
 
-If you subclass `SwarmBrainBase` instead of `SwarmTankBase`, this check is already applied automatically before every `SetFire` call.
+If you subclass `SwarmTankCortexCradleBase` instead of `SwarmTankBase`, this check is already applied automatically before every `SetFire` call.
 
 ---
 
@@ -341,7 +341,7 @@ If you subclass `SwarmBrainBase` instead of `SwarmTankBase`, this check is alrea
 - **Check `BuildingWallMap` before firing**: wasted shots drain energy and reveal your position. The map is free to query and populated automatically if you call `base.OnScannedBuilding(e)`.
 - **Energy management**: check `State.Energy` before firing at high power; a dead tank contributes nothing.
 - **ECM awareness**: if `Arena.GetActiveBullets()` shows a bullet heading your way, consider `SetEcm(EcmMode.Jam)` as a momentary defensive measure.
-- **Role as a contract**: set `Role` honestly — `SwarmBrainBase`'s ECM handling checks `Role == EcmSpecialist`, and any coordination logic you write can use `Role` to differentiate behaviour across swarm members.
+- **Role as a contract**: set `Role` honestly — `SwarmTankCortexCradleBase`'s ECM handling checks `Role == EcmSpecialist`, and any coordination logic you write can use `Role` to differentiate behaviour across swarm members.
 
 ---
 

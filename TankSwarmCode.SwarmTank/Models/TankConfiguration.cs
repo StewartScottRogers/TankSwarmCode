@@ -6,7 +6,7 @@ namespace TankSwarmCode.SwarmTank.Interfaces.Models;
 /// Physical and tactical configuration for a swarm tank.
 /// All tanks run the same <c>SwarmBrainBase</c> logic; only this record differs between them.
 /// </summary>
-public record TankConfig
+public record TankConfiguration
 {
     /// <summary>
     /// Position in the formation (0 = highest authority / default leader).

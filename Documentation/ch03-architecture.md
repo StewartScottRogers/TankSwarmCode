@@ -68,14 +68,14 @@ Everything AI authors see lives here:
 - Radar helpers: `GetFreshestEnemy()`, `GetFreshestContact()`
 - Default no-op implementations of every virtual lifecycle method
 
-**`SwarmBrainBase`** extends `SwarmTankBase` with a full team-coordination brain used by all built-in tanks:
+**`SwarmTankCortexCradleBase`** extends `SwarmTankBase` with a full team-coordination brain used by all built-in tanks:
 
 - Slot-based leader election (lowest `FormationSlot` among living allies leads each 40-tick epoch)
 - Epoch strategy selection: Wolfpack, Encircle, Pincer, ECMScreen, Fallback, Scatter
 - Coordinated volley scheduling via `VolleyFire` broadcast messages
 - Ally health tracking via `AllyPing` heartbeats every 15 ticks
 - Automatic ECM mode switching based on strategy and received `EcmAlert` messages
-- Configured via `TankConfig` — subclasses only need to provide a config record
+- Configured via `TankConfiguration` — subclasses only need to provide a config record
 
 ### Layer 3 — Physics Engine (`TankSwarmCode.Arena`)
 

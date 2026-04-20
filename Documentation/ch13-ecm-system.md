@@ -193,7 +193,7 @@ RedGhost runs JamAndSpoof (ECMScreen strategy)
 
 BlueEcm scans a Ghost contact (name starts with "Ghost-")
     → broadcasts EcmAlert to Blue swarm
-    → SwarmBrainBase responds: all Blue tanks switch to Burnthrough
+    → SwarmTankCortexCradleBase responds: all Blue tanks switch to Burnthrough
 
 Blue swarm now filters 70% of ghost contacts per sweep
 

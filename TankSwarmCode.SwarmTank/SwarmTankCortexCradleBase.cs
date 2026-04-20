@@ -5,9 +5,9 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTank;
 
-public abstract class SwarmTankBrainBase : SwarmTankBase
+public abstract class SwarmTankCortexCradleBase : SwarmTankBase
 {
-    protected internal abstract TankConfig TankConfig { get; }
+    protected internal abstract TankConfiguration TankConfig { get; }
 
     protected internal record AllyEntry(int Slot, double Energy, long LastSeen);
     protected internal record StrategyPayload(string Strategy, string TargetName, int Epoch);

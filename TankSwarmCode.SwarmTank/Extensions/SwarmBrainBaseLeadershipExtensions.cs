@@ -7,14 +7,14 @@ namespace TankSwarmCode.SwarmTank;
 
 internal static class SwarmBrainBaseLeadershipExtensions
 {
-    internal static string DetermineLeader(this SwarmTankBrainBase brain)
+    internal static string DetermineLeader(this SwarmTankCortexCradleBase brain)
     {
-        SwarmTankBrainBase.AllyEntry? best = null;
+        SwarmTankCortexCradleBase.AllyEntry? best = null;
         string bestName = string.Empty;
 
-        foreach (KeyValuePair<string, SwarmTankBrainBase.AllyEntry> kv in brain.AllyEntryMap)
+        foreach (KeyValuePair<string, SwarmTankCortexCradleBase.AllyEntry> kv in brain.AllyEntryMap)
         {
-            if (kv.Value.LastSeen < brain.Arena.TickNumber - SwarmTankBrainBase.AllyStaleTicks)
+            if (kv.Value.LastSeen < brain.Arena.TickNumber - SwarmTankCortexCradleBase.AllyStaleTicks)
                 continue;
 
             if (best is null
@@ -29,14 +29,14 @@ internal static class SwarmBrainBaseLeadershipExtensions
         return bestName;
     }
 
-    internal static void RunEpochLogic(this SwarmTankBrainBase brain)
+    internal static void RunEpochLogic(this SwarmTankCortexCradleBase brain)
     {
         SwarmStrategy strategy = brain.SelectStrategy();
         brain.ActiveSwarmStrategy = strategy;
         brain.StrategyEpoch++;
 
         RadarContact? priorityTarget = null;
-        long freshCutoff = brain.Arena.TickNumber - SwarmTankBrainBase.AllyStaleTicks;
+        long freshCutoff = brain.Arena.TickNumber - SwarmTankCortexCradleBase.AllyStaleTicks;
         foreach (RadarContact c in brain.RadarMap.Values)
         {
             if (c.IsAlly || c.Timestamp < freshCutoff)
@@ -48,8 +48,8 @@ internal static class SwarmBrainBaseLeadershipExtensions
         brain.PriorityTargetName = priorityTarget?.Name ?? string.Empty;
 
         string strategyJson = JsonSerializer.Serialize(
-            new SwarmTankBrainBase.StrategyPayload(strategy.ToString(), brain.PriorityTargetName, brain.StrategyEpoch),
-            SwarmTankBrainBase.JsonSerializerOptions);
+            new SwarmTankCortexCradleBase.StrategyPayload(strategy.ToString(), brain.PriorityTargetName, brain.StrategyEpoch),
+            SwarmTankCortexCradleBase.JsonSerializerOptions);
 
         brain.Broadcast(new SwarmMessage
         {
@@ -63,14 +63,14 @@ internal static class SwarmBrainBaseLeadershipExtensions
         if ((strategy == SwarmStrategy.Wolfpack || strategy == SwarmStrategy.Pincer)
             && brain.GetAliveAllyCount() >= 2
             && priorityTarget != null
-            && brain.State.Position.DistanceTo(priorityTarget.Position) <= SwarmTankBrainBase.VolleyRange
-            && brain.Arena.TickNumber - brain.LastVolleyTick >= SwarmTankBrainBase.VolleyIntervalTicks)
+            && brain.State.Position.DistanceTo(priorityTarget.Position) <= SwarmTankCortexCradleBase.VolleyRange
+            && brain.Arena.TickNumber - brain.LastVolleyTick >= SwarmTankCortexCradleBase.VolleyIntervalTicks)
         {
             long fireAtTick = brain.Arena.TickNumber + 20;
             brain.LastVolleyTick = brain.Arena.TickNumber;
 
             string volleyJson = JsonSerializer.Serialize(
-                new SwarmTankBrainBase.VolleyPayload(fireAtTick), SwarmTankBrainBase.JsonSerializerOptions);
+                new SwarmTankCortexCradleBase.VolleyPayload(fireAtTick), SwarmTankCortexCradleBase.JsonSerializerOptions);
 
             brain.Broadcast(new SwarmMessage
             {
@@ -85,9 +85,9 @@ internal static class SwarmBrainBaseLeadershipExtensions
         }
     }
 
-    internal static SwarmStrategy SelectStrategy(this SwarmTankBrainBase brain)
+    internal static SwarmStrategy SelectStrategy(this SwarmTankCortexCradleBase brain)
     {
-        long freshCutoff = brain.Arena.TickNumber - SwarmTankBrainBase.AllyStaleTicks;
+        long freshCutoff = brain.Arena.TickNumber - SwarmTankCortexCradleBase.AllyStaleTicks;
 
         List<RadarContact> enemies = brain.RadarMap.Values
             .Where(c => !c.IsAlly && c.Timestamp >= freshCutoff)
@@ -96,7 +96,7 @@ internal static class SwarmBrainBaseLeadershipExtensions
         int allyCount = brain.GetAliveAllyCount() + 1; // +1 = self
 
         double totalEnergy = brain.State.Energy;
-        foreach (SwarmTankBrainBase.AllyEntry entry in brain.AllyEntryMap.Values)
+        foreach (SwarmTankCortexCradleBase.AllyEntry entry in brain.AllyEntryMap.Values)
         {
             if (entry.LastSeen >= freshCutoff && brain.AllyEntryMap.ContainsKey(brain.Name) && !ReferenceEquals(entry, brain.AllyEntryMap[brain.Name]))
                 totalEnergy += entry.Energy;
@@ -104,7 +104,7 @@ internal static class SwarmBrainBaseLeadershipExtensions
         // Recompute properly: sum all alive ally energies + self
         double sumEnergy = brain.State.Energy;
         int countForAvg = 1;
-        foreach (KeyValuePair<string, SwarmTankBrainBase.AllyEntry> kv in brain.AllyEntryMap)
+        foreach (KeyValuePair<string, SwarmTankCortexCradleBase.AllyEntry> kv in brain.AllyEntryMap)
         {
             if (kv.Key == brain.Name) continue;
             if (kv.Value.LastSeen >= freshCutoff)
@@ -136,9 +136,9 @@ internal static class SwarmBrainBaseLeadershipExtensions
         return SwarmStrategy.Wolfpack;
     }
 
-    internal static void BroadcastAllyPing(this SwarmTankBrainBase brain)
+    internal static void BroadcastAllyPing(this SwarmTankCortexCradleBase brain)
     {
-        if (brain.Arena.TickNumber % SwarmTankBrainBase.AllyPingInterval != 0)
+        if (brain.Arena.TickNumber % SwarmTankCortexCradleBase.AllyPingInterval != 0)
             return;
 
         brain.Broadcast(new SwarmMessage
@@ -150,9 +150,9 @@ internal static class SwarmBrainBaseLeadershipExtensions
         });
     }
 
-    internal static int GetAliveAllyCount(this SwarmTankBrainBase brain)
+    internal static int GetAliveAllyCount(this SwarmTankCortexCradleBase brain)
     {
-        long freshCutoff = brain.Arena.TickNumber - SwarmTankBrainBase.AllyStaleTicks;
+        long freshCutoff = brain.Arena.TickNumber - SwarmTankCortexCradleBase.AllyStaleTicks;
         return brain.AllyEntryMap.Values.Count(e => e.LastSeen >= freshCutoff) - 1; // subtract self
     }
 }

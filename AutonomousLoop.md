@@ -63,7 +63,7 @@ dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.cspro
 
 If the hypothesis is purely observational (no code change needed), skip to step 6.
 
-If the hypothesis requires a code change (e.g. tuning a `TankConfig` value):
+If the hypothesis requires a code change (e.g. tuning a `TankConfiguration` value):
 - Make the minimal change needed to test the hypothesis.
 - Rebuild and re-run the benchmark.
 
@@ -79,10 +79,10 @@ If code was changed in step 5, update the affected documentation files now. Appl
 
 | Code area changed | Documentation to update |
 |------------------|------------------------|
-| `TankConfig` values in any tank | `ch09-builtin-tanks.md` roster table + tank section; Engineering READMEs |
+| `TankConfiguration` values in any tank | `ch09-builtin-tanks.md` roster table + tank section; Engineering READMEs |
 | New tank class added or removed | `ch09`, `ch01` solution layout, `ch02` Add Tanks walkthrough, Engineering README |
 | `ArenaConstants` values | `ch12-configuration.md`, `ch04-physics-engine.md`, `ch13-ecm-system.md`, `ch14-tank-energy.md` |
-| `SwarmBrainBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Blue/Red Engineering READMEs |
+| `SwarmTankCortexCradleBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Blue/Red Engineering READMEs |
 | CLI flags or output format | `ch15-cli.md`; Engineering READMEs |
 | `ISwarmTank` / `IArenaContext` interface | `ch05-tank-ai-framework.md`, `ch08-data-models.md` |
 | New `SwarmMessageType` enum value | `ch06-swarm-communication.md` message table |

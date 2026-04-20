@@ -3,11 +3,11 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Red;
 
-public sealed class RedBlade : SwarmTankBrainRed
+public sealed class RedBlade : SwarmTankRedCortexCradle
 {
     public RedBlade() { SwarmId = 1; Role = TankRole.Attacker; }
     public override string Name => "RedBlade";
-    protected internal override TankConfig TankConfig { get; } = new()
+    protected internal override TankConfiguration TankConfig { get; } = new()
     {
         FormationSlot = 1,
         MaxFirePower = 2.5,

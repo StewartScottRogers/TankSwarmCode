@@ -8,15 +8,15 @@ Two fully implemented swarms ship with the project. They serve as reference impl
 
 ---
 
-## Architecture: SwarmBrainBase
+## Architecture: SwarmTankCortexCradleBase
 
-All built-in tanks inherit from `SwarmBrainBase` (in `TankSwarmCode.SwarmTank/SwarmBrainBase.cs`), not directly from `SwarmTankBase`. `SwarmBrainBase` is a concrete AI layer that sits on top of `SwarmTankBase` and provides a full team-coordination brain. Individual tanks configure it via a `TankConfig` record:
+All built-in tanks inherit from `SwarmTankCortexCradleBase` (in `TankSwarmCode.SwarmTank/SwarmTankCortexCradleBase.cs`), not directly from `SwarmTankBase`. `SwarmTankCortexCradleBase` is a concrete AI layer that sits on top of `SwarmTankBase` and provides a full team-coordination brain. Individual tanks configure it via a `TankConfiguration` record:
 
 ```csharp
-protected abstract TankConfig Config { get; }
+protected internal abstract TankConfiguration TankConfig { get; }
 ```
 
-### TankConfig Fields
+### TankConfiguration Fields
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
@@ -66,7 +66,7 @@ Every 15 ticks each tank broadcasts an `AllyPing` message containing its formati
 
 ### Wall-Aware Firing
 
-`SwarmBrainBase` never fires through a wall it knows about. Before every shot — both in `LinearPredictionFire` and in scheduled volley fire — the brain checks every `WallSegment` in `BuildingWallMap` against the line from the tank to the target (or predicted position). If any known wall segment intersects that line, the shot is suppressed for that tick. The gun continues tracking the target so the shot fires as soon as the line of fire is clear.
+`SwarmTankCortexCradleBase` never fires through a wall it knows about. Before every shot — both in `LinearPredictionFire` and in scheduled volley fire — the brain checks every `WallSegment` in `BuildingWallMap` against the line from the tank to the target (or predicted position). If any known wall segment intersects that line, the shot is suppressed for that tick. The gun continues tracking the target so the shot fires as soon as the line of fire is clear.
 
 Walls accumulate in `BuildingWallMap` from both direct radar echoes and `BuildingEchoShare` messages relayed by allies. A tank that has never scanned a particular building face will not know to avoid shooting through it.
 
@@ -97,7 +97,7 @@ For NvN matches larger than 4 per side, additional `RedTrooper` instances fill s
 ### RedHammer (Slot 0 — Leader)
 
 ```csharp
-new TankConfig { FormationSlot = 0, MaxFirePower = 3.0, PreferredRange = 200.0, HasEcm = false, RetreatEnergyThreshold = 25.0 }
+new TankConfiguration { FormationSlot = 0, MaxFirePower = 3.0, PreferredRange = 200.0, HasEcm = false, RetreatEnergyThreshold = 25.0 }
 ```
 
 RedHammer is the Red swarm's default leader. It fires maximum-power bullets (3.0) and engages at medium range (200 px). Because it holds slot 0, it issues `StrategyCommand` and `VolleyFire` orders whenever it is alive. When it falls, RedBlade (slot 1) takes over leadership.
@@ -113,7 +113,7 @@ RedHammer is the Red swarm's default leader. It fires maximum-power bullets (3.0
 ### RedBlade (Slot 1 — Aggressive Flanker)
 
 ```csharp
-new TankConfig { FormationSlot = 1, MaxFirePower = 2.5, PreferredRange = 160.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
+new TankConfiguration { FormationSlot = 1, MaxFirePower = 2.5, PreferredRange = 160.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
 ```
 
 RedBlade closes to tighter range than RedHammer (160 px vs 200 px) and fires at 2.5 power — a good balance of speed and damage. It acts as both the secondary attacker and the fallback leader. Its closer preferred range makes it effective in cramped arenas and building-heavy maps.
@@ -123,17 +123,17 @@ RedBlade closes to tighter range than RedHammer (160 px vs 200 px) and fires at 
 ### RedArrow (Slot 2 — Scout)
 
 ```csharp
-new TankConfig { FormationSlot = 2, MaxFirePower = 1.5, PreferredRange = 220.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
+new TankConfiguration { FormationSlot = 2, MaxFirePower = 1.5, PreferredRange = 220.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
 ```
 
-RedArrow's `Role` is `Scout`. Its lighter fire power (1.5) is intentional — faster bullets are harder to dodge at long range (220 px). `SwarmBrainBase`'s `MaintainRadar` continuously re-locks the radar on the priority target, giving the whole swarm frequent fresh contacts. RedArrow also contributes to `VolleyFire` schedules when in range.
+RedArrow's `Role` is `Scout`. Its lighter fire power (1.5) is intentional — faster bullets are harder to dodge at long range (220 px). `SwarmTankCortexCradleBase`'s `MaintainRadar` continuously re-locks the radar on the priority target, giving the whole swarm frequent fresh contacts. RedArrow also contributes to `VolleyFire` schedules when in range.
 
 ---
 
 ### RedGhost (Slot 3 — ECM Specialist)
 
 ```csharp
-new TankConfig { FormationSlot = 3, MaxFirePower = 0.1, PreferredRange = 150.0, HasEcm = true, OffensiveEcmMode = EcmMode.JamAndSpoof, RetreatEnergyThreshold = 40.0 }
+new TankConfiguration { FormationSlot = 3, MaxFirePower = 0.1, PreferredRange = 150.0, HasEcm = true, OffensiveEcmMode = EcmMode.JamAndSpoof, RetreatEnergyThreshold = 40.0 }
 ```
 
 RedGhost is an electronic warfare platform. It almost never fires (max power 0.1) and instead relies on `JamAndSpoof` to suppress the enemy:
@@ -171,7 +171,7 @@ For NvN matches larger than 5 per side, additional `BlueTrooper` instances fill 
 ### BlueStrike (Slot 0 — Leader)
 
 ```csharp
-new TankConfig { FormationSlot = 0, MaxFirePower = 3.0, PreferredRange = 250.0, HasEcm = false, RetreatEnergyThreshold = 25.0 }
+new TankConfiguration { FormationSlot = 0, MaxFirePower = 3.0, PreferredRange = 250.0, HasEcm = false, RetreatEnergyThreshold = 25.0 }
 ```
 
 BlueStrike is the Blue swarm's default leader. It fires at maximum power from longer range (250 px) than RedHammer, favouring a stand-off engagement style. It issues `StrategyCommand` and `VolleyFire` orders each epoch. When BlueStrike falls, BlueSharp (slot 1) takes over.
@@ -181,7 +181,7 @@ BlueStrike is the Blue swarm's default leader. It fires at maximum power from lo
 ### BlueSharp (Slot 1 — Long-Range Support)
 
 ```csharp
-new TankConfig { FormationSlot = 1, MaxFirePower = 3.0, PreferredRange = 300.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
+new TankConfiguration { FormationSlot = 1, MaxFirePower = 3.0, PreferredRange = 300.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
 ```
 
 BlueSharp holds the longest preferred range in either swarm (300 px). Its maximum fire power of 3.0 and wide engagement distance mean it keeps firing while other tanks close in. Linear prediction ensures the slow heavy bullets land despite the range. It is Blue's fallback leader after BlueStrike.
@@ -191,7 +191,7 @@ BlueSharp holds the longest preferred range in either swarm (300 px). Its maximu
 ### BlueRush (Slot 2 — Close-Quarters Attacker)
 
 ```csharp
-new TankConfig { FormationSlot = 2, MaxFirePower = 2.5, PreferredRange = 180.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
+new TankConfiguration { FormationSlot = 2, MaxFirePower = 2.5, PreferredRange = 180.0, HasEcm = false, RetreatEnergyThreshold = 20.0 }
 ```
 
 BlueRush is the Blue swarm's fast-closing attacker. Its tight preferred range (180 px) means the brain's `NavigateTo` drives it aggressively toward the target. During Encircle strategy, BlueRush occupies one of the orbit positions closest to the target, sustaining pressure from close range.
@@ -201,7 +201,7 @@ BlueRush is the Blue swarm's fast-closing attacker. Its tight preferred range (1
 ### BlueGuard (Slot 3 — Defender)
 
 ```csharp
-new TankConfig { FormationSlot = 3, MaxFirePower = 2.0, PreferredRange = 200.0, HasEcm = false, RetreatEnergyThreshold = 30.0 }
+new TankConfiguration { FormationSlot = 3, MaxFirePower = 2.0, PreferredRange = 200.0, HasEcm = false, RetreatEnergyThreshold = 30.0 }
 ```
 
 BlueGuard's `Role` is `Defender`. It has a higher retreat threshold (30 energy) than the other non-specialist Blue tanks, retreating earlier to stay alive longer. Its moderate power (2.0) and 200 px range make it a reliable all-around fighter. During Fallback it retreats early, keeping the swarm's average energy up.
@@ -211,7 +211,7 @@ BlueGuard's `Role` is `Defender`. It has a higher retreat threshold (30 energy) 
 ### BlueEcm (Slot 4 — ECM Specialist)
 
 ```csharp
-new TankConfig { FormationSlot = 4, MaxFirePower = 1.5, PreferredRange = 150.0, HasEcm = true, OffensiveEcmMode = EcmMode.Jam, RetreatEnergyThreshold = 35.0 }
+new TankConfiguration { FormationSlot = 4, MaxFirePower = 1.5, PreferredRange = 150.0, HasEcm = true, OffensiveEcmMode = EcmMode.Jam, RetreatEnergyThreshold = 35.0 }
 ```
 
 BlueEcm's offensive mode is `Jam` (not `JamAndSpoof`), so it fully suppresses enemy radar without injecting fake contacts. This makes it a reliable ECCM platform: when an `EcmAlert` is received, the brain switches it to `Burnthrough`, clearing enemy ghost contacts from the Blue swarm's `RadarMap`. Its light cannon (1.5 power) lets it contribute damage when jamming is not active. The high retreat threshold (35 energy) ensures its jamming capacity is preserved deep into a round.

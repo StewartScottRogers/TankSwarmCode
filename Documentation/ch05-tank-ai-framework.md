@@ -10,9 +10,9 @@ The AI framework has two layers in `TankSwarmCode.SwarmTank`:
 
 - **`SwarmTankBase`** (`SwarmTank.cs`) — the base class for all tank AI. It implements `ISwarmTank`, maintains `RadarMap`, exposes the command API (`SetAhead`, `SetFire`, `Broadcast`, etc.), and provides default no-op lifecycle hooks. Subclass this directly for full control over your AI logic.
 
-- **`SwarmBrainBase`** (`SwarmBrainBase.cs`) — a concrete AI layer built on top of `SwarmTankBase`. All built-in Red and Blue tanks subclass `SwarmBrainBase`. It provides a complete team-coordination brain: leader election, epoch-based strategy selection, coordinated volley scheduling, ally health tracking, and automatic ECM handling. You configure it with a `TankConfig` record rather than implementing strategy logic from scratch. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full `SwarmBrainBase` reference.
+- **`SwarmTankCortexCradleBase`** (`SwarmTankCortexCradleBase.cs`) — a concrete AI layer built on top of `SwarmTankBase`. All built-in Red and Blue tanks subclass `SwarmTankCortexCradleBase`. It provides a complete team-coordination brain: leader election, epoch-based strategy selection, coordinated volley scheduling, ally health tracking, and automatic ECM handling. You configure it with a `TankConfiguration` record rather than implementing strategy logic from scratch. See [Chapter 9: Built-in Tank AI Examples](ch09-builtin-tanks.md) for the full `SwarmTankCortexCradleBase` reference.
 
-For a custom tank you can subclass either: `SwarmTankBase` for full control, or `SwarmBrainBase` to inherit the coordination brain and override only the `TankConfig`.
+For a custom tank you can subclass either: `SwarmTankBase` for full control, or `SwarmTankCortexCradleBase` to inherit the coordination brain and override only the `TankConfiguration`.
 
 ---
 
@@ -405,15 +405,15 @@ if (gunAligned && shotClear)
     SetFire(power);
 ```
 
-### `IsWallInLineOfFire(Vector2D target)` — `SwarmBrainBase` only
+### `IsWallInLineOfFire(Vector2D target)` — `SwarmTankCortexCradleBase` only
 
 ```csharp
 internal bool IsWallInLineOfFire(Vector2D target)
 ```
 
-Available on `SwarmBrainBase` subclasses. Returns `true` if any wall segment in `BuildingWallMap` intersects the line from this tank's position to `target`. Uses a parametric segment-segment intersection test — parallel walls return `false`.
+Available on `SwarmTankCortexCradleBase` subclasses. Returns `true` if any wall segment in `BuildingWallMap` intersects the line from this tank's position to `target`. Uses a parametric segment-segment intersection test — parallel walls return `false`.
 
-`SwarmBrainBase` calls this automatically before every `SetFire` in `LinearPredictionFire` and the scheduled volley path. Override `OnScannedBuilding` and call `base.OnScannedBuilding(e)` to keep `BuildingWallMap` current, which in turn keeps the wall check accurate.
+`SwarmTankCortexCradleBase` calls this automatically before every `SetFire` in `LinearPredictionFire` and the scheduled volley path. Override `OnScannedBuilding` and call `base.OnScannedBuilding(e)` to keep `BuildingWallMap` current, which in turn keeps the wall check accurate.
 
 ---
 

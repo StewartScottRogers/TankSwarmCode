@@ -8,15 +8,15 @@ namespace TankSwarmCode.SwarmTanks.Red;
 /// Each instance gets a unique formation slot so the swarm brain assigns
 /// distinct roles and orbit positions.
 /// </summary>
-public sealed class RedTrooper : SwarmTankBrainRed
+public sealed class RedTrooper : SwarmTankRedCortexCradle
 {
-    private readonly TankConfig _config;
+    private readonly TankConfiguration _config;
 
     public RedTrooper(int slot)
     {
         SwarmId = 1;
         Role = TankRole.Attacker;
-        _config = new TankConfig
+        _config = new TankConfiguration
         {
             FormationSlot = slot,
             MaxFirePower = 2.5,
@@ -27,5 +27,5 @@ public sealed class RedTrooper : SwarmTankBrainRed
     }
 
     public override string Name => $"Red{_config.FormationSlot}";
-    protected internal override TankConfig TankConfig => _config;
+    protected internal override TankConfiguration TankConfig => _config;
 }

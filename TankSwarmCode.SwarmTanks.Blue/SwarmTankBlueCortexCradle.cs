@@ -6,7 +6,7 @@ using TankSwarmCode.SwarmTank.Interfaces.Models;
 
 namespace TankSwarmCode.SwarmTanks.Blue;
 
-public abstract class SwarmTankBrainBlue : SwarmTankBrainBase
+public abstract class SwarmTankBlueCortexCradle : SwarmTankCortexCradleBase
 {
     public override void OnTick(TickEventArgs e)
     {

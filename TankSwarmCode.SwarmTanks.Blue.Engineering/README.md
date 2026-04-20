@@ -23,7 +23,7 @@ Slot numbers drive formation assignments (encircle angle, pincer group) and lead
 
 ## Swarm Brain Architecture
 
-All Blue tanks inherit from `SwarmBrainBase` in `TankSwarmCode.SwarmTank`. The brain handles:
+All Blue tanks inherit from `SwarmTankCortexCradleBase` in `TankSwarmCode.SwarmTank`. The brain handles:
 
 ### Leadership Election
 
@@ -114,7 +114,7 @@ The leader schedules a `VolleyFire` message specifying a target name and a futur
 
 ```
 TankSwarmCode.SwarmTank.Interfaces   ← Public contracts (ISwarmTank, models, enums, events)
-TankSwarmCode.SwarmTank              ← SwarmTankBase + SwarmBrainBase
+TankSwarmCode.SwarmTank              ← SwarmTankBase + SwarmTankCortexCradleBase
 TankSwarmCode.Arena.Interfaces       ← IArenaContext contract
 TankSwarmCode.Arena                  ← Physics engine and runtime
 TankSwarmCode.SwarmTanks.Blue        ← Blue Swarm implementation (this project links here)

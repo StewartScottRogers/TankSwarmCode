@@ -80,7 +80,7 @@ dotnet publish TankSwarmCode.SwarmTanks.Blue/TankSwarmCode.SwarmTanks.Blue.cspro
 If the hypothesis is purely observational (e.g. cross-seed validation), skip to step 6.
 
 If the hypothesis requires a code change:
-- Make the minimal change to the relevant `TankConfig` value.
+- Make the minimal change to the relevant `TankConfiguration` value.
 - **Rebuild BOTH DLLs after any change.** Stale DLLs have contaminated runs before (iter-7, iter-9).
 - Re-run the benchmark.
 
@@ -100,9 +100,9 @@ If code changed, update the minimum set of docs:
 
 | Code area changed | Documentation to update |
 |---|---|
-| `TankConfig` values in any Red tank | `Documentation/ch09-builtin-tanks.md` roster table + tank section; `TankSwarmCode.SwarmTanks.Red.Engineering/README.md` |
+| `TankConfiguration` values in any Red tank | `Documentation/ch09-builtin-tanks.md` roster table + tank section; `TankSwarmCode.SwarmTanks.Red.Engineering/README.md` |
 | New tank class added or removed | `ch09`, `ch01`, `ch02`, Red Engineering README |
-| `SwarmBrainBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Red Engineering README |
+| `SwarmTankCortexCradleBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Red Engineering README |
 
 Do not update docs for code that did not change.
 

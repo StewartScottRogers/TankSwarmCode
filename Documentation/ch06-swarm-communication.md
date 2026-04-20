@@ -85,10 +85,10 @@ The engine queues the message and delivers it to all living, non-jamming allies 
 | `RadarShare` | Auto (base class) | Contains `RadarContact` for a detected enemy; merged into allies' `RadarMap` |
 | `BuildingEchoShare` | Auto (base class) | Contains `BuildingEcho` with wall faces reflected by radar; merged into allies' `BuildingWallMap` |
 | `Painted` | Auto (base class) | Fired when an enemy radar sweeps this tank; `Position` = painter's position, `TargetName` = painter's name |
-| `AllyPing` | `SwarmBrainBase` | Heartbeat every 15 ticks; `CustomData` = `"slot:energy"` |
-| `StrategyCommand` | `SwarmBrainBase` leader | Epoch strategy decree; `CustomData` = JSON `{ Strategy, TargetName, Epoch }` |
-| `VolleyFire` | `SwarmBrainBase` leader | Coordinated fire order; `CustomData` = JSON `{ FireAtTick }`; each tank adjusts for bullet travel time |
-| `EcmAlert` | Any tank | Sender detected enemy jamming or ghost contacts; `SwarmBrainBase` responds by switching to Burnthrough for 20 ticks |
+| `AllyPing` | `SwarmTankCortexCradleBase` | Heartbeat every 15 ticks; `CustomData` = `"slot:energy"` |
+| `StrategyCommand` | `SwarmTankCortexCradleBase` leader | Epoch strategy decree; `CustomData` = JSON `{ Strategy, TargetName, Epoch }` |
+| `VolleyFire` | `SwarmTankCortexCradleBase` leader | Coordinated fire order; `CustomData` = JSON `{ FireAtTick }`; each tank adjusts for bullet travel time |
+| `EcmAlert` | Any tank | Sender detected enemy jamming or ghost contacts; `SwarmTankCortexCradleBase` responds by switching to Burnthrough for 20 ticks |
 | `EnemySpotted` | Manual | Broadcast a sighting without a full RadarShare |
 | `TargetLocked` | Manual | Designate priority target for the swarm |
 | `RequestBackup` | Manual | Signal low energy or need for help |
@@ -185,7 +185,7 @@ There is no per-tick message limit. Messages are only delivered to tanks that ar
 
 ### Epoch leader pattern (both swarms)
 
-`SwarmBrainBase` elects a leader every 40 ticks — the living tank with the lowest `FormationSlot`. The leader broadcasts a `StrategyCommand` message (containing the chosen strategy name and the priority target's name) and a `VolleyFire` message (containing the tick at which all tanks should fire simultaneously). Non-leader tanks receive and apply these messages, focusing the entire swarm on the same target with a coordinated salvo. There is no central "commander" class — any tank can become leader if its predecessors die.
+`SwarmTankCortexCradleBase` elects a leader every 40 ticks — the living tank with the lowest `FormationSlot`. The leader broadcasts a `StrategyCommand` message (containing the chosen strategy name and the priority target's name) and a `VolleyFire` message (containing the tick at which all tanks should fire simultaneously). Non-leader tanks receive and apply these messages, focusing the entire swarm on the same target with a coordinated salvo. There is no central "commander" class — any tank can become leader if its predecessors die.
 
 ### Ally ping heartbeat (both swarms)
 
@@ -193,7 +193,7 @@ Every 15 ticks each tank broadcasts an `AllyPing` message containing its formati
 
 ### ECM alert chain
 
-When any tank detects a ghost contact (name starts with `"Ghost-"`), it should broadcast `EcmAlert`. `SwarmBrainBase` handles incoming `EcmAlert` messages by switching to `Burnthrough` for 20 ticks, coordinating ECCM coverage across the swarm without a central controller. `BlueEcm` is the built-in tank most likely to generate these alerts since its default role is ECCM protection.
+When any tank detects a ghost contact (name starts with `"Ghost-"`), it should broadcast `EcmAlert`. `SwarmTankCortexCradleBase` handles incoming `EcmAlert` messages by switching to `Burnthrough` for 20 ticks, coordinating ECCM coverage across the swarm without a central controller. `BlueEcm` is the built-in tank most likely to generate these alerts since its default role is ECCM protection.
 
 ### Painted counter-targeting
 

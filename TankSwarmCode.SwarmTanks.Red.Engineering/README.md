@@ -8,18 +8,18 @@ This shared project is the working area for building and tuning the Red Swarm AI
 
 ### 1. Choose a Base Class
 
-All current Red tanks use `SwarmBrainBase` for the full coordination brain. To add a new tank with identical behaviour, subclass `SwarmBrainBase` and provide a `TankConfig`:
+All current Red tanks use `SwarmTankCortexCradleBase` for the full coordination brain. To add a new tank with identical behaviour, subclass `SwarmTankRedCortexCradle` and provide a `TankConfiguration`:
 
 ```csharp
 using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Interfaces.Enums;
 using TankSwarmCode.SwarmTank.Interfaces.Models;
 
-public sealed class RedViper : SwarmBrainBase
+public sealed class RedViper : SwarmTankRedCortexCradle
 {
     public RedViper() { SwarmId = 1; Role = TankRole.Attacker; }
     public override string Name => "RedViper";
-    protected override TankConfig Config { get; } = new()
+    protected internal override TankConfiguration TankConfig { get; } = new()
     {
         FormationSlot = 5,       // higher slot = lower leadership priority
         MaxFirePower = 2.0,
