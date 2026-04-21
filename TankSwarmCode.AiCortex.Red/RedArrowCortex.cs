@@ -8,7 +8,7 @@ public sealed class RedArrowCortex : RedCortexBase
     protected override TankConfiguration TankConfiguration { get; } = new()
     {
         FormationSlot = 2,
-        MaxFirePower = 1.0,
+        MaxFirePower = 2.0,
         PreferredRange = 160.0,
         HasEcm = false,
         RetreatEnergyThreshold = 20.0

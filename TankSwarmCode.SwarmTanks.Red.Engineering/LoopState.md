@@ -1,59 +1,57 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iters 37-45 complete (28-tank sweep, 94.0% ceiling confirmed)
+2026-04-21 — Iters 45-46 complete (MaxFP=2.0 + Red28 accepted, 55.6% avg)
 
 ## Current Iteration
-**ACTIVE** — 62.8% avg (5-seed) vs Blue's updated 12-tank roster. Continuing optimization.
+**ACTIVE** — 55.6% avg (5-seed) vs Blue's current 29-tank DLL. Continuing optimization.
 
 ## Situation
 
-**RECOVERING: 62.8% average win rate across 5 seeds against current Blue DLL (12 tanks).**
+**RECOVERING: 55.6% average win rate across 5 seeds against current Blue DLL (29 tanks).**
 
-Blue Engineering ran iters 34-40, adding 7 more tanks to reach 12 total (Blue ceiling: 87%).
-Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62.8%.
+Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). Red counter-expanded to 29 tanks. MaxFP recalibrated from 1.0→2.0 (the "faster bullets" optimization from iter-24 was for old 5-tank Blue and is wrong for dense 29-tank formations).
 
 **CRITICAL INFRASTRUCTURE NOTE:** Always use `net10.0/publish/` DLL paths, NOT `net9.0/publish/`.
 - Red: `TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Red.dll`
 - Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
-**Current win rates (5-seed parallel, 200 matches each, 28 tanks vs Blue 12 tanks):**
-- Seed 1000: **94%**
-- Seed 2000: **94%**
-- Seed 3000: **94%**
-- Seed 4000: **94%**
-- Seed 5000: **94%**
-- **5-seed average: 94.0%**
+**Current win rates (5-seed parallel, 200 matches each, 29 Red tanks vs Blue 29 tanks, MaxFP=2.0):**
+- Seed 1000: **56%**
+- Seed 2000: **52%**
+- Seed 3000: **57%**
+- Seed 4000: **58%**
+- Seed 5000: **55%**
+- **5-seed average: 55.6%**
 
-## What We Know (Current Blue DLL — 12 tanks)
+## What We Know (Current Blue DLL — 29 tanks)
 
 - **Parallel mode is VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug.
   Use `--parallel 8` for all runs.
-- **12 Red tanks (12v12 parity) is the correct roster size.** 5v12 = 15% win rate. 12v12 = 62.8%.
-- **Faster bullets confirmed: MaxFP=1.0 optimal for attack tanks at PR=160.** Ghost=2.0 unchanged.
-- **PR=160 is definitively optimal.** Confirmed across seeds and MaxFP values.
-- **28 tanks vs Blue 12 tanks = 94.0% ceiling.** Gradient flattens/reverses at 30 tanks.
-- **Numerical superiority sweep complete**: 12→14→16→18→20→22→24→26→28 all positive; 30 reverses.
-- **All slot tanks use identical Trooper config** (MaxFP=1.0, PR=160, HasEcm=false, Retreat=20).
-- **Wolfpack orbit distributes by slot % aliveCount.** 28 tanks = 13° spacing at 160px radius.
+- **Blue has 29 tanks:** Named (BlueSharp, BlueGuard, BlueEcm, BlueRush, BlueStrike) + Blue5-Blue28 slots.
+- **Red has 29 tanks:** Named (RedHammer/Blade/Arrow/Ghost) + Red4-Red28 slots.
+- **MaxFP=2.0 optimal for all attack tanks** vs 29-tank Blue (dense formation makes slower bullets acceptable, doubled damage is decisive). MaxFP=1.0 was optimal for old 5-tank Blue; wrong for current configuration. MaxFP=3.0 too slow (38% at seed 3000).
+- **PR=160 unchanged.** Has been stable through all Blue expansions.
+- **Ghost stays at MaxFP=2.0.** This is unchanged and correct.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
+- **Blue's named tanks have very high DPS rates:** BlueGuard=65.91, BlueStrike=58.10, Blue11=58.86, Blue9=57.04. Red must match with MaxFP=2.0 (RedGhost=42.48 rate).
 
 ## Current Configuration
 
 | Tanks | Slots | MaxFP | PR | HasEcm | Retreat |
 |-------|-------|-------|----|--------|---------|
-| RedHammer | 0 | 1.0 | 160 | false | 25 |
-| RedBlade | 1 | 1.0 | 160 | false | 20 |
-| RedArrow | 2 | 1.0 | 160 | false | 20 |
+| RedHammer | 0 | 2.0 | 160 | false | 25 |
+| RedBlade | 1 | 2.0 | 160 | false | 20 |
+| RedArrow | 2 | 2.0 | 160 | false | 20 |
 | RedGhost | 3 | 2.0 | 160 | false | 20 |
-| Red4-Red27 | 4-27 | 1.0 | 160 | false | 20 |
+| Red4-Red28 | 4-28 | 2.0 | 160 | false | 20 |
 
-**Total: 28 Red tanks vs Blue 12 tanks. 94.0% win rate.**
+**Total: 29 Red tanks vs Blue 29 tanks. 55.6% avg 5-seed win rate.**
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## LOOP STATUS: COMPLETE (Numerical Superiority Ceiling)
+## LOOP STATUS: ACTIVE (55.6% ceiling candidate — next: PR tuning or targeted strategy)
 
 **94.0% avg (5-seed) is the ceiling for numerical superiority at 28 tanks vs Blue 12.**
 
@@ -66,6 +64,15 @@ To exceed 94.0%, different approaches needed:
 ---
 
 ## Iteration Log
+
+### Iters 45-46 — Red28 + MaxFP=2.0 (ACCEPTED, +12pp avg)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. Red 55.6% avg (5-seed) vs ~44% baseline (+12pp).
+- Iter 45: Added Red28 (29th tank, slot 28) to match Blue's 29 tanks. Marginal alone (+1pp).
+- Iter 46: MaxFP 1.0→2.0 for all attack tanks (Trooper/Arrow/Blade/Hammer). Major driver (+12pp).
+- MaxFP=3.0 tested and rejected (38% at seed 3000 — slower bullets miss mobile targets).
+- Mechanism: 29-tank dense Wolfpack formation increases target density, making slower/harder bullets (MaxFP=2.0) superior to faster/lighter (MaxFP=1.0).
+- See Research/iter-0045-0046-maxfp2-red28.md
 
 ### Iters 37-45 — Numerical Superiority Sweep: Red14-Red27 (ACCEPTED, 94.0% ceiling at 28 tanks)
 **Date:** 2026-04-21
