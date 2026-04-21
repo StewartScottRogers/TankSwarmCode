@@ -1,75 +1,80 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 33 complete (Pincer@160 NEUTRAL 0.0pp; LOOP COMPLETE — ceiling 70.2% confirmed)
+2026-04-21 — Iteration 34 complete (12-Tank Parity ACCEPTED +47.8pp; 15% → 62.8%)
 
 ## Current Iteration
-**LOOP COMPLETE** — 70.2% is the hard ceiling for current framework. Novel mechanisms required.
+**ACTIVE** — 62.8% avg (5-seed) vs Blue's updated 12-tank roster. Continuing optimization.
 
 ## Situation
 
-**DOMINANT: 70.2% average win rate across 5 seeds against current Blue DLL (net10.0).**
+**RECOVERING: 62.8% average win rate across 5 seeds against current Blue DLL (12 tanks).**
+
+Blue Engineering ran iters 34-40, adding 7 more tanks to reach 12 total (Blue ceiling: 87%).
+Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62.8%.
 
 **CRITICAL INFRASTRUCTURE NOTE:** Always use `net10.0/publish/` DLL paths, NOT `net9.0/publish/`.
-The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate).
 - Red: `TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Red.dll`
 - Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
-**Current win rates (5-seed parallel, 200 matches each, 5 tanks vs current Blue):**
-- Seed 1000: **70.0%**
-- Seed 2000: **70.5%**
-- Seed 3000: **66.0%**
-- Seed 4000: **73.0%**
-- Seed 5000: **71.5%**
-- **5-seed average: 70.2%**
+**Current win rates (5-seed parallel, 200 matches each, 12 tanks vs Blue 12 tanks):**
+- Seed 1000: **58%**
+- Seed 2000: **64%**
+- Seed 3000: **62%**
+- Seed 4000: **63%**
+- Seed 5000: **67%**
+- **5-seed average: 62.8%**
 
-## What We Know (Current Blue DLL)
+## What We Know (Current Blue DLL — 12 tanks)
 
 - **Parallel mode is VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug.
   Use `--parallel 8` for all runs.
-- **Faster bullets gradient continues: 2.0→1.5→1.0 all positive for 4 attack tanks.** Arrow, Trooper,
-  Blade, Hammer all confirmed at MaxFP=1.0 (iter-24, +3.0pp avg). Ghost is the exception: confirmed
-  at MaxFP=2.0 (burst damage role). Each step: 2.0→1.5 +3-5pp; 1.5→1.0 +3.0pp.
-- **Energy mechanics confirm hit rate is decisive.** Damage/energy ratio = 4 at all power levels;
-  faster bullets (17 px/tick at MaxFP=1.0 vs 15.5 at 1.5) improve hit rate against mobile targets.
-- **PR=160 is definitively optimal.** PR=140 (-4.5pp) and PR=150 (-2.5pp) both refuted. Orbit
-  radius and MaxFP are tightly coupled; PR=160 is confirmed across all tested values (iter-22/23).
-- **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
-- **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
+- **12 Red tanks (12v12 parity) is the correct roster size.** 5v12 = 15% win rate. 12v12 = 62.8%.
+- **Faster bullets confirmed: MaxFP=1.0 optimal for attack tanks at PR=160.** Ghost=2.0 unchanged.
+- **PR=160 is definitively optimal.** Confirmed across seeds and MaxFP values.
+- **All 7 new slot tanks use identical Trooper config** (MaxFP=1.0, PR=160, HasEcm=false, Retreat=20).
+  This has not been individually optimized yet — may be opportunity.
+- **Wolfpack orbit at 12 tanks: 30° intervals.** Distributes perfectly around target with slot % aliveCount.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
-- **BlueSharp linchpin targeting is NOT exploitable.** Priority-targeting Sharp (iter-21) gave -0.3pp.
-  The correlation (Sharp alive → Blue wins) is observational; weakest-first targeting is confirmed
-  optimal. The linchpin stat is informational only, not an actionable targeting strategy.
 
 ## Current Configuration
 
 | Tank | Slot | MaxFP | PR | HasEcm | Retreat |
 |------|------|-------|----|--------|---------|
-| Hammer | 0 | **1.0** | 160 | false | 25 |
-| Blade | 1 | **1.0** | 160 | false | 20 |
-| Arrow | 2 | **1.0** | 160 | false | 20 |
-| Ghost | 3 | **2.0** | 160 | false | 20 |
-| Trooper | 4 | **1.0** | 160 | false | 20 |
+| Hammer | 0 | 1.0 | 160 | false | 25 |
+| Blade | 1 | 1.0 | 160 | false | 20 |
+| Arrow | 2 | 1.0 | 160 | false | 20 |
+| Ghost | 3 | 2.0 | 160 | false | 20 |
+| Trooper (Red4) | 4 | 1.0 | 160 | false | 20 |
+| Red5 | 5 | 1.0 | 160 | false | 20 |
+| Red6 | 6 | 1.0 | 160 | false | 20 |
+| Red7 | 7 | 1.0 | 160 | false | 20 |
+| Red8 | 8 | 1.0 | 160 | false | 20 |
+| Red9 | 9 | 1.0 | 160 | false | 20 |
+| Red10 | 10 | 1.0 | 160 | false | 20 |
+| Red11 | 11 | 1.0 | 160 | false | 20 |
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## LOOP STATUS: COMPLETE
+## Next Hypothesis
 
-**70.2% avg (5-seed) is the hard ceiling for the current Wolfpack/orbit framework.**
-
-8 consecutive neutral/negative results (iters 26-33) confirm the ceiling. All accessible parameter
-dimensions have been tested. No single-parameter or strategy-routing change produces ≥2pp gain.
-
-To exceed 70.2%, fundamentally new approaches are needed:
-- New formation geometry (not Wolfpack/Encircle/Pincer variants)
-- Dynamic behavior based on live match state
-- Updated Blue DLL (ceiling resets if Blue changes strategy)
-- New information sources (track individual Blue tank histories across a match)
+**Iter 35: Add Red12 (13th tank, slot 12) — numerical advantage.**
+If 12v12 = 62.8%, then 13v12 should give Red a persistent numerical advantage.
+Success: ≥2pp improvement (≥64.8% avg).
 
 ---
 
 ## Iteration Log
+
+### Iter 34 — 12-Tank Parity: Add Red5-Red11 (ACCEPTED +47.8pp avg, 5-seed)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. Red 62.8% avg (5-seed) vs 15% baseline (+47.8pp).
+- Blue Engineering added 7 tanks (iter 34-40) to reach 12 total; Red collapsed to 15%
+- Added Red5-Red11 (slots 5-11) with identical Trooper config (MaxFP=1.0, PR=160, HasEcm=false)
+- 12v12 parity restores Red coordination advantage; Wolfpack orbit distributes 12 tanks at 30° intervals
+- Seed results: 58/64/62/63/67% = 62.8% avg
+- See Research/iter-0034-12-tanks-parity-accepted.md for full details
 
 ### Iter 33 — Pincer Approach 200px→160px (NEUTRAL 0.0pp avg, 2 seeds)
 **Date:** 2026-04-21
