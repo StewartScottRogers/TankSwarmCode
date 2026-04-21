@@ -1,34 +1,41 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 50
+2026-04-21 — Iteration 62
 
 ## Current Iteration
-**50** — 47.75% avg (slot MaxFP 1.0→1.5, +5.25pp)
+**62** — 52.5% avg 4-seed / 51.2% 5-seed (BlueEcm MaxFP=5→2, +4.75pp)
 
 ## Situation
-**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue win rate ~47.75% avg (4-seed).
-- Seed 1000: Blue 50% (2x confirmed)  |  Seed 2000: Blue 44%  |  Seed 3000: Blue 48% (2x confirmed)  |  Seed 5000: Blue 49%
+**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue win rate ~52.5% avg (4-seed), ~51.2% (5-seed).
+- Seed 1000: 58%  |  Seed 2000: 50%  |  Seed 3000: 54%  |  Seed 4000: 46%  |  Seed 5000: 48%
 
-**CONTEXT: Red Engineering (iters 45-49) matched Blue's tank count and optimized:**
-- Red added Red28 (29th tank) → Red 29 vs Blue 29 tanks
-- Red named tanks MaxFP 1.0→2.0 (+12pp for Red)
-- Red Fallback threshold 30→10 (+2pp for Red)
-- Red ceiling: 57.6% avg (5-seed, exhausted Wolfpack parameters)
-- Blue was at ~42.5% before iter-50 (Red 57.6% = Blue 42.4%)
+**CONTEXT:**
+- Red ceiling: 57.6% (5-seed, Wolfpack exhausted against OLD Blue DLL)
+- Remaining gap: ~6.4pp (Red 57.6% vs Blue 51.2%)
+- iter-52 breakthrough: BlueEcm MaxFP=5→2 (+4.75pp) — ECM hardware irrelevant vs Red (no Red ECM)
+- iters 53-62: Wolfpack parameter space exhausted (see iter-0052-0062 research doc)
 
-**Iter-50 findings (ACCEPTED):**
-- BlueSlotCortex MaxFP 1.0→1.5: +5.25pp avg (42.5% → 47.75%)
-- MaxFP=2.0 tested first: seeds 1000+5000 +10/+9pp but seeds 2000+3000 -4/-2pp (rejected)
-- MaxFP=1.5 compromise: all seeds positive or neutral (0pp to +10pp), 2 seeds double-confirmed
+**Architecture findings (29v29, iters 52-62):**
+- Tiered PR rings (160/180/200/250/300) are BENEFICIAL — do not compress
+- MaxFP optimal: PR=160 (slot)→1.5, PR=160 (BlueEcm)→2.0, PR=180-200→2.5, PR=250-300→3.0
+- BlueStrike at PR=250 is CRITICAL (−5pp if moved to 200)
+- slot%aliveCount orbit formula is CORRECT; rank-based alternatives destabilize
 
-**DO NOT raise slot MaxFP above 1.5** — 2.0 gives consistent seed 2000 -4pp regression.
+**DO NOT raise slot MaxFP above 1.5** — 2.0 regresses seeds 2000/3000.
+**DO NOT change BlueEcm MaxFP from 2.0** — 1.5 is −3.75pp; 5.0 was useless.
+**DO NOT change BlueStrike PR from 250** — 200 is −4.8pp.
+**DO NOT compress PR rings** — mid-range PR=160 was −6pp.
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
-## 29v29 Baseline (Iter-50, CURRENT)
-- Seed 1000: Blue 50% (2x confirmed)  |  Seed 2000: Blue 44%  |  Seed 3000: Blue 48% (2x confirmed)  |  Seed 5000: Blue 49%
-- **4-seed avg: ~47.75%** — 29 Blue vs 29 Red, slot MaxFP=1.5, Fallback=10
+## 29v29 Baseline (Iter-52, CURRENT)
+- Seed 1000: 58%  |  Seed 2000: 50%  |  Seed 3000: 54%  |  Seed 4000: 46%  |  Seed 5000: 48%
+- **4-seed avg: ~52.5% | 5-seed avg: ~51.2%** — 29v29, BlueEcm MaxFP=2.0
+
+## 29v29 Baseline (Iter-50, Superseded)
+- Seed 1000: Blue 50%  |  Seed 2000: Blue 44%  |  Seed 3000: Blue 48%  |  Seed 5000: Blue 49%
+- **4-seed avg: ~47.75%** — slot MaxFP=1.5, BlueEcm still MaxFP=5.0
 
 ## 29v28 Baseline (Iter-44, Obsolete — Red added 29th tank)
 - Seed 1000: Blue 60%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 56%
@@ -44,13 +51,13 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - Seed 1000: ~88%  |  Seed 2000: ~91%  |  Seed 3000: ~86%  |  Seed 5000: ~82%
 - **4-seed average: 87%** — OBSOLETE. Red expanded to 28 tanks.
 
-## Active Configuration (Iter-41, 28 Blue tanks)
-### Named tanks (unchanged from iter-37):
-- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20
+## Active Configuration (Iter-52, CURRENT)
+### Named tanks:
 - BlueStrike: MaxFP=3.0, PR=250, FormationSlot=0 (leader), Retreat=25
 - BlueGuard: MaxFP=3.0, PR=200, FormationSlot=1, Retreat=30
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20
-- BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35
+- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20
+- **BlueEcm: MaxFP=2.0, PR=160, HasEcm=true, Retreat=35** ← iter-52 change
 - BlueTrooper: MaxFP=2.5, PR=200, FormationSlot=5, Retreat=0
 - BlueSurge: MaxFP=2.5, PR=200, FormationSlot=6, Retreat=0
 - BlueRaider: MaxFP=2.5, PR=200, FormationSlot=7, Retreat=0
@@ -59,13 +66,14 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - BlueScout: MaxFP=2.5, PR=200, FormationSlot=10, Retreat=0
 - BluePhoenix: MaxFP=2.5, PR=200, FormationSlot=11, Retreat=0
 
-### Slot tanks (Iter-50):
+### Slot tanks:
 - Blue12-Blue28: MaxFP=1.5, PR=160.0, FormationSlot=12-28 (via BlueSlotCortex)
 - Uses dynamic orbit: `slot % aliveCount * (360/aliveCount)` degrees
 
 ### Coordinator:
 - Per-tank coordinator: `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam**
 - Wolfpack uses dynamic angle formula + predicted orbit + config.PreferredRange
+- Fallback threshold: 10.0 (confirmed optimal)
 
 ## Parallel Mode Baseline (post-Iter-16, OBSOLETE — against buggy Red)
 - Seed 1000: ~86% avg  |  Seed 2000: ~90% avg  |  Seed 3000: ~90.5% avg  |  Seed 4000: ~85.5% avg  |  Seed 5000: ~89.5% avg
