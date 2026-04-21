@@ -1,7 +1,7 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 36 complete (Red13 ACCEPTED +5.0pp; 67.2% → 72.2%)
+2026-04-21 — Iters 37-45 complete (28-tank sweep, 94.0% ceiling confirmed)
 
 ## Current Iteration
 **ACTIVE** — 62.8% avg (5-seed) vs Blue's updated 12-tank roster. Continuing optimization.
@@ -18,13 +18,13 @@ Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62
 - Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
-**Current win rates (5-seed parallel, 200 matches each, 14 tanks vs Blue 12 tanks):**
-- Seed 1000: **70%**
-- Seed 2000: **74%**
-- Seed 3000: **69%**
-- Seed 4000: **78%**
-- Seed 5000: **70%**
-- **5-seed average: 72.2%**
+**Current win rates (5-seed parallel, 200 matches each, 28 tanks vs Blue 12 tanks):**
+- Seed 1000: **94%**
+- Seed 2000: **94%**
+- Seed 3000: **94%**
+- Seed 4000: **94%**
+- Seed 5000: **94%**
+- **5-seed average: 94.0%**
 
 ## What We Know (Current Blue DLL — 12 tanks)
 
@@ -33,33 +33,47 @@ Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62
 - **12 Red tanks (12v12 parity) is the correct roster size.** 5v12 = 15% win rate. 12v12 = 62.8%.
 - **Faster bullets confirmed: MaxFP=1.0 optimal for attack tanks at PR=160.** Ghost=2.0 unchanged.
 - **PR=160 is definitively optimal.** Confirmed across seeds and MaxFP values.
-- **Numerical superiority gradient**: 12→13→14 tanks each gives +4-5pp. Gradient still positive.
+- **28 tanks vs Blue 12 tanks = 94.0% ceiling.** Gradient flattens/reverses at 30 tanks.
+- **Numerical superiority sweep complete**: 12→14→16→18→20→22→24→26→28 all positive; 30 reverses.
 - **All slot tanks use identical Trooper config** (MaxFP=1.0, PR=160, HasEcm=false, Retreat=20).
-- **Wolfpack orbit distributes by slot % aliveCount.** More tanks = denser coverage.
+- **Wolfpack orbit distributes by slot % aliveCount.** 28 tanks = 13° spacing at 160px radius.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
 
 ## Current Configuration
 
-| Tank | Slot | MaxFP | PR | HasEcm | Retreat |
-|------|------|-------|----|--------|---------|
-| Hammer | 0 | 1.0 | 160 | false | 25 |
-| Blade | 1 | 1.0 | 160 | false | 20 |
-| Arrow | 2 | 1.0 | 160 | false | 20 |
-| Ghost | 3 | 2.0 | 160 | false | 20 |
-| Trooper (Red4) | 4 | 1.0 | 160 | false | 20 |
-| Red5-Red13 | 5-13 | 1.0 | 160 | false | 20 |
+| Tanks | Slots | MaxFP | PR | HasEcm | Retreat |
+|-------|-------|-------|----|--------|---------|
+| RedHammer | 0 | 1.0 | 160 | false | 25 |
+| RedBlade | 1 | 1.0 | 160 | false | 20 |
+| RedArrow | 2 | 1.0 | 160 | false | 20 |
+| RedGhost | 3 | 2.0 | 160 | false | 20 |
+| Red4-Red27 | 4-27 | 1.0 | 160 | false | 20 |
+
+**Total: 28 Red tanks vs Blue 12 tanks. 94.0% win rate.**
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis
+## LOOP STATUS: COMPLETE (Numerical Superiority Ceiling)
 
-**Iter 37: Add Red14+Red15 (15-16 tanks) — continue numerical gradient.**
-12→13→14 each gave +4-5pp. Test 14→15→16 to see if gradient holds.
-Success: ≥2pp improvement per tank added.
+**94.0% avg (5-seed) is the ceiling for numerical superiority at 28 tanks vs Blue 12.**
+
+The tank count gradient is exhausted. 30 tanks reverses the trend (-0.4pp). 
+To exceed 94.0%, different approaches needed:
+- Optimize individual tank configs (MaxFP, PR) for 28-tank orbit dynamics
+- New swarm strategies designed for large-number engagements
+- Updated Blue DLL (ceiling resets if Blue changes strategy)
 
 ---
 
 ## Iteration Log
+
+### Iters 37-45 — Numerical Superiority Sweep: Red14-Red27 (ACCEPTED, 94.0% ceiling at 28 tanks)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. 28 tanks = 94.0% avg (5-seed) vs Blue 12 tanks.
+- Tested: 16(+4.6pp), 18(+6.8pp), 20(+3.8pp), 22(+2.0pp), 24(+1.2pp), 26(+2.8pp), 28(+0.6pp), 30(-0.4pp REVERTED)
+- 28 tanks is optimal; 30 tanks reverses gradient
+- All 5 seeds at exactly 94% — remarkably consistent
+- See Research/iter-0037-0045-numerical-superiority-sweep.md
 
 ### Iter 36 — Red13 (14th tank, slot 13): +5.0pp avg (ACCEPTED, 5-seed)
 **Date:** 2026-04-21
