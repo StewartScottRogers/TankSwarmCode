@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 24
+2026-04-21 — Iteration 25
 
 ## Current Iteration
-**25** — pending
+**26** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -52,11 +52,17 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 25)
+## Next Hypothesis (Iteration 26)
 
-**BlueGuard MaxFP recalibration against 6-tank formation** — with 6 tanks, the formation dynamics changed. Red now targets Guard (22 first kills) and Sharp (21) most. Previously Guard at 3.0 was optimal, but the 6-tank geometry is new. Test Guard MaxFP 3.0→2.5 (faster bullets at 200px may improve accuracy now that 6 other tanks provide damage coverage) and Guard MaxFP 3.0→3.5 (borderline test). Also: consider re-testing BlueStrike PR from 250 — the old "DO NOT LOWER" rule was calibrated against 5-tank config.
+**6-tank formation geometry: reduce angle spread from 60° to 45°**
 
-Alternatively, explore BlueSharp PR tuning with 6 tanks — Sharp is now Red's #2 first-kill target. Sharp at 300px (slot 3/180°) may need adjustment with 6-tank geometry.
+With 6 tanks at 60°, the formation perfectly covers 360°. But 360° coverage might not be optimal — concentrating fire from a narrower arc could apply more simultaneous pressure on the priority target.
+
+At 45° spread: 6 tanks at 0°, 45°, 90°, 135°, 180°, 225° → 225° arc with 135° gap. This concentrates tanks on a 225° front arc. This was never tested with 6 tanks (only tested 60° and 72° with 5 tanks).
+
+Alternative: try forming two attack clusters (3+3) by using alternating large/small angles. For example: slot×90° gives 0°, 90°, 180°, 270° for 4 slots, 6th tank fills gaps.
+
+Also consider: complete strategic rethink for iter 26 — the 43.25% ceiling may require a new swarm tactic rather than parameter tuning.
 
 Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 
@@ -94,6 +100,9 @@ Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 - **DO NOT** increase energy fire factor above 0.1 — 0.12 gave -0.9pp
 - **DO NOT** target closest enemy — -0.7pp, seed2000 -5pp; lowest-energy targeting is optimal
 - BlueTrooper 6th tank (COMMITTED iter 23): seed2000 fear from iter 14 was against broken Red. Against fixed Red: +10pp avg, seed2000 +15pp. KEEP.
+- **DO NOT change volley lead time from 20 ticks** — 30 ticks caused -9pp seed2000; 20 is the calibrated optimum
+- **DO NOT use Ghost-priority targeting** — seed2000 -9pp; lowest-energy is optimal target selection
+- **DO NOT change BlueSharp PR from 300 (with 6 tanks)** — 250px tested, neutral; 300px stays
 - **DO NOT** add rush-opening branch (tick<50 charge to target): -2.5pp, seeds 2000+3000 hurt badly; aggressive early convergence lets Red concentrate fire
 - **DO NOT** increase NavigateTo max speed above 100: 120 gave -1.7pp, seed2000 -6pp; overshooting orbit points destabilizes formation
 - **DO NOT** raise Encircle threshold beyond enemies×2: enemies×3 gave -1.5pp; Encircle is genuinely better than Wolfpack in overwhelming-advantage endgame
@@ -163,6 +172,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 25 — Further 6-tank sweeps (all reverted)
+**Date:** 2026-04-21
+- **BlueSharp PR 300→250 (with 6 tanks):** NEUTRAL. 4-seed avg 43.25% = baseline. Sharp at 250px doesn't improve despite shorter prediction window — 6-tank formation already provides sufficient coverage. DO NOT change Sharp PR from 300 (constraint reconfirmed with 6 tanks).
+- **Ghost-priority targeting:** REFUTED. Seed 2000 dropped from 49%→40% (-9pp). Targeting Ghost before lowest-energy tank extends time-to-first-kill on seed2000's geometry. DO NOT target highest-energy enemy (Ghost typically high-energy). Lowest-energy targeting confirmed optimal.
+- **Volley lead time 20→30 ticks:** REFUTED. Seed 2000 dropped from 49%→40% (-9pp). Extended lead time increases prediction window (30 ticks) which causes more misses when targets change direction. The 20-tick lead is the empirical optimum.
+- **DO NOT change volley lead time from 20** — 30-tick lead caused -9pp on seed 2000.
+- **DO NOT use Ghost-priority targeting** — seed 2000 -9pp; breaks consistent lowest-energy focus.
+- **6-tank ceiling: 43.25% appears firm** — all single-parameter changes are neutral (43.25%) or negative. Architecture ceiling reached for current strategy code.
 
 ### Iter 24 — 6-tank parameter sweep (all reverted)
 **Date:** 2026-04-21
