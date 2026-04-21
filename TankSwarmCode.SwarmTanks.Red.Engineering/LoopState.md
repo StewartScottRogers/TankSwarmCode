@@ -1,7 +1,7 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 34 complete (12-Tank Parity ACCEPTED +47.8pp; 15% → 62.8%)
+2026-04-21 — Iteration 36 complete (Red13 ACCEPTED +5.0pp; 67.2% → 72.2%)
 
 ## Current Iteration
 **ACTIVE** — 62.8% avg (5-seed) vs Blue's updated 12-tank roster. Continuing optimization.
@@ -18,13 +18,13 @@ Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62
 - Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
-**Current win rates (5-seed parallel, 200 matches each, 12 tanks vs Blue 12 tanks):**
-- Seed 1000: **58%**
-- Seed 2000: **64%**
-- Seed 3000: **62%**
-- Seed 4000: **63%**
-- Seed 5000: **67%**
-- **5-seed average: 62.8%**
+**Current win rates (5-seed parallel, 200 matches each, 14 tanks vs Blue 12 tanks):**
+- Seed 1000: **70%**
+- Seed 2000: **74%**
+- Seed 3000: **69%**
+- Seed 4000: **78%**
+- Seed 5000: **70%**
+- **5-seed average: 72.2%**
 
 ## What We Know (Current Blue DLL — 12 tanks)
 
@@ -33,9 +33,9 @@ Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62
 - **12 Red tanks (12v12 parity) is the correct roster size.** 5v12 = 15% win rate. 12v12 = 62.8%.
 - **Faster bullets confirmed: MaxFP=1.0 optimal for attack tanks at PR=160.** Ghost=2.0 unchanged.
 - **PR=160 is definitively optimal.** Confirmed across seeds and MaxFP values.
-- **All 7 new slot tanks use identical Trooper config** (MaxFP=1.0, PR=160, HasEcm=false, Retreat=20).
-  This has not been individually optimized yet — may be opportunity.
-- **Wolfpack orbit at 12 tanks: 30° intervals.** Distributes perfectly around target with slot % aliveCount.
+- **Numerical superiority gradient**: 12→13→14 tanks each gives +4-5pp. Gradient still positive.
+- **All slot tanks use identical Trooper config** (MaxFP=1.0, PR=160, HasEcm=false, Retreat=20).
+- **Wolfpack orbit distributes by slot % aliveCount.** More tanks = denser coverage.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
 
 ## Current Configuration
@@ -47,25 +47,34 @@ Red matched with 7 new slot tanks (Red5-Red11), restoring parity from 15% → 62
 | Arrow | 2 | 1.0 | 160 | false | 20 |
 | Ghost | 3 | 2.0 | 160 | false | 20 |
 | Trooper (Red4) | 4 | 1.0 | 160 | false | 20 |
-| Red5 | 5 | 1.0 | 160 | false | 20 |
-| Red6 | 6 | 1.0 | 160 | false | 20 |
-| Red7 | 7 | 1.0 | 160 | false | 20 |
-| Red8 | 8 | 1.0 | 160 | false | 20 |
-| Red9 | 9 | 1.0 | 160 | false | 20 |
-| Red10 | 10 | 1.0 | 160 | false | 20 |
-| Red11 | 11 | 1.0 | 160 | false | 20 |
+| Red5-Red13 | 5-13 | 1.0 | 160 | false | 20 |
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
 ## Next Hypothesis
 
-**Iter 35: Add Red12 (13th tank, slot 12) — numerical advantage.**
-If 12v12 = 62.8%, then 13v12 should give Red a persistent numerical advantage.
-Success: ≥2pp improvement (≥64.8% avg).
+**Iter 37: Add Red14+Red15 (15-16 tanks) — continue numerical gradient.**
+12→13→14 each gave +4-5pp. Test 14→15→16 to see if gradient holds.
+Success: ≥2pp improvement per tank added.
 
 ---
 
 ## Iteration Log
+
+### Iter 36 — Red13 (14th tank, slot 13): +5.0pp avg (ACCEPTED, 5-seed)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. Red 72.2% avg vs 67.2% baseline (+5.0pp).
+- Seed 1000: +4pp, seed 2000: +4pp, seed 3000: +1pp, seed 4000: +10pp, seed 5000: +6pp
+- All 5 seeds positive; gradient still strong
+- Pattern: each additional tank yields +4-5pp — numerical superiority advantage compounds
+- See Research/iter-0035-0036-red12-red13-accepted.md
+
+### Iter 35 — Red12 (13th tank, slot 12): +4.4pp avg (ACCEPTED, 5-seed)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. Red 67.2% avg vs 62.8% baseline (+4.4pp).
+- Seed 1000: +8pp, seed 2000: +6pp, seed 3000: +6pp, seed 4000: +5pp, seed 5000: -3pp
+- 4/5 seeds positive
+- See Research/iter-0035-0036-red12-red13-accepted.md
 
 ### Iter 34 — 12-Tank Parity: Add Red5-Red11 (ACCEPTED +47.8pp avg, 5-seed)
 **Date:** 2026-04-21

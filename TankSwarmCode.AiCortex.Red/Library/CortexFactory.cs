@@ -18,6 +18,8 @@ public static class CortexFactory
         "Red9"        => new RedTrooperCortex(9),
         "Red10"       => new RedTrooperCortex(10),
         "Red11"       => new RedTrooperCortex(11),
+        "Red12"       => new RedTrooperCortex(12),
+        "Red13"       => new RedTrooperCortex(13),
         _ => throw new ArgumentException($"Unknown tank type: {tankName}", nameof(tankName))
     };
 }
