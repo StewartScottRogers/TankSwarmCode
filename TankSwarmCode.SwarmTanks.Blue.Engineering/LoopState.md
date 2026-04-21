@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 12
+2026-04-20 — Iteration 13
 
 ## Current Iteration
-**13** — pending
+**14** — pending
 
 ## Situation
 **DOMINATING AT NEW HIGH.** Blue 85.4% avg across 5 seeds (2 runs each). Red now has a 5th tank "Red4" (MVP, All-in). Iter 10 found 60° Wolfpack angle (+3.6pp). Iter 11 found Fallback threshold 30→20 (+1.5pp). Both committed.
@@ -36,13 +36,13 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 13)
+## Next Hypothesis (Iteration 14)
 
-**Explore asymmetric radius tuning**: Now that slots are reordered (Guard at 1/60°, Sharp at 3/180°), BlueSharp approaches from 180° at 300px (the furthest and most rear-facing). This is already good. What about BlueGuard at 60°/200px vs BlueRush at 120°/180px — can we tune their radii?
+**Explore BlueEcm/BlueRush slot swap**: BlueEcm (slot 4, 240°, 150px) is Red's most common first kill target (24 first-kills at seed 1000). Its exposure is due to close range (150px), not angle. Swapping slots with BlueRush puts Ecm at slot 2 (120°/150px) and Rush at slot 4 (240°/180px).
 
-Specific hypothesis: try increasing BlueRush PR from 180 to 200 (same as Guard). At 120°, BlueRush at 200px would form a tighter arc with Guard (60°/200px) and Strike (0°/250px). Previously BlueRush PR=160 was -8pp on seed4000 (Iter 8), but +1pp avg. Worth checking after slot reordering changes formation geometry.
+Effect: Ecm moves to front-left where Guard and Strike provide cover. Rush (MaxFP=2.5, slightly weaker) moves to rear-left at 180px. Both are still exposed but different geometries might reduce Ecm's first-kill rate.
 
-Alternative: try BlueSharp PR change (currently 300px from 180°). At 180°, the "behind" approach at 300px might be more effective at 250px (matching Strike's front). Risk: previous tests of distance changes on Strike (not Sharp) caused regressions.
+Alternative: try BlueEcm slot 0 swap with Strike — make BlueEcm the leader (slot 0, 0°/150px). Very close frontal approach. Ecm as Kamikaze-leader. Risk: losing BlueStrike as leader (BlueStrike "DO NOT LOWER PR").
 
 Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 
@@ -72,6 +72,8 @@ Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 - **DO NOT** change BlueEcm PR from 150 — PR=200 regresses all seeds (-17pp seed4000)
 - **DO NOT** change BlueGuard Retreat from 30 — Retreat=25 gives -20pp seed4000, -10pp seed3000
 - **DO NOT** change Wolfpack angle below 60° — 45° and 30° tested: same avg but higher seed variance
+- **DO NOT** lower BlueSharp PR below 300 (at new slot 3/180°) — PR=250 regressed -1.9pp across most seeds
+- BlueRush PR=200 is marginal (+0.8pp) with seed2000 -2.5pp — not worth the trade
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
 - **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
 - **Seed 4000 is extremely volatile**: up to 78-96% range in same session for identical config. Require 2+ runs. "DO NOT sacrifice seed4000" rule still applies but single runs unreliable.
@@ -123,6 +125,13 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 13 — PR tuning exploration (all reverted)
+**Date:** 2026-04-20
+- BlueSharp PR 300→250 (at new slot 3/180°): FAILED — 84.8% vs 86.7% baseline (-1.9pp). Seed 2000 -4pp, most seeds regress. Sharp 300px from behind is correct; 250px brings it into crowded front arc.
+- BlueRush PR 180→200: MARGINAL — avg 87.5% vs 86.7% (+0.8pp), seed2000 -2.5pp, seeds4000+5000 +2.5/+3.5pp. Not statistically significant. NOT COMMITTED.
+- Insights from current config (seed 1000): BlueSharp BACK to MVP (114/167), BlueGuard Top attacker (rate 27.58). BlueEcm still Red's #1 target (24 first-kills). Red MVP shifted to RedHammer (was Red4).
+- **Net result: No change. 86.7% is the current ceiling at 5-seed avg.**
 
 ### Iter 12 — Guard/Sharp slot swap: +1.3pp average (**COMMITTED**)
 **Date:** 2026-04-20
