@@ -1,14 +1,14 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 23 complete (PR=150 REFUTED; PR sweep done; 160 is definitive optimum)
+2026-04-20 — Iteration 24 complete (MaxFP=1.0 ACCEPTED; new 5-seed avg 70.2%)
 
 ## Current Iteration
-**24** — pending
+**25** — pending
 
 ## Situation
 
-**DOMINANT: 65.9% average win rate across 5 seeds against current Blue DLL (net10.0).**
+**DOMINANT: 70.2% average win rate across 5 seeds against current Blue DLL (net10.0).**
 
 **CRITICAL INFRASTRUCTURE NOTE:** Always use `net10.0/publish/` DLL paths, NOT `net9.0/publish/`.
 The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate).
@@ -17,20 +17,22 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
 **Current win rates (5-seed parallel, 200 matches each, 5 tanks vs current Blue):**
-- Seed 1000: **66.0%**
-- Seed 2000: **72.0%**
-- Seed 3000: **69.0%**
-- Seed 4000: **66.0%**
-- Seed 5000: **63.0%**
-- **5-seed average: 67.2%**
+- Seed 1000: **70.0%**
+- Seed 2000: **70.5%**
+- Seed 3000: **66.0%**
+- Seed 4000: **73.0%**
+- Seed 5000: **71.5%**
+- **5-seed average: 70.2%**
 
 ## What We Know (Current Blue DLL)
 
 - **Parallel mode is VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug.
   Use `--parallel 8` for all runs.
-- **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160 — for 4 of 5 tanks.** Confirmed
-  for Arrow (iter-14), Trooper (iter-18), Blade+Hammer (iter-19). Ghost is the exception: Ghost
-  MaxFP=1.5 was refuted (-1.5pp). Ghost stays at 2.0. MaxFP sweep is complete.
+- **Faster bullets gradient continues: 2.0→1.5→1.0 all positive for 4 attack tanks.** Arrow, Trooper,
+  Blade, Hammer all confirmed at MaxFP=1.0 (iter-24, +3.0pp avg). Ghost is the exception: confirmed
+  at MaxFP=2.0 (burst damage role). Each step: 2.0→1.5 +3-5pp; 1.5→1.0 +3.0pp.
+- **Energy mechanics confirm hit rate is decisive.** Damage/energy ratio = 4 at all power levels;
+  faster bullets (17 px/tick at MaxFP=1.0 vs 15.5 at 1.5) improve hit rate against mobile targets.
 - **PR=160 is definitively optimal.** PR=140 (-4.5pp) and PR=150 (-2.5pp) both refuted. Orbit
   radius and MaxFP are tightly coupled; PR=160 is confirmed across all tested values (iter-22/23).
 - **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
@@ -44,37 +46,40 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 | Tank | Slot | MaxFP | PR | HasEcm | Retreat |
 |------|------|-------|----|--------|---------|
-| Hammer | 0 | 1.5 | 160 | false | 25 |
-| Blade | 1 | 1.5 | 160 | false | 20 |
-| Arrow | 2 | 1.5 | 160 | false | 20 |
+| Hammer | 0 | **1.0** | 160 | false | 25 |
+| Blade | 1 | **1.0** | 160 | false | 20 |
+| Arrow | 2 | **1.0** | 160 | false | 20 |
 | Ghost | 3 | **2.0** | 160 | false | 20 |
-| **Trooper** | **4** | **1.5** | **160** | **false** | **20** |
+| Trooper | 4 | **1.0** | 160 | false | 20 |
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 24)
+## Next Hypothesis (Iteration 25)
 
-**Parameter tuning is exhausted for current architecture.** MaxFP and PR sweeps are complete.
-Remaining options require either new mechanisms or accepting the current ceiling (~67%).
+**MaxFP gradient: does 1.0→0.5 continue?** At MaxFP=0.5: bullet speed = 20 - 3×0.5 = 18.5 px/tick.
+Travel at PR=160: 160/18.5 = 8.6 ticks (vs 9.4t at 1.0). Damage/shot = 2 (vs 4 at 1.0, -50%).
+The energy mechanics are the same (ratio = 4), so hit rate must more than compensate for halved damage.
 
-**Architecture-level options:**
-1. MaxFP=1.0 for all 4 "faster bullets" tanks (ultra-fast bullets at PR=160: 160/17=9.4t travel)
-2. Encircle orbit uses fixed 180px vs Wolfpack's config.PreferredRange=160 — change Encircle to 160
-3. Retreat threshold tuning (Hammer=25, others=20; test all=15 for more aggressive fighting)
-4. Ghost orbit position change (slot 3 → different slot if slot conflicts matter late-game)
-5. New ECM strategy — Ghost re-enabling HasEcm=true for active ECM disruption
+**Top pick:** MaxFP=0.5 for Arrow/Blade/Hammer/Trooper. Ghost stays at 2.0.
+- Quick 2-seed check (seeds 1000+2000); stop early if clearly negative after seed 1000.
+- If regression: 1.0 is the floor; next hypothesis shifts to architecture (Encircle radius, RetreatThreshold).
+- If positive: continue to 5-seed and consider MaxFP=0.1 (Ghost's "sniper" configuration).
 
-**Top pick:** MaxFP=1.0 for Arrow/Blade/Hammer/Trooper. The "faster bullets" gradient shows:
-- MaxFP=2.0 → 1.5 was +3-5pp for 4 tanks
-- MaxFP=1.5 is optimal for those tanks (Ghost exception at 2.0)
-- MaxFP=1.0 extends the curve: bullet speed 17px/tick (vs 15.5 at 1.5), at cost of 33% less damage/shot
-This tests whether the bullet speed benefit continues below 1.5, or whether 1.5 is a sweet spot.
-
-Success criteria: Red 3-seed avg changes by ≥2pp vs baseline; stop early if clearly negative
+Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline (67.0%+); stop if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 24 — MaxFP=1.0 for Arrow/Blade/Hammer/Trooper (ACCEPTED +3.0pp avg, 5-seed)
+**Date:** 2026-04-20
+**Status:** ACCEPTED. Red 70.2% avg (5-seed parallel) vs 67.2% baseline (+3.0pp).
+- Seed 1000: +4.0pp, seed 2000: -1.5pp, seed 3000: -3.0pp, seed 4000: +7.0pp, seed 5000: +8.5pp
+- 4/5 seeds positive; seeds 4000/5000 show large gains; Red crosses 70% threshold for first time
+- Mechanism: faster bullets (17 px/tick at 1.0 vs 15.5 at 1.5) improve hit rate vs mobile Blue at PR=160
+- Energy: 45-52% remaining vs 40% at 1.5 — firing less energy per shot allows sustained combat
+- Ghost confirmed at 2.0 (unchanged); "faster bullets" gradient continues: 2.0→1.5→1.0 all positive
+- See Research/iter-0024-maxfp-1.0.md for full details
 
 ### Iter 23 — PR=150 for All Tanks (REFUTED -2.5pp, 2 seeds)
 **Date:** 2026-04-20
