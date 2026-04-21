@@ -1,15 +1,15 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 9
+2026-04-20 — Iteration 11
 
 ## Current Iteration
-**10** — pending
+**12** — pending
 
 ## Situation
-**WE ARE DOMINATING.** Blue ~80-87% across seeds (seed 1000 ~80% avg, seed 2000 87%). Iter 3 explored 6 approaches — all regressed. Current config is the optimum found so far.
+**DOMINATING AT NEW HIGH.** Blue 85.4% avg across 5 seeds (2 runs each). Red now has a 5th tank "Red4" (MVP, All-in). Iter 10 found 60° Wolfpack angle (+3.6pp). Iter 11 found Fallback threshold 30→20 (+1.5pp). Both committed.
 
-Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when both seeds agree.
+Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree. Seed 4000 is the most volatile (78-96% range for same config in same session).
 
 ## Active Configuration
 - BlueSharp: MaxFP=3.0, PR=300, FormationSlot=1, Retreat=20 — **DO NOT TOUCH** (MVP both seeds)
@@ -18,24 +18,29 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
 - BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
-- Wolfpack angle-offset: slot × 72° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 9 win, +3.8pp avg)
+- Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
+- Fallback threshold: 20.0 (was 30.0) — **KEEP** (Iter 11 win, +1.5pp avg)
 
-## Parallel Mode Baseline (post-Iter-9 Wolfpack angle-offset, 200 games each)
-- Seed 1000: 74%  |  Seed 2000: 81%  |  Seed 3000: 82%  |  Seed 4000: 82%  |  Seed 5000: 85%
-- **5-seed average: 80.8%**
-- Note: serial mode (--parallel 1) shows ~34-36% at seed 1000 — the parallel vs serial gap is unexplained (possibly engine routes SwarmMessages across parallel games). Use --parallel 16 as the consistent measurement mode.
+## Parallel Mode Baseline (post-Iter-11, 2×200 games each)
+- Seed 1000: ~84% avg  |  Seed 2000: ~89% avg  |  Seed 3000: ~86% avg  |  Seed 4000: ~80% avg (high variance)  |  Seed 5000: ~88% avg
+- **5-seed average: ~85.4%** (avg of 2 full 5-seed sweeps)
+- Note: 10-20pp run-to-run variance. Seed 4000 showed 78-96% range in same session. Require 2+ runs to confirm changes.
+
+## Post-Iter-10 Baseline (60° Wolfpack, Fallback=30, 1 run)
+- Seed 1000: 84%  |  Seed 2000: 86%  |  Seed 3000: 82%  |  Seed 4000: 84%  |  Seed 5000: 86%
+- **5-seed average: 84.4%**
 
 ## Pre-Wolfpack-angle Baseline (Iter-7 fix, 200 games each)
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 10)
+## Next Hypothesis (Iteration 12)
 
-**Fine-tune the angle-offset Wolfpack: try wider spread (90° per slot = 4-way instead of 5-way) or narrower (60° per slot = 6-way).** The 72° spacing distributed 5 tanks evenly over 360°. A wider spread (90°: 0°, 90°, 180°, 270°, 0° for the 5th tank — wait this doesn't divide evenly) — alternatively, try 45° per slot offset to cluster into two pairs plus one: 0°/45°/90°/135°/180°. OR try staggered formation: front 3 tanks close (72° spread at smaller radius) and rear 2 tanks at wider angles/bigger radius.
+**Explore BlueGuard/BlueSharp slot swap**: BlueGuard is consistently the top attacker (Rate 25+/100t) but is at slot 3 (180° approach, 200px). BlueSharp is MVP survival but at slot 1 (60° approach, 300px). Swapping their FormationSlots puts BlueGuard at 60° (200px, closer frontline) and BlueSharp at 180° (300px from behind). Hypothesis: top attacker at closer front-right position deals more damage; long-range MVP approaching from behind is harder for Red to target.
 
-More promising: **tune the angle for the specific formation strengths**. The leader (slot 0) approaches at 0°. Other slots fan out. What if we use non-uniform angles that concentrate firepower while still surrounding? E.g., 0°/60°/120°/240°/300° (leaving a 120° gap — the rear) to keep all 5 tanks in the forward arc.
+Alternative: try adjusting the Wolfpack approach distance — currently each tank uses its own PR as orbit radius. What if we add a small per-slot radius offset (e.g., slot × -10px) so closer tanks approach even closer? This creates a layered formation: BlueStrike 250px, BlueSharp 290px, BlueRush 160px, BlueGuard 170px, BlueEcm 110px.
 
-Success criteria: 5-seed average ≥82% (vs 80.8% current).
+Success criteria: 5-seed average ≥87% (2+ run confirmation required).
 
 ---
 
@@ -43,6 +48,8 @@ Success criteria: 5-seed average ≥82% (vs 80.8% current).
 
 ### What WORKS
 - Guard MaxFP=3.0 (Iter 2): +15pp seed 1000, +4pp seed 2000 — keep it
+- Wolfpack angle 60° (Iter 10): +3.6pp avg — keep it
+- Fallback threshold 20.0 (Iter 11): +1.5pp avg (seeds 2000+5000 +5pp each) — keep it
 
 ### Hard limits discovered
 - **DO NOT** lower BlueStrike PR below 250 — all values (200, 230) devastate seed 2000 (-15 to -25pp)
@@ -59,8 +66,18 @@ Success criteria: 5-seed average ≥82% (vs 80.8% current).
 - **DO NOT** change BlueStrike PR from 250 — seed 4000 drops 18pp at PR=220
 - **DO NOT** change BlueEcm PR from 150 — PR=200 regresses all seeds (-17pp seed4000)
 - **DO NOT** change BlueGuard Retreat from 30 — Retreat=25 gives -20pp seed4000, -10pp seed3000
-- **Seed 4000 is the sensitivity canary**: almost any change drops it from 90% to 70-75%. Do not sacrifice seed4000 for other seeds (swaps create ~neutral average)
+- **DO NOT** change Wolfpack angle below 60° — 45° and 30° tested: same avg but higher seed variance
+- **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
+- **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
+- **Seed 4000 is extremely volatile**: up to 78-96% range in same session for identical config. Require 2+ runs. "DO NOT sacrifice seed4000" rule still applies but single runs unreliable.
 - **Per-tank coordinator fix**: COMMIT. `_swarm = new SwarmCoordinator()` in OnStart is architecturally correct; ForTeam/static registry breaks parallel mode.
+
+### Red's New 5th Tank (Red4)
+Red added a 5th tank "4" (RedTrooper) around their iter 16. Key observations:
+- Red4 is their MVP (72% WinSurv when Red wins) and All-in (only survives in wins)
+- Red4 is Linchpin: Red win rate drops from 100% to 9% when Red4 is dead
+- Blue kills Red4 last (14 first-kills vs Ghost 33, Arrow 31) — lowest priority from our focus-fire targeting
+- Red4 frequently stalls timeout games (5+ wins via timeout at 5000 ticks with Red4 alive at 100E)
 
 ### ECM Dead Code (key insight)
 EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is always false. Consequences:
@@ -101,6 +118,27 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 11 — Fallback threshold 30→20: +1.5pp average (**COMMITTED**)
+**Date:** 2026-04-20
+- **Code change:** `SelectStrategy` Fallback threshold: `sumEnergy/allyCount < 30` → `< 20`
+- Effect: Blue stays in Wolfpack/Pincer/Encircle until more depleted; fights more aggressively at low energy instead of retreating to corner
+- Run 1: Seed 1000: 84% | Seed 2000: 90% | Seed 3000: 86% | Seed 4000: 78% | Seed 5000: 88% = 85.2%
+- Run 2: Seed 1000: 84% | Seed 2000: 88% | Seed 3000: 86% | Seed 4000: 82% | Seed 5000: 88% = 85.6%
+- **Avg 85.4% vs 83.9% baseline (2 runs each) → +1.5pp (1.8 sigma / 2000 games)**
+- Seed 2000 and 5000 consistently +5pp. Seed 4000 extremely volatile (78-96% in same session).
+- Failed alternatives: Fallback=25 (82.8%, clear regression), Fallback=20+center-seeking Scout (80.8%, regression)
+- **COMMITTED**
+
+### Iter 10 — Wolfpack angle 72°→60°: +3.6pp average (**COMMITTED**)
+**Date:** 2026-04-20
+- **Code change:** `ExecuteWolfpack` approach angle: `slot × 72°` → `slot × 60°`
+- Effect: 5 tanks spread over 240° arc (vs 360° at 72°) — front-heavy concentration; creates 120° gap at rear
+- Seed 1000: 84% (+10pp vs 74% at 72°)  |  Seed 2000: 86% (+5pp)  |  Seed 3000: 82% (0pp)  |  Seed 4000: 84% (+2pp)  |  Seed 5000: 86% (+1pp)
+- **5-seed avg: 84.4% vs 80.8% baseline → +3.6pp**
+- Also tested: 45° (85.2% avg, within noise, mixed seeds), 30° (84.4% avg, same avg, higher variance) — both reverted
+- Pattern: smaller angle = more front-concentrated; 60° is robust optimum
+- **COMMITTED** (angle change made in git commit `00f7f08` before iter 10 was formalized)
 
 ### Iter 9 — Wolfpack angle-offset formation: +3.8pp average (**COMMITTED**)
 **Date:** 2026-04-20
