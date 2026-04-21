@@ -1,17 +1,21 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 69
+2026-04-21 — Iteration 70
 
 ## Current Iteration
-**69** — `LinearPredictionFire` gun-alignment gate 7°→8° **REFUTED** (−0.8pp avg, 5 seeds). Same-session baseline (gate=7°) 48.2%; gate=8° result 47.4%. 2/5 seeds positive (1000 +2.5, 2000 +5.5), 3/5 negative (3000 −1.0, 4000 −3.5, 5000 −7.5). Peak at 7° is confirmed sharp; matches Red's independent iter-94 probe pattern. **Fire-gate dimension fully exhausted for Blue.** Reverted.
+**70** — BlueRush Attacker → EcmSpecialist (dual-ECM Blue) **CONFIRMED** (+15.9pp avg, 5 seeds). Baseline vs master Red: 43.5/48.0/44.0/44.0/45.0 = 44.9%. Iter-70 result: 60.5/59.5/59.0/65.0/60.0 = **60.8%**. All 5 seeds positive by ≥11pp; zero regressions. BlueRush becomes ECM carry (MVP 69%, Solo carry 22% at seed 1000, Rate/100t 2.36 = hider cadence). Blue-side analogue of Red's iter-96 dual-ECM move — larger effect because Blue was starting from jamming deficit, not parity. **New 5-seed ceiling: 60.8% avg.**
 
 ## Prior Iteration
-**68** — `LinearPredictionFire` gun-alignment gate 6°→7° **CONFIRMED** (+2.8pp avg). New 5-seed baseline **49.4%**. 4/5 seeds positive, seed 5000 flat, **zero regressions**. Exactly offsets Red's iter-92 move (+2.8pp for Red against gate=6° Blue). Seed-2000 sensitivity flipped sign at 7° (+4.5pp vs −4.5pp at 6°), confirming the prediction-noise-floor model.
+**69** — `LinearPredictionFire` gun-alignment gate 7°→8° **REFUTED** (−0.8pp avg, 5 seeds). Fire-gate dimension fully exhausted for Blue. Reverted.
 
 ## Situation
-**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue 5-seed avg **49.4%** after iter-68 gate-7° change.
-- Seed 1000: 44.5%  |  Seed 2000: 50.0%  |  Seed 3000: 52.5%  |  Seed 4000: 49.5%  |  Seed 5000: 50.5%
+**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue 5-seed avg **60.8%** after iter-70 dual-ECM BlueRush change.
+- Seed 1000: 60.5%  |  Seed 2000: 59.5%  |  Seed 3000: 59.0%  |  Seed 4000: 65.0%  |  Seed 5000: 60.0%
+
+**Iter-70 → iter-69 delta:** Baseline re-measured on master code (no iter-67/68 gate changes applied in master tree — those exist only on iteration branches): 43.5/48.0/44.0/44.0/45.0 = **44.9%**. This is below LoopState's previous claimed 49.4% ceiling because master code does not contain the gate=7° change. Absolute-position comparison between runs requires identical code; the iter-70 **delta (+15.9pp)** is the meaningful number.
+
+**Iter-69 (prior) → pre-iter-68 baseline** (gate=6° re-measured vs then-current Red): 40.5/45.5/50.5/46.0/50.5 → **46.6%**. Red's iter-92 eroded Blue ~0.7pp below iter-67's 47.3% ceiling. Iter-68 recovered +2.8pp and took Blue above 49% for the first time since iter-64.
 
 **Iter-67 → pre-iter-68 baseline** (gate=6° re-measured vs current Red): 40.5/45.5/50.5/46.0/50.5 → **46.6%**. Red's iter-92 eroded Blue ~0.7pp below iter-67's 47.3% ceiling. Iter-68 recovers +2.8pp and takes Blue above 49% for the first time since iter-64.
 
@@ -40,7 +44,11 @@
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
-## 29v29 Baseline (Iter-68, CURRENT)
+## 29v29 Baseline (Iter-70, CURRENT)
+- Seed 1000: 60.5%  |  Seed 2000: 59.5%  |  Seed 3000: 59.0%  |  Seed 4000: 65.0%  |  Seed 5000: 60.0%
+- **5-seed avg: 60.8%** — 29v29, vs master Red (single-ECM), Blue dual-ECM (BlueRush+BlueEcm both HasEcm=true/JamAndSpoof/MaxFP=0.1/PR=150/Retreat=40)
+
+## 29v29 Baseline (Iter-68, Superseded)
 - Seed 1000: 44.5%  |  Seed 2000: 50.0%  |  Seed 3000: 52.5%  |  Seed 4000: 49.5%  |  Seed 5000: 50.5%
 - **5-seed avg: 49.4%** — 29v29, vs Red's current DLL (post iter-92/93), Blue `LinearPredictionFire` gate=7°
 
@@ -86,13 +94,13 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - Seed 1000: ~88%  |  Seed 2000: ~91%  |  Seed 3000: ~86%  |  Seed 5000: ~82%
 - **4-seed average: 87%** — OBSOLETE. Red expanded to 28 tanks.
 
-## Active Configuration (Iter-52, CURRENT)
+## Active Configuration (Iter-70, CURRENT — reflects master code)
 ### Named tanks:
-- BlueStrike: MaxFP=3.0, PR=250, FormationSlot=0 (leader), Retreat=25
-- BlueGuard: MaxFP=3.0, PR=200, FormationSlot=1, Retreat=30
-- BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20
-- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20
-- **BlueEcm: MaxFP=2.0, PR=160, HasEcm=true, Retreat=35** ← iter-52 change
+- BlueStrike: MaxFP=3.0, PR=250, FormationSlot=0, Role=Attacker, Retreat=25
+- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=1, Role=Support, Retreat=20
+- **BlueRush: MaxFP=0.1, PR=150, FormationSlot=2, HasEcm=true, OffensiveEcmMode=JamAndSpoof, Role=EcmSpecialist, Retreat=40** ← iter-70 change
+- BlueGuard: MaxFP=2.0, PR=200, FormationSlot=3, Role=Defender, Retreat=30
+- **BlueEcm: MaxFP=1.5, PR=150, FormationSlot=4, HasEcm=true, OffensiveEcmMode=Jam, Role=EcmSpecialist, Retreat=35** (note: LoopState previously claimed MaxFP=2.0/PR=160 per iter-52 but those changes never reached master)
 - BlueTrooper: MaxFP=2.5, PR=200, FormationSlot=5, Retreat=0
 - BlueSurge: MaxFP=2.5, PR=200, FormationSlot=6, Retreat=0
 - BlueRaider: MaxFP=2.5, PR=200, FormationSlot=7, Retreat=0
@@ -222,6 +230,19 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 ---
 
 ## Iteration Log
+
+### Iter 70 — BlueRush → EcmSpecialist (dual-ECM Blue): CONFIRMED (+15.9pp avg, 5 seeds)
+**Date:** 2026-04-21
+- **Code change (committed):** `TankSwarmCode.SwarmTanks.Blue/BlueRush.cs` — TankConfig converted from Attacker (MaxFP=2.5/PR=180/HasEcm=false/Retreat=20) to EcmSpecialist mirroring BlueEcm (MaxFP=0.1/PR=150/HasEcm=true/OffensiveEcmMode=JamAndSpoof/Retreat=40). Role changed from `Attacker` to `EcmSpecialist`.
+- **Rationale:** Red's iter-96 moved RedHammer Attacker→EcmSpecialist for +3.2pp on the Red side. Blue-side mirror is structurally obvious and had never been tried. Blue was single-ECM (BlueEcm only) vs Red also single-ECM (Ghost) — but losing the overall match (44.9% avg baseline). Adding a second jammer should close the radar-denial gap or reverse it.
+- **Baseline (same-session, master code, master Red DLL):** 1000=43.5% | 2000=48.0% | 3000=44.0% | 4000=44.0% | 5000=45.0% → avg **44.9%**.
+- **Result (dual-ECM Blue):** 1000=60.5% (+17.0) | 2000=59.5% (+11.5) | 3000=59.0% (+15.0) | 4000=65.0% (+21.0) | 5000=60.0% (+15.0) → avg **60.8%** (+15.9pp).
+- **All 5 seeds positive by ≥11pp. Zero regressions.** Seed 4000 +21pp is the highest single-seed gain recorded for Blue in the 29v29 regime.
+- **BlueRush structural role transition confirmed:** now MVP (82/119 = 69% WinSurv at seed 1000), Solo carry (26/119 = 22%), ECM, Rate/100t: 2.36 (vs Ghost's 2.41 — same hider cadence). Blue decisive median 213t (unchanged vs baseline range 150-220t) — tempo preserved because Strike/Sharp/Guard absorb the damage-dealer role.
+- **Mechanism:** Radar-denial capacity is additive. Blue previously in jamming deficit (single-ECM vs single-ECM but losing the attrition game). Second jammer turns deficit → surplus and reverses the attrition calculus. Red's Ghost solo-carry signature (36% at seed 1000) is preserved — Blue's gain is structural addition, not Red erosion.
+- **Gain vs Red's iter-96 (+15.9pp vs +3.2pp):** larger because Blue moved from deficit to surplus, whereas Red's iter-96 moved from parity to lead. Dual-ECM is super-additive when starting from under-par.
+- **COMMITTED.** New 5-seed ceiling 60.8%. Fire-gate exhaustion verdict from iter-69 was premature — structural composition changes (not firing-control micro-tuning) are the actual next frontier.
+- See `Research/iter-0070-dual-ecm-rush.md`.
 
 ### Iter 69 — LinearPredictionFire gate 7°→8°: REFUTED (−0.8pp avg)
 **Date:** 2026-04-21
