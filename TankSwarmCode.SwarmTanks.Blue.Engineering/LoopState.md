@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 65
+2026-04-21 — Iteration 66
 
 ## Current Iteration
-**65** — leader-change immediate-epoch REFUTED (−2.2pp avg; 3 seeds −3pp or worse); reverted. 49.3% 5-seed baseline from iter-64 preserved.
+**66** — volley-fire 5° gun-alignment gate NEUTRAL (−0.1pp avg; all seeds within ±0.5pp); reverted. 49.3% 5-seed baseline from iter-64 preserved. Gate is redundant because per-tick LinearPredictionFire already keeps the gun aligned by the time volley fires.
 
 ## Situation
 **CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue 5-seed avg **49.3%** after iter-64 Scout gun-tracks-radar change (symmetric to Red's iter-89 change).
@@ -176,6 +176,7 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
 - **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
 - **DO NOT** run epoch off-cycle on leader-change: iter-65 refuted (−2.2pp avg; seeds 1000/4000 −3.5pp, seed 2000 −3pp). Immediate epoch on leader succession causes mid-engagement strategy/volley churn. `LeadershipEpochTicks = 40` with NO off-cycle exceptions is the calibrated optimum. Same class as prior "LeadershipEpochTicks 20/35 regression" findings.
+- **DO NOT** add 5° gun-alignment gate to volley fire: iter-66 neutral (−0.1pp avg; all seeds within ±0.5pp). Per-tick `LinearPredictionFire` already keeps the gun aligned by the time `_scheduledFireTick` triggers, so the gate filters almost nothing. Firing-control micro-tuning is saturated; look to coordination/geometry/composition for next gains.
 - **Seed 4000 is extremely volatile**: up to 78-96% range in same session for identical config. Require 2+ runs. "DO NOT sacrifice seed4000" rule still applies but single runs unreliable.
 - **Per-tank coordinator fix**: COMMIT. `_swarm = new SwarmCoordinator()` in OnStart is architecturally correct; ForTeam/static registry breaks parallel mode.
 
@@ -198,6 +199,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 ---
 
 ## Iteration Log
+
+### Iter 66 — Volley fire 5° gun-alignment gate: NEUTRAL (−0.1pp avg)
+**Date:** 2026-04-21
+- **Code change (reverted):** `BlueCortexBase.OnTick` — volley-fire block now computes predicted target position (via bullet travel time), checks `|gunDiff| < 5°`, and skips `SetFire` if misaligned. Mirrors `LinearPredictionFire`'s gate.
+- **Rationale:** Volley fire currently fires blindly at current gun heading with no alignment check; misaligned shots waste energy on bullets that can't hit. Gating should eliminate those and net positive.
+- **Baseline (iter-64):** 1000=50.0% | 2000=48.0% | 3000=48.5% | 4000=48.0% | 5000=52.0% → avg **49.3%**
+- **Result:** 1000=50.5% (+0.5) | 2000=47.5% (−0.5) | 3000=48.5% (0) | 4000=48.0% (0) | 5000=51.5% (−0.5) → avg **49.2%** (−0.1pp)
+- **Mechanism of null result:** per-tick `LinearPredictionFire` (inside `ExecuteWolfpack`) already tracks the priority target with the gun throughout the ~20-tick volley pre-aim window. By `_scheduledFireTick`, the gun is essentially always within 5°, so the gate filters almost nothing. The rare skipped shots (a) cost little energy and (b) would miss anyway — a wash.
+- **REVERTED** (neutral changes don't get committed per convention).
+- **Pattern:** 4th neutral firing-logic change (joins iter-3, 13, 24, 25). Firing-control micro-tuning is saturated; future gains need coordination / geometry / composition changes, not per-shot gates.
+- Add to DO NOT list.
 
 ### Iter 65 — Leader-change triggers immediate epoch: REFUTED (−2.2pp avg)
 **Date:** 2026-04-21
