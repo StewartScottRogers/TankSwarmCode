@@ -15,8 +15,7 @@ public abstract class RedCortexBase : IAiCortex
 
     public virtual void OnStart(ITankContext ctx)
     {
-        _swarm = SwarmCoordinator.ForTeam(ctx.SwarmId);
-        _swarm.Reset();
+        _swarm = new SwarmCoordinator();
         _scheduledFireTick = -1;
     }
 
