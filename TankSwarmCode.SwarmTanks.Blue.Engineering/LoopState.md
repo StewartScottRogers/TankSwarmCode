@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 17
+2026-04-20 — Iteration 18
 
 ## Current Iteration
-**18** — pending
+**19** — pending
 
 ## Situation
 **NEW HIGH: 88.3% avg.** Iter 16 found predicted orbit points (+1.6pp). Blue now uses target velocity to predict where target will be when navigating to orbit position. All 5 seeds improved consistently. Red's 5th tank "Red4" is their MVP. Previous ceiling 86.7% broken.
@@ -41,15 +41,13 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 18)
+## Next Hypothesis (Iteration 19)
 
-**Try energy-proportional approach range**: Instead of `config.PreferredRange`, use `config.PreferredRange * (ctx.State.Energy / 100.0).Clamp(0.7, 1.0)`. Tanks at full energy orbit at full range; tanks below 70E orbit 30% closer. This keeps damaged tanks closer to the fight rather than sitting at full PR while low on energy.
+**Add position data to AllyPing**: Current `AllyPing` only shares slot+energy. Tanks don't know where their allies are, so formation spreading is based on fixed slot-based angles rather than actual positions. If tanks knew ally positions, they could dynamically choose approach angles that spread better. Format change: `"{slot}:{energy:F1}:{x:F0}:{y:F0}"`. AllyEntry would need X/Y fields.
 
-Alternative: **Try gun tolerance tightening to 4°** — more accurate fire at cost of slightly lower fire rate.
+Alternative: **BlueEcm PR 150→165** — small 10% increase. PR=200 was catastrophic (-17pp seed4000). But 165 is a much smaller step. At current slot 4 (240°), Ecm approaches from back-left at close range, making it Red's #1 kill target. 165px keeps it slightly safer without the clustering that caused 200 to fail.
 
-Alternative: **Try targeting priority target by highest energy** in the fallback `GetStrategyTarget` path (not in RunEpochLogic). Keep RunEpochLogic's lowest-energy primary targeting; only change the fallback scan.
-
-Alternative: **Try a `Pursue` mode** — when enemies.Count == 1 and allyCount >= 3, navigate directly to predicted enemy position (not orbit offset). Finishes 1-vs-many faster, prevents timeout losses.
+Alternative: **LeadershipEpochTicks = 45** — very small increase from 40. More time between epoch transitions, slightly less strategy churn. The "DO NOT reduce below 40" rule is from 20-tick test; a tiny increase to 45 hasn't been tested.
 
 Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 
@@ -91,6 +89,11 @@ Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 - **DO NOT** raise Encircle threshold beyond enemies×2: enemies×3 gave -1.5pp; Encircle is genuinely better than Wolfpack in overwhelming-advantage endgame
 - **DO NOT** use formation rotation based on target velocity: seed2000 consistently -3.5pp; dynamic angle rotation breaks the stable 60° geometry
 - **DO NOT** use uniform PR×0.9 scaling: -2.7pp, 3 seeds regressed; the calibrated per-tank PRs are at their optimum
+- **DO NOT** increase OrbitRadius above 180: 220 gave -1.5pp; tanks at 220px can't reliably fire (< 220 threshold)
+- **DO NOT** change gun tolerance from 5°: 4° gave -2.7pp, 6° gave -3.7pp; 5° is the empirical optimum
+- **DO NOT** reduce wall avoidance below 80: 60 gave -1.3pp and seed1000 consistently regressed
+- **DO NOT** make Scout hunt stale target positions: -2.3pp, seed4000 -5pp; bunches tanks at outdated location
+- **DO NOT** disable Pincer: -2.5pp, seed2000 -8pp, seed5000 -7pp; Pincer is critical for 3v2 endgame
 - **DO NOT** reduce AllyStaleTicks below 30: tested at 25, part of -2.5pp regression; 30 ticks matches ping interval well
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
 - **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
@@ -143,6 +146,20 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 18 — Extensive ceiling sweep (all reverted)
+**Date:** 2026-04-20
+- **Encircle OrbitRadius 180→220**: Regression 86.8% avg (-1.5pp). Seeds 1000/2000/5000 regressed. 180px orbit is already at the fire threshold (< 220 check). Larger orbit = tanks too far to fire reliably.
+- **Gun tolerance 4°**: Regression 85.6% avg (-2.7pp). Tighter tolerance fires less often; rate reduction > accuracy gain.
+- **Gun tolerance 6°**: Regression 84.6% avg (-3.7pp). Looser tolerance misses too often; volume increase < accuracy loss.
+- **Pincer prediction only**: 88.0% avg (neutral, within noise). Seeds 1000+2000 -3pp, seeds 3000+4000 +4/+5pp. Pincer triggers rarely; inconsistent effect.
+- **Wall avoidance 80→60**: Run1=88.0%, Run2=86.0% → 87.0% avg (-1.3pp). Seed1000 consistently regressed. Less wall avoidance causes edge collisions.
+- **Disable Pincer**: Regression 85.8% avg (-2.5pp). Seed2000 -8pp, seed5000 -7pp. Pincer is critical for 3v2 endgame in those seeds.
+- **Stale-target Scout hunt**: Regression 86.0% avg (-2.3pp). Seed4000 -5pp. Hunting last-known stale position bunches tanks at outdated location.
+- **Formation rotation (already tried in iter17)**, **orbit clamping**, **PR×0.9**: all documented in iter17 record.
+- Pattern: every navigation/positioning change from the current calibrated state hurts. 88.3% is the geometry optimum.
+- Key insight: 47% of Red's wins in some seeds are timeouts (Red tanks flee with high energy). Anti-timeout requires better information sharing (ally positions) or dedicated hunt behavior — neither is simple.
+- **Net result: No change. 88.3% is the confirmed ceiling of current architecture.**
 
 ### Iter 17 — All-strategies prediction + strategy tuning (all reverted)
 **Date:** 2026-04-20
