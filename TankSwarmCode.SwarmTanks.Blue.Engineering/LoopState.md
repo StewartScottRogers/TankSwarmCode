@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 7
+2026-04-20 — Iteration 8
 
 ## Current Iteration
-**8** — pending
+**9** — pending
 
 ## Situation
 **WE ARE DOMINATING.** Blue ~80-87% across seeds (seed 1000 ~80% avg, seed 2000 87%). Iter 3 explored 6 approaches — all regressed. Current config is the optimum found so far.
@@ -24,13 +24,15 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - **5-seed average: 77%**
 - Note: serial mode (--parallel 1) shows ~34-36% at seed 1000 — the parallel vs serial gap is unexplained (possibly engine routes SwarmMessages across parallel games). Use --parallel 16 as the consistent measurement mode.
 
-## Next Hypothesis (Iteration 8)
+## Next Hypothesis (Iteration 9)
 
-**Re-validate the Guard MaxFP=3.0 change with the fixed parallel baseline, then try BlueRush PR 180→160** (closer range = faster bullet travel = better hit accuracy at 2.5 MaxFP power). BlueRush's MaxFP=2.5 means bullet speed=12.5. At PR=160, travel time = 160/12.5 = 12.8 ticks vs 180/12.5 = 14.4 ticks. Better accuracy at 160. BlueRush won't become a priority target since MaxFP=2.5 is still moderate. First: confirm Guard MaxFP=3.0 still helps vs the pre-Iter-2 baseline. Then try Rush PR.
+**Wolfpack angle-offset formation: distribute tanks around the target by formation slot.** Currently all 5 Blue tanks approach the priority target from whatever direction they're already facing, clustering them on one side. If each slot approaches from a different angle (slot 0: 0°, slot 1: 72°, slot 2: 144°, slot 3: 216°, slot 4: 288°), Blue tanks spread around the target, forcing Red to split attention in multiple directions. Use each tank's own PreferredRange as the orbit radius (so spread: 150/180/200/250/300 units at 5 different angles).
 
-Success criteria:
-- Guard MaxFP=3.0 still shows clear improvement vs Guard MaxFP=2.0 baseline
-- Blue 5-seed average ≥80% (vs 77% current)
+Implementation: modify `ExecuteWolfpack` in SwarmCoordinator to compute an angle-offset approach point using `config.FormationSlot` and `target.Position.PolarOffset`.
+
+Risk: same issue as Encircle — Red Hammer might concentrate fire on the closest tank. But unlike Encircle (fixed radius for all), the variable PR means tanks at 150/180 are in tighter range and more aggressive while 250/300 tanks are safe.
+
+Success criteria: 5-seed average ≥79% (vs 77% current), seed 4000 stays ≥85%.
 
 ---
 
@@ -51,6 +53,11 @@ Success criteria:
 - **DO NOT** expand VolleyRange beyond 300 — far tanks compute negative fire ticks, volley coordination breaks
 - **DO NOT** add volley fire-tick correction in RunEpochLogic — self-message already corrects leader's fire tick; redundant fix causes double-fire conflicts
 - **DO NOT** target highest-energy enemy — focus-fire on lowest-energy is correct; highest-energy extends time-to-first-kill, Red deals more damage (52% seed 2000)
+- **DO NOT** change BlueStrike PR from 250 — seed 4000 drops 18pp at PR=220
+- **DO NOT** change BlueEcm PR from 150 — PR=200 regresses all seeds (-17pp seed4000)
+- **DO NOT** change BlueGuard Retreat from 30 — Retreat=25 gives -20pp seed4000, -10pp seed3000
+- **Seed 4000 is the sensitivity canary**: almost any change drops it from 90% to 70-75%. Do not sacrifice seed4000 for other seeds (swaps create ~neutral average)
+- **Per-tank coordinator fix**: COMMIT. `_swarm = new SwarmCoordinator()` in OnStart is architecturally correct; ForTeam/static registry breaks parallel mode.
 
 ### ECM Dead Code (key insight)
 EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is always false. Consequences:
@@ -91,6 +98,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 8 — Re-validated Guard MaxFP=3.0; all other parameter sweeps failed
+**Date:** 2026-04-20
+- Guard MaxFP=2.0 re-test: 75.2% avg (5-seed) vs 77% baseline → Guard 3.0 confirmed better, especially seed4000 (+19pp). KEEP Guard 3.0.
+- BlueRush PR=160: avg 76.6% vs 77% — neutral (seed4000 -8pp), reverted
+- BlueStrike PR=220: avg dropped (seed4000 -18pp), reverted
+- BlueEcm PR=200: all seeds regress (seed4000 -17pp), reverted
+- BlueRush Retreat=25: avg 78% vs 77% — +1pp but not significant; seed3000 +15pp / seed4000 -16pp swap, reverted
+- BlueGuard Retreat=25: avg 72.4% vs 77% — failed (seed3000 -10pp, seed4000 -20pp), reverted
+- **Pattern: seed 4000 is an outlier at 90% baseline and drops -10 to -20pp on almost every single-parameter change. 77% average is the single-parameter ceiling.**
+- **Net result: No change. Configuration unchanged.**
 
 ### Iter 7 — Fix parallel mode static registry bug + 5-seed baseline
 **Date:** 2026-04-20
