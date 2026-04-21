@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 22
+2026-04-21 — Iteration 23
 
 ## Current Iteration
-**23** — pending
+**24** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -15,23 +15,25 @@ Red applied the same fix Blue used in iter-7: `new SwarmCoordinator()` per game 
 
 Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree.
 
-## New Baseline (post-Red-fix, PR=150 Blue config)
-- Seed 1000: ~36%  |  Seed 2000: ~35%  |  Seed 3000: ~38%  |  Seed 5000: ~38%
-- **4-seed average: ~37%** (1 run each; requires 2+ runs for reliable estimate)
-- Prior 88.3% baseline is obsolete — was against buggy Red winning only 16%
+## New Baseline (post-Iter-23, 6-tank config, 2×4-seed sweeps)
+- Seed 1000: ~42%  |  Seed 2000: ~49%  |  Seed 3000: ~40%  |  Seed 5000: ~42%
+- **4-seed average: 43.25%** (consistent across 2 full passes)
+- Pre-6th-tank baseline (5-tank): Seed1000=32%, Seed2000=34%, Seed3000=38%, Seed5000=29% → avg 33.25%
+- Prior LoopState "~37%" baseline was from iter-22 lucky single runs; true 5-tank baseline was ~33%
 
 ## Active Configuration
-- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=1, Retreat=20 — **DO NOT TOUCH** (MVP both seeds)
+- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20 — **DO NOT TOUCH** (MVP multiple seeds)
 - BlueStrike: MaxFP=3.0, PR=250, FormationSlot=0 (leader), Retreat=25 — **DO NOT LOWER PR** (kills seed 2000)
-- BlueGuard: MaxFP=3.0, PR=200, FormationSlot=3, Retreat=30 — **KEEP** (Iter 2 win)
+- BlueGuard: MaxFP=3.0, PR=200, FormationSlot=1, Retreat=30 — **KEEP** (Iter 2 win)
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
 - BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
+- **BlueTrooper: MaxFP=2.5, PR=200, FormationSlot=5, Retreat=0 — 6th tank COMMITTED (Iter 23 win, +10pp avg)**
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
 - Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
 - Wolfpack predicted orbit: orbit point based on `target.Position + VelocityVector * contactAge` — **KEEP** (Iter 16 win, +1.6pp avg)
 - Fallback threshold: 20.0 (was 30.0) — **KEEP** (Iter 11 win, +1.5pp avg)
 - BlueGuard FormationSlot=1 (was 3), BlueSharp FormationSlot=3 (was 1) — **KEEP** (Iter 12 win, +1.3pp avg)
-- **Current slot layout**: Strike(0°,250px) → Guard(60°,200px) → Rush(120°,180px) → Sharp(180°,300px) → Ecm(240°,150px)
+- **Current slot layout**: Strike(0°,250px) → Guard(60°,200px) → Rush(120°,180px) → Sharp(180°,300px) → Ecm(240°,150px) → Trooper(300°,200px)
 
 ## Parallel Mode Baseline (post-Iter-16, OBSOLETE — against buggy Red)
 - Seed 1000: ~86% avg  |  Seed 2000: ~90% avg  |  Seed 3000: ~90.5% avg  |  Seed 4000: ~85.5% avg  |  Seed 5000: ~89.5% avg
@@ -50,13 +52,16 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 23)
+## Next Hypothesis (Iteration 24)
 
-**BlueGuard MaxFP 3.0 → 4.0** — the biggest prior gain in all research was Guard MaxFP 2.0→3.0 (+15pp seed 1000, iter 2). Extending this to 4.0 is the most promising untested direction. BlueGuard is consistently top attacker (Rate/100t ~21). At PR=200, power 4.0 gives 18 energy damage/hit vs 14 at 3.0. Risk: slower bullets (8 px/tick vs 11) may reduce accuracy at 200px range. Worth testing given new lower baseline of 36%.
+**BlueTrooper configuration tuning** — now that 6th tank is confirmed (+10pp), tune its parameters:
+1. PR: currently 200px. Try 180px (matches Rush, slot-2 radius) — might improve firing accuracy at shorter range vs staying at 200.
+2. MaxFP: currently 2.5. Try 3.0 (match Guard) — more damage per hit at 200px range; bullet speed drop from 12.5 to 11 px/tick manageable.
+3. Slot: currently 5 (300°). With 6 tanks at 60° intervals, full circle coverage. Try leaving as-is and tuning other parameters first.
 
-Also consider testing 5.0 in same iteration (run both quickly).
+Also consider: with 6 tanks, the Encircle threshold (enemies.Count * 2) changes behavior. At 6v5, 6>=10? No. 6v4, 6>=8? No. 6v3, 6>=6? Yes! Encircle now triggers at 6v3 (was never reachable at 5v5). This could be a free win.
 
-Success criteria: any of seeds 1000/2000/3000/5000 ≥ 40% (baseline ~36-38%). Confirm with 2+ runs.
+Success criteria: 4-seed avg ≥ 45% (new 6-tank baseline 43.25%).
 
 ---
 
@@ -68,6 +73,7 @@ Success criteria: any of seeds 1000/2000/3000/5000 ≥ 40% (baseline ~36-38%). C
 - Fallback threshold 20.0 (Iter 11): +1.5pp avg (seeds 2000+5000 +5pp each) — keep it
 - Guard/Sharp slot swap (Iter 12): +1.3pp avg, Guard(slot1=60°) Sharp(slot3=180°) — keep it
 - Wolfpack predicted orbit (Iter 16): +1.6pp avg — orbit point uses `target.Position + VelocityVector * age`; all 5 seeds improved consistently
+- **BlueTrooper 6th tank (Iter 23): +10pp avg** — slot5/300°, PR=200, MaxFP=2.5; 6v5 numerical advantage overcomes Red's coordination; seed2000 +15pp (fear of seed2000 regression was calibrated against old broken Red)
 
 ### Hard limits discovered
 - **DO NOT** lower BlueStrike PR below 250 — all values (200, 230) devastate seed 2000 (-15 to -25pp)
@@ -90,7 +96,7 @@ Success criteria: any of seeds 1000/2000/3000/5000 ≥ 40% (baseline ~36-38%). C
 - **DO NOT** swap BlueEcm/BlueRush slots — -2.1pp regression, seed2000 -7pp
 - **DO NOT** increase energy fire factor above 0.1 — 0.12 gave -0.9pp
 - **DO NOT** target closest enemy — -0.7pp, seed2000 -5pp; lowest-energy targeting is optimal
-- BlueTrooper 6th tank at slot5/300°: seed2000 -3pp consistently, overall +0.5pp not significant — consider only with a direct seed2000 mitigation strategy
+- BlueTrooper 6th tank (COMMITTED iter 23): seed2000 fear from iter 14 was against broken Red. Against fixed Red: +10pp avg, seed2000 +15pp. KEEP.
 - **DO NOT** add rush-opening branch (tick<50 charge to target): -2.5pp, seeds 2000+3000 hurt badly; aggressive early convergence lets Red concentrate fire
 - **DO NOT** increase NavigateTo max speed above 100: 120 gave -1.7pp, seed2000 -6pp; overshooting orbit points destabilizes formation
 - **DO NOT** raise Encircle threshold beyond enemies×2: enemies×3 gave -1.5pp; Encircle is genuinely better than Wolfpack in overwhelming-advantage endgame
@@ -160,6 +166,25 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 23-pre — Parameter sweeps against fixed Red (all reverted)
+**Date:** 2026-04-21
+- **BlueGuard MaxFP 3.0→4.0:** REFUTED. Seeds 1000/2000/3000: 30%/32%/30% vs baseline ~33% avg. Slower bullets at 200px range hurt accuracy more than extra damage helps. Guard MaxFP=3.0 is the optimum.
+- **Encircle threshold 2:1→1.5:1 (enemies+2):** NEUTRAL. 4-seed avg 32.5% ≈ baseline 33.25%. Seed5000 -2pp, seed3000 +2pp. Not confirmed.
+- **BlueEcm MaxFP 5.0→2.5:** NEUTRAL. BlueEcm role improved (Expendable→Co-MVP) but total damage rate nearly identical (18.2 vs 18.5). 4-seed avg unchanged. Faster bullets compensate for lower per-hit damage exactly.
+- **Energy-triggered Encircle (target≤40E AND allyCount>enemies):** NEUTRAL. 4-seed avg 33.25% = baseline. Seed5000 consistently 29% with this config.
+- Key session learning: LoopState baseline of ~37% was lucky single runs. True same-session baseline was ~33%. All parameter tweaks showed 33% ceiling for 5-tank config.
+
+### Iter 23 — BlueTrooper 6th tank: +10pp avg (**COMMITTED**)
+**Date:** 2026-04-21
+- **Code change:** Added `public BlueTrooper() : this(5) { }` to BlueTrooper.cs to activate 6th Blue tank (slot 5, 300° approach, PR=200, MaxFP=2.5)
+- **5-tank baseline (this session, 2 runs):** Seed1000=32%, Seed2000=34%, Seed3000=38%, Seed5000=29% → avg 33.25%
+- **6th tank result (2 full 4-seed passes):** Seed1000=42%, Seed2000=49%, Seed3000=40%, Seed5000=42% → avg **43.25%** (consistent across both passes)
+- **Delta: +10pp avg.** All seeds improved. Seed2000 +15pp despite old iter-14 fear of -3pp regression (was against broken Red).
+- Blue5 is Co-MVP in multiple seeds (40-45% WinSurv). Blue's "wins after Red gets first kill" improved from 27% to 39-43%.
+- Mechanism: 6v5 numerical advantage forces Red to defend 6 angles simultaneously; Blue gets more total damage output and recovers better from losing a tank.
+- Previously failed seed2000 fear (iter 14) was calibrated against buggy Red winning 16%. Against fixed Red, seed2000 is most improved (+15pp).
+- **COMMITTED**
 
 ### Iter 22 — BlueEcm PR=171 REFUTED + Red parallel mode fix discovered
 **Date:** 2026-04-20
