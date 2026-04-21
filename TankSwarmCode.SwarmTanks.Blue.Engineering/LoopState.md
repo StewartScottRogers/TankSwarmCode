@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 23
+2026-04-21 — Iteration 24
 
 ## Current Iteration
-**24** — pending
+**25** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -52,16 +52,13 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 24)
+## Next Hypothesis (Iteration 25)
 
-**BlueTrooper configuration tuning** — now that 6th tank is confirmed (+10pp), tune its parameters:
-1. PR: currently 200px. Try 180px (matches Rush, slot-2 radius) — might improve firing accuracy at shorter range vs staying at 200.
-2. MaxFP: currently 2.5. Try 3.0 (match Guard) — more damage per hit at 200px range; bullet speed drop from 12.5 to 11 px/tick manageable.
-3. Slot: currently 5 (300°). With 6 tanks at 60° intervals, full circle coverage. Try leaving as-is and tuning other parameters first.
+**BlueGuard MaxFP recalibration against 6-tank formation** — with 6 tanks, the formation dynamics changed. Red now targets Guard (22 first kills) and Sharp (21) most. Previously Guard at 3.0 was optimal, but the 6-tank geometry is new. Test Guard MaxFP 3.0→2.5 (faster bullets at 200px may improve accuracy now that 6 other tanks provide damage coverage) and Guard MaxFP 3.0→3.5 (borderline test). Also: consider re-testing BlueStrike PR from 250 — the old "DO NOT LOWER" rule was calibrated against 5-tank config.
 
-Also consider: with 6 tanks, the Encircle threshold (enemies.Count * 2) changes behavior. At 6v5, 6>=10? No. 6v4, 6>=8? No. 6v3, 6>=6? Yes! Encircle now triggers at 6v3 (was never reachable at 5v5). This could be a free win.
+Alternatively, explore BlueSharp PR tuning with 6 tanks — Sharp is now Red's #2 first-kill target. Sharp at 300px (slot 3/180°) may need adjustment with 6-tank geometry.
 
-Success criteria: 4-seed avg ≥ 45% (new 6-tank baseline 43.25%).
+Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 
 ---
 
@@ -166,6 +163,14 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 24 — 6-tank parameter sweep (all reverted)
+**Date:** 2026-04-21
+- **BlueTrooper MaxFP 2.5→3.0:** NEUTRAL. 4-seed avg 43.25% = baseline. Higher damage per hit exactly offset by slightly slower bullets at 200px. Reverted.
+- **Encircle threshold enemies.Count*2 → enemies.Count+2 (with 6 tanks):** NEUTRAL. 4-seed avg 43.25% = baseline. 6v4 Encircle doesn't help — converging to 180px from 200px while Red still has 4 tanks doesn't produce faster kills vs staying in Wolfpack. Reverted.
+- **Key finding:** 6-tank ceiling appears to be 43.25% for current parameter ranges. Trooper configuration (PR, MaxFP) doesn't materially change the result within ±50px/±0.5 power.
+- **DO NOT change BlueTrooper MaxFP from 2.5** — tested 3.0, same result. 2.5 is adequate.
+- **DO NOT use Encircle=enemies+2 with 6 tanks** — neutral vs Wolfpack; 6v3 Encircle (already in code via enemies×2) is the correct trigger.
 
 ### Iter 23-pre — Parameter sweeps against fixed Red (all reverted)
 **Date:** 2026-04-21
