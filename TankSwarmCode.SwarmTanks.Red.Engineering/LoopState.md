@@ -17,13 +17,13 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 - Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
-**Current win rates (5-seed parallel, 200 matches each, 29 Red tanks vs Blue 29 tanks, MaxFP=2.0):**
-- Seed 1000: **56%**
-- Seed 2000: **52%**
+**Current win rates (5-seed parallel, 200 matches each, 29 Red tanks vs Blue 29 tanks, MaxFP=2.0, Fallback=10):**
+- Seed 1000: **60%**
+- Seed 2000: **56%**
 - Seed 3000: **57%**
 - Seed 4000: **58%**
-- Seed 5000: **55%**
-- **5-seed average: 55.6%**
+- Seed 5000: **57%**
+- **5-seed average: 57.6%**
 
 ## What We Know (Current Blue DLL — 29 tanks)
 
@@ -32,10 +32,12 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 - **Blue has 29 tanks:** Named (BlueSharp, BlueGuard, BlueEcm, BlueRush, BlueStrike) + Blue5-Blue28 slots.
 - **Red has 29 tanks:** Named (RedHammer/Blade/Arrow/Ghost) + Red4-Red28 slots.
 - **MaxFP=2.0 optimal for all attack tanks** vs 29-tank Blue (dense formation makes slower bullets acceptable, doubled damage is decisive). MaxFP=1.0 was optimal for old 5-tank Blue; wrong for current configuration. MaxFP=3.0 too slow (38% at seed 3000).
-- **PR=160 unchanged.** Has been stable through all Blue expansions.
+- **PR=160 unchanged.** Has been stable through all Blue expansions. PR=180 refuted (neutral).
 - **Ghost stays at MaxFP=2.0.** This is unchanged and correct.
+- **Fallback threshold = 10.0** (vs old 30.0). Lower = more aggressive mid-battle. Gradient: 30→15→10 consistently positive; 10→5 flat.
+- **29 Red tanks is optimal** (30 = Red29 refuted, -0.5pp avg).
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
-- **Blue's named tanks have very high DPS rates:** BlueGuard=65.91, BlueStrike=58.10, Blue11=58.86, Blue9=57.04. Red must match with MaxFP=2.0 (RedGhost=42.48 rate).
+- **Blue's named tanks have very high DPS rates:** BlueGuard=65.91, BlueStrike=58.10, Blue11=58.86, Blue9=57.04. Red matches with MaxFP=2.0.
 
 ## Current Configuration
 
@@ -47,11 +49,11 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 | RedGhost | 3 | 2.0 | 160 | false | 20 |
 | Red4-Red28 | 4-28 | 2.0 | 160 | false | 20 |
 
-**Total: 29 Red tanks vs Blue 29 tanks. 55.6% avg 5-seed win rate.**
+**Total: 29 Red tanks vs Blue 29 tanks. 57.6% avg 5-seed win rate.**
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## LOOP STATUS: ACTIVE (55.6% ceiling candidate — next: PR tuning or targeted strategy)
+## LOOP STATUS: ACTIVE (57.6% — continuing optimization)
 
 **94.0% avg (5-seed) is the ceiling for numerical superiority at 28 tanks vs Blue 12.**
 
@@ -64,6 +66,15 @@ To exceed 94.0%, different approaches needed:
 ---
 
 ## Iteration Log
+
+### Iter 47 — Fallback Threshold 30→10 (ACCEPTED, +2.0pp avg)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. Red 57.6% avg (5-seed) vs 55.6% baseline (+2.0pp).
+- Fallback threshold sweep: 30→15 (+1.2pp) → 10 (+2.0pp) → 5 (flat at 10).
+- Also refuted: PR=180 (neutral), Red29/30th tank (-0.5pp).
+- Mechanism: lower threshold = Red attacks more rounds before retreating → more damage in close engagements.
+- Seeds: 60/56/57/58/57% = 57.6% avg
+- See Research/iter-0047-fallback-threshold-sweep.md
 
 ### Iters 45-46 — Red28 + MaxFP=2.0 (ACCEPTED, +12pp avg)
 **Date:** 2026-04-21
