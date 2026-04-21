@@ -1,7 +1,7 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iters 45-46 complete (MaxFP=2.0 + Red28 accepted, 55.6% avg)
+2026-04-21 — Iter 49 complete (180° arc orbit refuted -8pp seed 1000; ceiling analysis closed)
 
 ## Current Iteration
 **ACTIVE** — 55.6% avg (5-seed) vs Blue's current 29-tank DLL. Continuing optimization.
@@ -64,6 +64,7 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 - Centroid orbit (-1.5pp) — uniform 360° optimal
 - Per-tank targeting (-3pp) — coordinated weakest-first critical
 - Fallback=5 (flat vs 10) — 10 is optimal floor
+- 180° arc orbit (-8pp seed 1000, neutral seed 3000) — decisive rejection; uniform 360° encirclement essential
 
 To exceed 57.6%: need architectural innovation or Blue DLL update.
 See Research/iter-0048-ceiling-analysis.md for full analysis.
