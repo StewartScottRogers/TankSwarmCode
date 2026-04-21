@@ -109,7 +109,7 @@ echo.
 dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj --no-build -- ^
   --bot1 TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Red.dll ^
   --bot2 TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Blue.dll ^
-  --batch 50 --parallel 8 --seed 9999 --on-timeout energy --format table
+  --batch 50 --parallel 16 --seed 9999 --on-timeout energy --format table
 echo.
 
 :: --- PERIODIC GUI SPECTACLE ----------------------------------
@@ -148,7 +148,7 @@ echo.
 dotnet run --project TankSwarmCode.Cli/TankSwarmCode.Cli.csproj --no-build -- ^
   --bot1 TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Red.dll ^
   --bot2 TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Blue.dll ^
-  --batch 200 --parallel 8 --seed 9999 --on-timeout energy --format table
+  --batch 200 --parallel 16 --seed 9999 --on-timeout energy --format table
 echo.
 echo  Launching final spectacle...
 dotnet run --project TankSwarmCode.Gui/TankSwarmCode.Gui.csproj
