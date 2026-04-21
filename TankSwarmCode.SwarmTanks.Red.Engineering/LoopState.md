@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 29 complete (Hammer PR=120 REFUTED -1.25pp; uniform PR=160 confirmed)
+2026-04-20 — Iteration 30 complete (Hammer Retreat=20 NEUTRAL; architecture ceiling confirmed 70.2%)
 
 ## Current Iteration
-**30** — pending
+**31** — pending (requires novel mechanisms; all Wolfpack parameters exhausted)
 
 ## Situation
 
@@ -54,22 +54,43 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 30)
+## Next Hypothesis (Iteration 31)
 
-**Last untested parameter: Hammer RetreatEnergyThreshold 25→20.** All other knobs exhausted.
-Hammer has threshold=25 while all other tanks have 20. The Scatter condition is `allyCount==1 &&
-energy < threshold`. Lowering Hammer's threshold to 20 means Hammer fights 5 more energy-ticks
-in last-tank-alive scenarios before retreating. At MaxFP=1.0 (0.5 energy/shot), 5 energy = 10 more
-shots fired. This could convert a few late-game 1v1 losses into wins.
+**ARCHITECTURE CEILING DECLARED. All Wolfpack parameters exhausted.** Novel mechanisms required.
 
-If this also shows no improvement, the architecture ceiling at 70.2% is fully confirmed. The loop
-should record that all accessible parameters within the Wolfpack/orbit framework are optimized.
+**Options for iter-31+ (novel approaches):**
+1. **Adaptive MaxFP**: Fire at MaxFP=1.0 normally but MaxFP=0.1 (ultra-fast) when target is at
+   very close range (<80px). At close range, ultra-fast bullets hit nearly instantly. Requires
+   modifying `ExecuteWolfpack` to conditionally set MaxFP based on distance.
 
-Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
+2. **Counter-targeting based on Blue survivor pattern**: If BlueRush is the most common Blue
+   survivor (win_survival_rate=69% in seed 1000), prioritize Rush rather than weakest-first.
+   This flips the prior refutation (Sharp targeting) — Rush is a different tank with different
+   energy curve. Test Rush-priority targeting.
+
+3. **Ghost at different formation slot**: Currently Ghost=slot 3 (216° orbit position). Ghost
+   at slot 0 (0°, "point" of formation) might place Ghost where it can use its burst damage most
+   effectively as the lead attacker, letting attack tanks orbit behind.
+
+4. **Dynamic strategy override**: When `allyCount > enemies.Count * 2` AND enemies are low energy
+   (avg < 30), switch to Wolfpack instead of Encircle. The 180px Encircle is too far for killing
+   weakened enemies; Wolfpack at 160 would finish them faster.
+
+**Top pick (lowest risk):** BlueRush priority targeting. Pure targeting change, no geometry risk.
+BlueRush has 69% win_survival_rate in seed 1000 — higher than Sharp's ~40-55%. Test 2 seeds.
 
 ---
 
 ## Iteration Log
+
+### Iter 30 — Hammer RetreatThreshold 25→20 (NEUTRAL 0.0pp avg, 2 seeds)
+**Date:** 2026-04-20
+**Status:** NEUTRAL. Red 70.25% avg (2-seed) vs 70.25% baseline (0.0pp — perfectly neutral).
+- Scatter fires only when allyCount==1; 5 extra energy = 10 shots — not enough to swing 1v1 outcomes
+- Hammer individual survival improved by 4-7 matches/seed but no net win rate effect
+- Code reverted to threshold=25. **Architecture ceiling at 70.2% DEFINITIVELY CONFIRMED.**
+- All Wolfpack parameters exhausted: MaxFP, PR, Encircle, Fallback, targeting, ECM, Retreat all done
+- See Research/iter-0030-hammer-retreat-20-neutral.md for full details
 
 ### Iter 29 — Hammer PR=120 Mixed Formation (REFUTED -1.25pp avg, 2 seeds)
 **Date:** 2026-04-20
