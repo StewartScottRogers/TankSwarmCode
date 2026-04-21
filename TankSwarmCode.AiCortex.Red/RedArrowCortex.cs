@@ -9,7 +9,7 @@ public sealed class RedArrowCortex : RedCortexBase
     {
         FormationSlot = 2,
         MaxFirePower = 1.5,
-        PreferredRange = 220.0,
+        PreferredRange = 180.0,
         HasEcm = false,
         RetreatEnergyThreshold = 20.0
     };

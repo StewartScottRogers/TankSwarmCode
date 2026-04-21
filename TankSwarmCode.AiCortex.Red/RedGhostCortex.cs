@@ -1,4 +1,5 @@
 using TankSwarmCode.AiCortex.Red.Library;
+using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Enums;
 using TankSwarmCode.SwarmTank.Models;
 
@@ -15,4 +16,13 @@ public sealed class RedGhostCortex : RedCortexBase
         OffensiveEcmMode = EcmMode.JamAndSpoof,
         RetreatEnergyThreshold = 40.0
     };
+
+    public override void OnTick(ITankContext ctx)
+    {
+        base.OnTick(ctx);
+        // Proactively jam whenever enemies are visible — don't wait for ECMScreen strategy
+        bool hasEnemy = ctx.RadarMap.Values.Any(c => !c.IsAlly && ctx.Arena.TickNumber - c.Timestamp < 30);
+        if (hasEnemy)
+            ctx.SetEcm(EcmMode.JamAndSpoof);
+    }
 }
