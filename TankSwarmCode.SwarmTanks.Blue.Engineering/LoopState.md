@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 35
+2026-04-21 — Iteration 36
 
 ## Current Iteration
-**36** — pending
+**37** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -15,13 +15,13 @@ Red applied the same fix Blue used in iter-7: `new SwarmCoordinator()` per game 
 
 Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree.
 
-## New Baseline (post-Iter-35, 10-tank config, 2×4-seed sweeps)
-- Seed 1000: ~77.5%  |  Seed 2000: ~74%  |  Seed 3000: ~77.5%  |  Seed 5000: ~80%
-- **4-seed average: 77.25%** (consistent across 2 full passes — both runs exactly 77.25%)
+## New Baseline (post-Iter-36, 11-tank config, 2×4-seed sweeps)
+- Seed 1000: ~84%  |  Seed 2000: ~80%  |  Seed 3000: ~82%  |  Seed 5000: ~82%
+- **4-seed average: 82%** (identical across both runs — extraordinary consistency)
+- Pre-11th-tank baseline (10-tank): avg 77.25%
 - Pre-10th-tank baseline (9-tank): avg 72%
 - Pre-9th-tank baseline (8-tank): avg 62.75%
 - Pre-8th-tank baseline (7-tank): avg 54.5%
-- Pre-7th-tank baseline (6-tank): avg 43.25%
 - Pre-6th-tank baseline (5-tank): avg 33.25%
 
 ## Active Configuration
@@ -35,6 +35,7 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - **BlueRaider: MaxFP=2.5, PR=200, FormationSlot=7→270°, Retreat=0 — 8th tank COMMITTED (Iter 33 win, +8.25pp avg)**
 - **BlueVanguard: MaxFP=2.5, PR=200, FormationSlot=8→30°, Retreat=0 — 9th tank COMMITTED (Iter 34 win, +9.25pp avg)**
 - **BlueLancer: MaxFP=2.5, PR=200, FormationSlot=9→90°, Retreat=0 — 10th tank COMMITTED (Iter 35 win, +5.25pp avg)**
+- **BlueScout: MaxFP=2.5, PR=200, FormationSlot=10→150°, Retreat=0 — 11th tank COMMITTED (Iter 36 win, +4.75pp avg)**
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
 - Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
 - Wolfpack predicted orbit: orbit point based on `target.Position + VelocityVector * contactAge` — **KEEP** (Iter 16 win, +1.6pp avg)
@@ -62,14 +63,15 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 36)
+## Next Hypothesis (Iteration 37)
 
-**BlueScout 11th tank at 150° (filling the Rush-Sharp gap)**
+**BluePhoenix 12th tank at 210° (filling the last 60° gap: Sharp-Ecm)**
 
-Remaining 60° gaps: 120°→180° (Rush-Sharp) and 180°→240° (Sharp-Ecm).
-Testing 150° for slot 10. Slot 10 × 60° = 600° = 240° (collision with Ecm), so special case slot10→150°.
+Only one 60° gap remains: 180°→240° (Sharp-Ecm). A 12th tank at 210° gives COMPLETE 30° coverage — all 12 positions filled with 30° spacing. Slot 11 × 60° = 660° = 300° (collision with Trooper), so special case slot11→210°.
 
-Success criteria: 4-seed avg ≥ 80% (i.e., +2.75pp from 77.25% baseline — returns diminishing).
+This would be the "maximum" formation for the current 30°-grid approach. 12v5 = Blue has 2.4× Red's numbers.
+
+Success criteria: 4-seed avg ≥ 85% (i.e., +3pp from 82% baseline).
 
 ---
 
@@ -182,6 +184,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 36 — BlueScout 11th tank: +4.75pp avg (**COMMITTED**)
+**Date:** 2026-04-21
+- **Code changes:** BlueScoutCortex.cs (slot10→150°), BlueScout.cs (Name="Blue10"), CortexFactory, SwarmCoordinator slot10→150° override
+- **Rationale:** Fills Rush(120°)-Sharp(180°) gap at 150°. 11v5. Only one 60° gap remains (Sharp-Ecm).
+- **Run 1+2:** Both runs identical: 84%/80%/82%/82% → **avg 82%**. Perfect reproducibility.
+- **Delta: +4.75pp avg** (77.25% → 82%). Returns diminishing but still ~+5pp per tank added.
+- Progression: 5→33.25%, 6→43.25%, 7→54.5%, 8→62.75%, 9→72%, 10→77.25%, 11→82%
+- **COMMITTED**
 
 ### Iter 35 — BlueLancer 10th tank: +5.25pp avg (**COMMITTED**)
 **Date:** 2026-04-21
