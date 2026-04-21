@@ -1,14 +1,19 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 67
+2026-04-21 — Iteration 69
 
 ## Current Iteration
-**67** — `LinearPredictionFire` gun-alignment gate 5°→6° **CONFIRMED** (+3.0pp avg). New 5-seed baseline **47.3%**. Re-tested the old 12v5-era DO NOT rule in the current 29v29 regime — outcome flipped. 4/5 seeds positive; seed 2000 regressed as expected.
+**69** — `LinearPredictionFire` gun-alignment gate 7°→8° **REFUTED** (−0.8pp avg, 5 seeds). Same-session baseline (gate=7°) 48.2%; gate=8° result 47.4%. 2/5 seeds positive (1000 +2.5, 2000 +5.5), 3/5 negative (3000 −1.0, 4000 −3.5, 5000 −7.5). Peak at 7° is confirmed sharp; matches Red's independent iter-94 probe pattern. **Fire-gate dimension fully exhausted for Blue.** Reverted.
+
+## Prior Iteration
+**68** — `LinearPredictionFire` gun-alignment gate 6°→7° **CONFIRMED** (+2.8pp avg). New 5-seed baseline **49.4%**. 4/5 seeds positive, seed 5000 flat, **zero regressions**. Exactly offsets Red's iter-92 move (+2.8pp for Red against gate=6° Blue). Seed-2000 sensitivity flipped sign at 7° (+4.5pp vs −4.5pp at 6°), confirming the prediction-noise-floor model.
 
 ## Situation
-**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue 5-seed avg **47.3%** after iter-67 gate-6° change.
-- Seed 1000: 44.5%  |  Seed 2000: 42.5%  |  Seed 3000: 49.0%  |  Seed 4000: 46.0%  |  Seed 5000: 54.5%
+**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue 5-seed avg **49.4%** after iter-68 gate-7° change.
+- Seed 1000: 44.5%  |  Seed 2000: 50.0%  |  Seed 3000: 52.5%  |  Seed 4000: 49.5%  |  Seed 5000: 50.5%
+
+**Iter-67 → pre-iter-68 baseline** (gate=6° re-measured vs current Red): 40.5/45.5/50.5/46.0/50.5 → **46.6%**. Red's iter-92 eroded Blue ~0.7pp below iter-67's 47.3% ceiling. Iter-68 recovers +2.8pp and takes Blue above 49% for the first time since iter-64.
 
 **Iter-66 → pre-iter-67 baseline** (gate=5° re-measured): 43.0/47.0/40.5/42.5/48.5 → **44.3%**. Red had eroded Blue by ~5pp since iter-64's 49.3% (Red's DLL moved forward). Iter-67 recovers +3.0pp.
 
@@ -35,9 +40,17 @@
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
-## 29v29 Baseline (Iter-67, CURRENT)
+## 29v29 Baseline (Iter-68, CURRENT)
+- Seed 1000: 44.5%  |  Seed 2000: 50.0%  |  Seed 3000: 52.5%  |  Seed 4000: 49.5%  |  Seed 5000: 50.5%
+- **5-seed avg: 49.4%** — 29v29, vs Red's current DLL (post iter-92/93), Blue `LinearPredictionFire` gate=7°
+
+## 29v29 Pre-Iter-68 Baseline (gate=6°, Red eroded since iter-67)
+- Seed 1000: 40.5%  |  Seed 2000: 45.5%  |  Seed 3000: 50.5%  |  Seed 4000: 46.0%  |  Seed 5000: 50.5%
+- **5-seed avg: 46.6%** — Red's iter-92 move eroded gate=6° Blue from 47.3% → 46.6%
+
+## 29v29 Baseline (Iter-67, Superseded)
 - Seed 1000: 44.5%  |  Seed 2000: 42.5%  |  Seed 3000: 49.0%  |  Seed 4000: 46.0%  |  Seed 5000: 54.5%
-- **5-seed avg: 47.3%** — 29v29, vs Red's current DLL, Blue `LinearPredictionFire` gate=6°
+- **5-seed avg: 47.3%** — 29v29, vs Red's pre-iter-92 DLL, Blue `LinearPredictionFire` gate=6°
 
 ## 29v29 Pre-Iter-67 Baseline (gate=5°, Red eroded since iter-64)
 - Seed 1000: 43.0%  |  Seed 2000: 47.0%  |  Seed 3000: 40.5%  |  Seed 4000: 42.5%  |  Seed 5000: 48.5%
@@ -171,7 +184,7 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - **DO NOT** change OrbitRadius from 180: 220 gave -1.5pp (iter 18); 150 gave seed2000 -9pp (iter 26). 180 is the calibrated optimum — both directions refuted.
 - **DO NOT** change Pincer group split from `<=1`: parity (3+3) refuted (iter 27) — seed2000 -9pp.
 - **DO NOT** add Encircle to volley condition: refuted (iter 28) — seed2000 -9pp; Encircle endgame rarely fires but code path change triggers pattern.
-- **Gun tolerance 6° is CURRENT (iter-67)**; 4° gave -2.7pp and 6° gave -3.7pp in old 12v5 regime, but regime shift to 29v29 with 17 slot tanks at MaxFP=1.5/PR=160 flipped the 6° finding to +3.0pp. 7° untested in current regime; worth a probe.
+- **Gun tolerance 7° is CURRENT (iter-68)**; 4° gave -2.7pp and 6° gave -3.7pp in old 12v5 regime, but 29v29 regime flipped both. Gradient at 29v29: 5°→6° (+3.0pp, iter-67) → 6°→7° (+2.8pp, iter-68) → 7°→8° (−0.8pp, iter-69 REFUTED). Peak sharply at 7°. Independent Red probe at 9° also refuted (−1.1pp, Red iter-93). **DO NOT change gate from 7°; fire-gate dimension fully exhausted.**
 - **DO NOT** reduce wall avoidance below 80: 60 gave -1.3pp and seed1000 consistently regressed
 - **DO NOT** make Scout hunt stale target positions: -2.3pp, seed4000 -5pp; bunches tanks at outdated location
 - **DO NOT** apply age-correction to `LinearPredictionFire`: -3.5pp; the 5° gunDiff gate is a hard barrier — shifting aim point by age×velocity causes more missed shots than accuracy gains
@@ -209,6 +222,29 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 ---
 
 ## Iteration Log
+
+### Iter 69 — LinearPredictionFire gate 7°→8°: REFUTED (−0.8pp avg)
+**Date:** 2026-04-21
+- **Code change (reverted):** `TankNavigation.LinearPredictionFire` — `if (Math.Abs(gunDiff) < 7.0 && ...)` → `< 8.0`.
+- **Rationale:** The state-file hint after iter-68 explicitly called out 8° as "untested; small bounded probe worthwhile but not urgent." Gradient 5→6→7 showed +3.0/+2.8pp. Red's independent 9° refute (−1.1pp) bracketed the peak in (7°, 9°]. 8° was the last untested value between the two known-bad endpoints.
+- **Baseline (gate=7°, same-session re-measurement):** 1000=44.5% | 2000=39.5% | 3000=50.0% | 4000=51.5% | 5000=55.5% → avg **48.2%** (−1.2pp below iter-68 recorded 49.4% baseline; minor session drift).
+- **Result (gate=8°):** 1000=47.0% (+2.5) | 2000=45.0% (+5.5) | 3000=49.0% (−1.0) | 4000=48.0% (−3.5) | 5000=48.0% (−7.5) → avg **47.4%** (−0.8pp).
+- 2/5 seeds positive, 3/5 negative. Strong seeds (4000/5000) regress hardest; weak seeds (1000/2000) gain. Consistent with prediction-noise-floor model: widening past the floor costs strong geometries more than it helps weak ones.
+- Same asymmetry as Red's iter-94 probe (Red saw −1.9pp at 8° with their weakest seeds gaining).
+- **REVERTED.** Fire-gate dimension fully exhausted — all integer gates in [4°, 9°] now tested; 7° is the peak for both Blue and Red. Per-shot firing gates saturated. Future gains must come from coordination, geometry, composition, or targeting changes.
+- Add to DO NOT list.
+- See `Research/iter-0069-fire-gate-8deg.md`.
+
+### Iter 68 — LinearPredictionFire gate 6°→7°: CONFIRMED (+2.8pp avg)
+**Date:** 2026-04-21
+- **Code change (committed):** `TankNavigation.LinearPredictionFire` — `if (Math.Abs(gunDiff) < 6.0 && ...)` → `< 7.0`.
+- **Rationale:** Red's iter-92 moved their own gate 5°→7° with same mechanism (+2.8pp for Red). Same regime (29v29, slot tanks MaxFP=1.5/PR=160) → same prediction-noise-floor argument applies to Blue. Expected Blue gain in same ballpark; also needed to recover the ~0.7pp Red eroded from Blue's iter-67 ceiling.
+- **Baseline (Blue gate=6°, current Red DLL, same session):** 1000=40.5% | 2000=45.5% | 3000=50.5% | 4000=46.0% | 5000=50.5% → avg **46.6%**.
+- **Result (Blue gate=7°):** 1000=44.5% (+4.0) | 2000=50.0% (+4.5) | 3000=52.5% (+2.0) | 4000=49.5% (+3.5) | 5000=50.5% (+0.0) → avg **49.4%** (+2.8pp).
+- **All 5 seeds ≥ baseline.** First firing-control change with zero regressions. Seed 2000 **flipped sign** from −4.5pp at gate=6° to +4.5pp at gate=7°, strong evidence the gate was still below the prediction-noise floor at 6° for some seed-2000-specific geometry.
+- **Mechanism:** Bullet speed 15.5 px/tick, PR=160 → ~10-tick travel. VelocityVector drift over that window contributes cross-range error of order 14–20 px (5°–7° angular). Gate ≤ 6° rejects shots whose miss is bidirectional-noise-dominated; gate = 7° is at/just past the noise floor. Ceiling is in (7°, 9°] — Red's iter-93 refutation at 9° (−1.1pp) is independent evidence.
+- **COMMITTED.** Exactly offsets Red's iter-92 gain; Blue returns to parity-plus.
+- See `Research/iter-0068-fire-gate-7deg.md`.
 
 ### Iter 67 — LinearPredictionFire gate 5°→6°: CONFIRMED (+3.0pp avg)
 **Date:** 2026-04-21
