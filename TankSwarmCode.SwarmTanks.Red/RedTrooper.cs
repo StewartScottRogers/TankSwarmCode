@@ -11,6 +11,8 @@ public sealed class RedTrooper : SwarmTankBase, ITankContext
     private readonly IAiCortex _cortex;
     private readonly int _slot;
 
+    public RedTrooper() : this(4) { }
+
     public RedTrooper(int slot)
     {
         SwarmId = 1;
