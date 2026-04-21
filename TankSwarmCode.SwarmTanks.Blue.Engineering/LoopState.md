@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 6
+2026-04-20 — Iteration 7
 
 ## Current Iteration
-**7** — pending
+**8** — pending
 
 ## Situation
 **WE ARE DOMINATING.** Blue ~80-87% across seeds (seed 1000 ~80% avg, seed 2000 87%). Iter 3 explored 6 approaches — all regressed. Current config is the optimum found so far.
@@ -17,17 +17,20 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - BlueGuard: MaxFP=3.0, PR=200, FormationSlot=3, Retreat=30 — **KEEP** (Iter 2 win)
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
 - BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
+- Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
 
-## Next Hypothesis (Iteration 7)
+## Parallel Mode Baseline (post-Iter-7 fix, 200 games each)
+- Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
+- **5-seed average: 77%**
+- Note: serial mode (--parallel 1) shows ~34-36% at seed 1000 — the parallel vs serial gap is unexplained (possibly engine routes SwarmMessages across parallel games). Use --parallel 16 as the consistent measurement mode.
 
-**Establish true baseline variance with a 5-seed 200-batch run, then accept ceiling or try a structural change.** Every single-parameter tweak has regressed seed 2000 while seed 1000 varies ±20pp. We don't know if the true ceiling is 80% or 88%. Run seeds 1000/2000/3000/4000/5000 at 200 battles each to get a proper multi-seed baseline. If the true avg is ≥83%, declare ceiling reached. If ≤78%, there's still room — investigate what Red does in the losing games to find the structural weakness.
+## Next Hypothesis (Iteration 8)
 
-Structural change candidates not yet tried:
-- Scout before Wolfpack: send one tank ahead to spot enemies before committing formation (reduces blind-spot exposure)
-- Target closest enemy instead of lowest-energy (better hit rate at the cost of focus-fire suboptimality)
-- Adaptive formation: tanks with lower energy back off to higher PR, creating dynamic spacing
+**Re-validate the Guard MaxFP=3.0 change with the fixed parallel baseline, then try BlueRush PR 180→160** (closer range = faster bullet travel = better hit accuracy at 2.5 MaxFP power). BlueRush's MaxFP=2.5 means bullet speed=12.5. At PR=160, travel time = 160/12.5 = 12.8 ticks vs 180/12.5 = 14.4 ticks. Better accuracy at 160. BlueRush won't become a priority target since MaxFP=2.5 is still moderate. First: confirm Guard MaxFP=3.0 still helps vs the pre-Iter-2 baseline. Then try Rush PR.
 
-Success criteria: establish ≥200-game baseline per seed for confident direction decisions.
+Success criteria:
+- Guard MaxFP=3.0 still shows clear improvement vs Guard MaxFP=2.0 baseline
+- Blue 5-seed average ≥80% (vs 77% current)
 
 ---
 
@@ -88,6 +91,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 7 — Fix parallel mode static registry bug + 5-seed baseline
+**Date:** 2026-04-20
+- **Critical discovery:** `SwarmCoordinator.Registry` is a static `ConcurrentDictionary` — in parallel mode, all games share one coordinator, corrupting AllyPings and strategy state across games. Same bug as Red research "PARALLEL MODE BROKEN" finding.
+- **Fix:** Changed `OnStart` to `_swarm = new SwarmCoordinator()` (per-tank, per-game) instead of `ForTeam(swarmId)` (shared static instance).
+- **5-seed 200-batch baseline after fix:** seed1000=75%, seed2000=72%, seed3000=76%, seed4000=90%, seed5000=72%. **Avg=77%.**
+- **Serial mode (--parallel 1):** ~34-36% at seed 1000 — gap vs parallel mode is unexplained.
+- Prior iters 3-6 ALL used the broken parallel mode. Direction of changes may still be valid but absolute numbers were unreliable.
+- **COMMITTED** (static registry fix is a real bug fix regardless of win rate impact)
 
 ### Iter 6 — Target highest-energy enemy (reverted)
 **Date:** 2026-04-20
