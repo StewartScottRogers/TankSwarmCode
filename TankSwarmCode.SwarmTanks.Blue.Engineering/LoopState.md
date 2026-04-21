@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 30
+2026-04-21 — Iteration 32
 
 ## Current Iteration
-**31** — pending
+**33** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -54,15 +54,16 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 31)
+## Next Hypothesis (Iteration 33)
 
-**BlueSurge PR tuning: 200px is default — test 160px and 250px**
+**BlueRaider 8th tank at 270° (filling the Ecm-Trooper gap)**
 
-BlueSurge at 330° (between Trooper at 300° and Strike at 0°) just committed with PR=200. This fills the formation gap and gave +11.25pp. The 330° approach has never been calibrated. PR=160 would make Surge more aggressive (matching Rush's range); PR=250 would match Strike's longer range from a nearby angle (330°). Neither has been tested yet.
+The 6th tank added +10pp (6v5), the 7th tank added +11.25pp (7v5). Testing whether an 8th tank continues the pattern. Blue7 (BlueRaider) at 270° fills the Ecm(240°)-Trooper(300°) gap, creating a symmetric lower-right cluster to match the upper-right cluster (Trooper+Surge). This gives 8v5 numerical advantage.
 
-Also: consider whether Surge's MaxFP=2.5 is optimal, or if 3.0 would be better at 200px range.
+Angle: slot 7 × 60° = 420° = 60° (collision with Guard). Special case: slot 7 → 270°.
+Layout: Strike(0°) → Guard(60°) → Rush(120°) → Sharp(180°) → Ecm(240°) → Raider(270°) → Trooper(300°) → Surge(330°)
 
-Success criteria: 4-seed avg ≥ 56% (baseline 54.5%).
+Success criteria: 4-seed avg ≥ 60% (i.e., +5.5pp from 54.5% baseline).
 
 ---
 
@@ -173,6 +174,19 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 32 — BlueSurge MaxFP=3.0 (reverted)
+**Date:** 2026-04-21
+- **Surge MaxFP 2.5→3.0:** NEUTRAL. 4-seed avg 54.75% ≈ 54.5% baseline. Seed 1000 -3pp, seed 2000 -1pp, seeds 3000+5000 +3pp/+2pp. Net flat. Same tradeoff as Trooper MaxFP=3.0 (neutral in iter-24). 200px with MaxFP=2.5 is the calibrated optimum for Surge at 330°.
+- **DO NOT change BlueSurge MaxFP from 2.5** — 3.0 neutral, 2.5 stays.
+- **7-tank single-parameter ceiling confirmed at 54.5%** — PR and MaxFP both tested, both neutral/refuted.
+
+### Iter 31 — BlueSurge PR tuning (all reverted)
+**Date:** 2026-04-21
+- **Surge PR 200→160:** REFUTED. Seed 1000: 51% (-6pp), Seed 2000: 48% (-5pp), Seed 3000: 51% (-2pp). Avg ~50.5% vs 54.5% baseline → -4pp. 330° geometry is calibrated to 200px; closer orbit hurts coverage.
+- **Surge PR 200→250:** REFUTED. Seed 1000: 50% (-7pp), Seed 2000: 48% (-5pp), Seed 3000: 55% (+2pp), Seed 5000: 50% (-5pp). Avg 50.75% vs 54.5% baseline → -3.75pp. Longer range from 330° moves Surge too far to cooperate with Trooper(300°/200px).
+- **DO NOT change BlueSurge PR from 200** — both 160 and 250 refuted; 200px is the calibrated optimum for 330° position.
+- **7-tank ceiling appears to be 54.5%** for single-parameter PR changes.
 
 ### Iter 30 — BlueSurge 7th tank: +11.25pp avg (**COMMITTED**)
 **Date:** 2026-04-21
