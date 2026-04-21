@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 34
+2026-04-21 — Iteration 35
 
 ## Current Iteration
-**35** — pending
+**36** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -15,13 +15,14 @@ Red applied the same fix Blue used in iter-7: `new SwarmCoordinator()` per game 
 
 Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree.
 
-## New Baseline (post-Iter-34, 9-tank config, 2×4-seed sweeps)
-- Seed 1000: ~72%  |  Seed 2000: ~75%  |  Seed 3000: ~71%  |  Seed 5000: ~70%
-- **4-seed average: 72%** (consistent across 2 full passes — both runs exactly 72%)
-- Pre-9th-tank baseline (8-tank): Seed1000=64%, Seed2000=62.5%, Seed3000=61.5%, Seed5000=63% → avg 62.75%
-- Pre-8th-tank baseline (7-tank): Seed1000=57%, Seed2000=53%, Seed3000=53%, Seed5000=55% → avg 54.5%
-- Pre-7th-tank baseline (6-tank): Seed1000=42%, Seed2000=49%, Seed3000=40%, Seed5000=42% → avg 43.25%
-- Pre-6th-tank baseline (5-tank): Seed1000=32%, Seed2000=34%, Seed3000=38%, Seed5000=29% → avg 33.25%
+## New Baseline (post-Iter-35, 10-tank config, 2×4-seed sweeps)
+- Seed 1000: ~77.5%  |  Seed 2000: ~74%  |  Seed 3000: ~77.5%  |  Seed 5000: ~80%
+- **4-seed average: 77.25%** (consistent across 2 full passes — both runs exactly 77.25%)
+- Pre-10th-tank baseline (9-tank): avg 72%
+- Pre-9th-tank baseline (8-tank): avg 62.75%
+- Pre-8th-tank baseline (7-tank): avg 54.5%
+- Pre-7th-tank baseline (6-tank): avg 43.25%
+- Pre-6th-tank baseline (5-tank): avg 33.25%
 
 ## Active Configuration
 - BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20 — **DO NOT TOUCH** (MVP multiple seeds)
@@ -33,15 +34,16 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - **BlueSurge: MaxFP=2.5, PR=200, FormationSlot=6→330°, Retreat=0 — 7th tank COMMITTED (Iter 30 win, +11.25pp avg)**
 - **BlueRaider: MaxFP=2.5, PR=200, FormationSlot=7→270°, Retreat=0 — 8th tank COMMITTED (Iter 33 win, +8.25pp avg)**
 - **BlueVanguard: MaxFP=2.5, PR=200, FormationSlot=8→30°, Retreat=0 — 9th tank COMMITTED (Iter 34 win, +9.25pp avg)**
+- **BlueLancer: MaxFP=2.5, PR=200, FormationSlot=9→90°, Retreat=0 — 10th tank COMMITTED (Iter 35 win, +5.25pp avg)**
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
 - Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
 - Wolfpack predicted orbit: orbit point based on `target.Position + VelocityVector * contactAge` — **KEEP** (Iter 16 win, +1.6pp avg)
 - Fallback threshold: 20.0 (was 30.0) — **KEEP** (Iter 11 win, +1.5pp avg)
 - BlueGuard FormationSlot=1 (was 3), BlueSharp FormationSlot=3 (was 1) — **KEEP** (Iter 12 win, +1.3pp avg)
-- **Current slot layout**: Strike(0°) → Vanguard(30°) → Guard(60°) → Rush(120°) → Sharp(180°) → Ecm(240°) → Raider(270°) → Trooper(300°) → Surge(330°) [all at their calibrated PRs]
-- Special angle overrides in ExecuteWolfpack: `slot6→330°, slot7→270°, slot8→30°, others→slot*60°`
-- Dense cluster (240°-30°): Ecm, Raider, Trooper, Surge, Strike, Vanguard — 6 tanks in 150° arc
-- Sparse arc (30°-240°): Guard, Rush, Sharp — 3 tanks with 60° spacing
+- **Current slot layout**: Strike(0°) → Vanguard(30°) → Guard(60°) → Lancer(90°) → Rush(120°) → Sharp(180°) → Ecm(240°) → Raider(270°) → Trooper(300°) → Surge(330°)
+- Special angle overrides: `slot6→330°, slot7→270°, slot8→30°, slot9→90°, others→slot*60°`
+- Dense upper-right (0°-120°): Strike, Vanguard, Guard, Lancer, Rush — 5 tanks, 30° each
+- Sparse left (180°-240°): Sharp, Ecm — 60° gap; tight lower-right (240°-330°): Raider, Trooper, Surge
 
 ## Parallel Mode Baseline (post-Iter-16, OBSOLETE — against buggy Red)
 - Seed 1000: ~86% avg  |  Seed 2000: ~90% avg  |  Seed 3000: ~90.5% avg  |  Seed 4000: ~85.5% avg  |  Seed 5000: ~89.5% avg
@@ -60,15 +62,14 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 35)
+## Next Hypothesis (Iteration 36)
 
-**BlueLancer 10th tank at 90° (filling the Guard-Rush gap)**
+**BlueScout 11th tank at 150° (filling the Rush-Sharp gap)**
 
-5→9 tanks: +10, +11.25, +8.25, +9.25pp — trend shows ~+8-11pp per additional tank.
-Remaining 60° gaps: 60°→120° (Guard-Rush), 120°→180° (Rush-Sharp), 180°→240° (Sharp-Ecm).
-Testing 90° (midpoint of Guard-Rush gap). Slot 9 would be 9×60°=540°=180° (collision with Sharp), so special case slot9→90°.
+Remaining 60° gaps: 120°→180° (Rush-Sharp) and 180°→240° (Sharp-Ecm).
+Testing 150° for slot 10. Slot 10 × 60° = 600° = 240° (collision with Ecm), so special case slot10→150°.
 
-Success criteria: 4-seed avg ≥ 77% (i.e., +5pp from 72% baseline).
+Success criteria: 4-seed avg ≥ 80% (i.e., +2.75pp from 77.25% baseline — returns diminishing).
 
 ---
 
@@ -181,6 +182,16 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 35 — BlueLancer 10th tank: +5.25pp avg (**COMMITTED**)
+**Date:** 2026-04-21
+- **Code changes:** BlueLancerCortex.cs (slot9→90°), BlueLancer.cs (Name="Blue9"), CortexFactory, SwarmCoordinator slot9→90° override
+- **Rationale:** Fills Guard(60°)-Rush(120°) gap at 90°. 10v5 advantage.
+- **Run 1:** Seed 1000: 77%  |  Seed 2000: 74%  |  Seed 3000: 78%  |  Seed 5000: 80% → **avg 77.25%**
+- **Run 2:** Seed 1000: 78%  |  Seed 2000: 74%  |  Seed 3000: 77%  |  Seed 5000: 80% → **avg 77.25%**
+- **Delta: +5.25pp avg** (72% → 77.25%). Consistent. Returns diminishing but still positive.
+- Progression: 5→33.25%, 6→43.25%, 7→54.5%, 8→62.75%, 9→72%, 10→77.25%
+- **COMMITTED**
 
 ### Iter 34 — BlueVanguard 9th tank: +9.25pp avg (**COMMITTED**)
 **Date:** 2026-04-21
