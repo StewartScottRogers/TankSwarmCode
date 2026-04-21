@@ -69,19 +69,29 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 - Fallback=5 (flat vs 10) — 10 is optimal floor
 - 180° arc orbit (-8pp seed 1000, neutral seed 3000) — decisive rejection
 
-### What was tested and refuted vs NEW Blue DLL 52.2% baseline (iters 82-84):
-- PR=171 (-3.5pp seed 1000, marginal noise on 2000/3000) — REFUTED
-- ECMScreen orbit-based positioning: NEUTRAL (52.5% = baseline seed 3000)
-- ECMScreen removal: catastrophic (35% draws). ECMScreen required for radar tracking — REVERTED
-- BlueEcm priority targeting: NEUTRAL (~51.75% vs ~51.5% for same 2 seeds) — REFUTED
-- ECM alert window 20→10 ticks: NEUTRAL (50.5/52.5 = exact baseline seeds 1000/3000)
-- **Conclusion**: ALL ECM-related changes are completely neutral. ECMScreen behavior doesn't affect outcomes.
+### What was tested vs NEW Blue DLL (iters 82-87, baseline 52.2%→53.2% with MaxFP=1.5):
+- PR=171 (-3.5pp seed 1000) — REFUTED. PR=160 remains optimal.
+- PR=155 (-10.5pp seed 1000) — CATASTROPHIC. Below-160 hurts.
+- PR=165 (-2.0pp seed 1000) — REFUTED.
+- ECMScreen orbit-based: NEUTRAL. ECM movement doesn't affect outcomes.
+- ECMScreen removal: CATASTROPHIC (35% draws). ECMScreen required for radar tracking.
+- BlueEcm priority targeting: NEUTRAL (0.0pp avg 2 seeds).
+- ECM alert window 20→10 ticks: NEUTRAL (exact baseline).
+- MaxFP=1.5: ACCEPTED +1.0pp avg (seeds 1000/4000 +3.5/+2.5pp, others flat/marginal).
+- MaxFP=1.0: CATASTROPHIC -10pp seed 1000.
+- Ghost MaxFP=2.0 (others 1.5): NEUTRAL (0.0pp avg 2 seeds). Keep uniform at 1.5.
+- Fallback=5: NEUTRAL (0.0pp avg 2 seeds). Fallback=10 confirmed optimal.
 
-### Open exploration vs new Blue DLL:
-- MaxFP sweep (1.5, 1.0) — Blue's new DLL may be more mobile; lighter bullets might be better
-- PR sweep below 160 (155, 150)
-- Fallback threshold re-sweep (5, 15) vs new Blue
-- Encircle threshold re-sweep
+**CEILING CONFIRMED: 53.2% avg — Wolfpack/MaxFP=1.5 architecture exhausted vs updated Blue DLL.**
+
+### Laws confirmed vs new Blue DLL (MaxFP=1.5, Fallback=10):
+| Parameter | Value | Status |
+|-----------|-------|--------|
+| MaxFP | 1.5 | NEW optimal (was 2.0 vs old Blue; new Blue is more mobile) |
+| PreferredRange | 160 | Confirmed optimal (155 catastrophic, 165 negative) |
+| Fallback threshold | 10.0 | Confirmed optimal (5 neutral) |
+| Ghost MaxFP | 1.5 | Same as others (old 2.0 exception no longer valid) |
+| All ECM params | unchanged | All neutral — ECM handling doesn't affect outcomes |
 
 See Research/iter-0082-blueecm-pr171-newbaseline.md for iter 82-84 details.
 
