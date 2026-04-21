@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 27 complete (Fallback@40 REFUTED; -0.5pp; architecture param space exhausted)
+2026-04-20 — Iteration 28 complete (Ghost ECM REFUTED; 0.0pp neutral; architecture ceiling confirmed 70.2%)
 
 ## Current Iteration
-**28** — pending
+**29** — pending
 
 ## Situation
 
@@ -54,26 +54,44 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 28)
+## Next Hypothesis (Iteration 29)
 
-**Ghost HasEcm=true with EcmMode.Jam (default OffensiveEcmMode).** Currently Ghost has HasEcm=false
-and never activates ECM. When Blue's ECM (BlueEcm) is detected:
-1. Red switches to ECMScreen strategy
-2. Ghost (HasEcm=true) moves to 120px from target and activates EcmMode.Jam (0.5/tick)
-3. Other 4 tanks move to 130px and fire + Burnthrough (0.3/tick)
-4. Ghost's jam corrupts 30% of BlueEcm's radar scans (vs 8% with Burnthrough)
+**Architecture ceiling at 70.2% confirmed.** All parameter knobs exhausted within the current
+Wolfpack/orbit framework. Novel mechanisms required for further gains.
 
-The risk: Ghost loses firing DPS during ECMScreen. The gain: BlueEcm's targeting accuracy drops
-by 30% vs Red tanks, degrading Blue's coordination when ECM is active.
+**Options (ranked by expected impact):**
+1. **AllyStaleTicks tuning (30→20):** Stale contact cutoff in SelectStrategy. At 30 ticks, allies
+   that haven't pinged in 30 ticks are excluded from allyCount. Tightening to 20 makes the swarm
+   coordinate more responsively to recently confirmed allies. Loosening to 45 is more forgiving of
+   ping gaps but might cause slow strategy switches when allies die.
 
-This is NOT JamAndSpoof (the original disaster): Jam keeps Ghost's own radar online and comms working.
-ECMScreen only activates when Blue ECM is detected — so Ghost jamming is reactive, not continuous.
+2. **Mixed-PR formation:** One tank at PR=140 (close anchor) + 3 at PR=160 + Ghost at PR=160.
+   A close-range anchor tank draws fire while others orbit at 160. The anchor fires at higher accuracy
+   (closer range) but takes more damage. If the damage-trade favors Red, this could unlock new gains.
+
+3. **Hammer as dedicated anchor:** Hammer has RetreatEnergyThreshold=25 (vs 20 for others) — it's
+   already configured for a more defensive role. Test Hammer at PR=120 (close anchor, high survival
+   priority) while others stay at 160. The orbit asymmetry might create a pincer-like effect in Wolfpack.
+
+**Top pick:** AllyStaleTicks 30→20. Fastest to test (1-line change), affects coordination responsiveness.
+If allies that "just died" are incorrectly counted (stale data), reducing the window forces faster
+de-registration of dead allies → more accurate allyCount → better strategy selection.
 
 Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 28 — Ghost HasEcm=true EcmMode.Jam (REFUTED 0.0pp, perfectly neutral, 2 seeds)
+**Date:** 2026-04-20
+**Status:** REFUTED. Red 70.25% avg (2-seed) vs 70.25% baseline (0.0pp — exactly neutral).
+- Jam disruption on BlueEcm exactly offset by Ghost's lost DPS + 120px repositioning
+- Ghost energy drained to avg 29-37 (vs ~50 for attack tanks) — ECM Jam drain is real
+- ECMScreen too infrequent to produce measurable effect; Burnthrough already counters BlueEcm
+- **Architecture ceiling confirmed: 70.2% avg is the floor for current Wolfpack framework**
+- Code reverted to HasEcm=false. All parameter dimensions now tested and exhausted.
+- See Research/iter-0028-ghost-hasecm-true-refuted.md for full details
 
 ### Iter 27 — Fallback Threshold 30→40 (REFUTED -0.5pp avg, 2 seeds)
 **Date:** 2026-04-20
