@@ -1,7 +1,7 @@
-using TankSwarmCode.AiCortex.Red.Library;
+using TankSwarmCode.AiCortex.Red.AiCortexes.Library;
 using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.AiCortex.Red;
+namespace TankSwarmCode.AiCortex.Red.AiCortexes;
 
 public sealed class RedBladeCortex : RedCortexBase
 {

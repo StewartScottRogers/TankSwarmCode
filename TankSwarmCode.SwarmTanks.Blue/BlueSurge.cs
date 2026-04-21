@@ -1,4 +1,4 @@
-using TankSwarmCode.AiCortex.Blue.Library;
+using TankSwarmCode.AiCortex.Blue.AiCortexes.Library;
 using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Enums;
 using TankSwarmCode.SwarmTank.Events;

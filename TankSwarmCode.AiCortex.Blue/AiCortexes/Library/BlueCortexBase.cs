@@ -1,11 +1,12 @@
+using TankSwarmCode.AiCortex.Blue.Library;
 using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Enums;
 using TankSwarmCode.SwarmTank.Events;
 using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.AiCortex.Red.Library;
+namespace TankSwarmCode.AiCortex.Blue.AiCortexes.Library;
 
-public abstract class RedCortexBase : IAiCortex
+public abstract class BlueCortexBase : IAiCortex
 {
     protected abstract TankConfiguration TankConfiguration { get; }
 

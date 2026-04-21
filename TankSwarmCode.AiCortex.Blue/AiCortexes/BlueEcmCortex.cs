@@ -1,8 +1,8 @@
-using TankSwarmCode.AiCortex.Blue.Library;
+using TankSwarmCode.AiCortex.Blue.AiCortexes.Library;
 using TankSwarmCode.SwarmTank.Enums;
 using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.AiCortex.Blue;
+namespace TankSwarmCode.AiCortex.Blue.AiCortexes;
 
 public sealed class BlueEcmCortex : BlueCortexBase
 {

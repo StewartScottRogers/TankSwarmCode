@@ -1,13 +1,13 @@
-using TankSwarmCode.AiCortex.Blue.Library;
+using TankSwarmCode.AiCortex.Blue.AiCortexes.Library;
 using TankSwarmCode.SwarmTank.Models;
 
-namespace TankSwarmCode.AiCortex.Blue;
+namespace TankSwarmCode.AiCortex.Blue.AiCortexes;
 
-public sealed class BlueSurgeCortex : BlueCortexBase
+public sealed class BluePhoenixCortex : BlueCortexBase
 {
     protected override TankConfiguration TankConfiguration { get; } = new()
     {
-        FormationSlot = 6,
+        FormationSlot = 11,
         MaxFirePower = 2.5,
         PreferredRange = 200.0,
         HasEcm = false,
