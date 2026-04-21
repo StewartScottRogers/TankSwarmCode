@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 4
+2026-04-20 — Iteration 5
 
 ## Current Iteration
-**5** — pending
+**6** — pending
 
 ## Situation
 **WE ARE DOMINATING.** Blue ~80-87% across seeds (seed 1000 ~80% avg, seed 2000 87%). Iter 3 explored 6 approaches — all regressed. Current config is the optimum found so far.
@@ -18,18 +18,16 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
 - BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
 
-## Next Hypothesis (Iteration 5)
+## Next Hypothesis (Iteration 6)
 
-**Fix the ECM dead code by sending EcmAlert when we detect Ghost in Jam mode.** When a RadarContact for an enemy flickers (present tick N, absent tick N+1 to N+k, then reappears), that gap is consistent with Jam — Ghost disappears from radar during Jam window. If we broadcast EcmAlert on detection of this contact-gap pattern, then `IsEnemyEcmActive()` becomes true, `ECMScreen` activates, and Burnthrough fires for all non-ECM tanks. This gives us an active counter to Ghost's Jam strategy instead of eating the 50% scan drop passively.
+**Target Red's highest-energy tank instead of lowest-energy.** Red Hammer is always the top attacker and accumulates energy from hits — it is typically the highest-energy Red tank. By changing `OrderBy(c => c.Energy).First()` to `OrderByDescending(c => c.Energy).First()` in `RunEpochLogic`, Blue focuses fire on Hammer. Eliminating Hammer first collapses Red's DPS, even though Hammer is harder to kill — the payoff is removing the tank most likely to kill Blue.
 
-The detection mechanism: track each enemy RadarContact's `Timestamp`. If an enemy was seen within 30 ticks but is missing from RadarMap this tick, that's a potential Jam gap. If this happens while other enemies are still visible (so it's not just blind-spot), broadcast EcmAlert.
-
-Implementation target: `BlueCortexBase.cs` or `SwarmCoordinator.cs` — add Jam-gap detection logic to the tick handler. `SwarmCoordinator` already has `EnemyEcmAlertTick` and `HandleEcmAlert()` — we just need a code path that calls it without relying on the incoming SwarmMessage.
+Implementation: one-line change in `SwarmCoordinator.RunEpochLogic`, the priority target selection.
 
 Success criteria:
 - Blue win rate ≥83% at seed 1000 (up from ~80% avg)
 - Blue win rate ≥87% at seed 2000 (maintain)
-- BlueEcm actually Jams at least once per game (observable from rate stats)
+- Red Hammer appears as first kill victim more often in Blue wins
 
 ---
 
@@ -44,6 +42,11 @@ Success criteria:
 - **DO NOT** use aggressive ECM changes — EcmAlert is never sent (dead code), changes just waste energy
 - **DO NOT** extend priority target staleness beyond 30 ticks — tanks fire at dead contacts, drain energy in 25 ticks
 - **DO NOT** lower Encircle threshold — early Encircle lets Red Hammer concentrate fire (68%)
+- **DO NOT** use ECM jam-gap detection to trigger ECMScreen — false positives move all tanks to 130 standoff (56%)
+- **DO NOT** reduce LeadershipEpochTicks below 40 — constant strategy churn, Red decisive wins spike (52%)
+- **DO NOT** change BlueEcm RetreatThreshold from 35 — seed 2000 drops 23pp; seed 2000 is sensitive to BlueEcm behavior
+- **DO NOT** expand VolleyRange beyond 300 — far tanks compute negative fire ticks, volley coordination breaks
+- **DO NOT** add volley fire-tick correction in RunEpochLogic — self-message already corrects leader's fire tick; redundant fix causes double-fire conflicts
 
 ### ECM Dead Code (key insight)
 EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is always false. Consequences:
@@ -84,6 +87,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 5 — Exploration of coordination/ECM knobs (all reverted)
+**Date:** 2026-04-20
+- ECM jam-gap detection (DetectJamGapAndAlert): FAILED (56% seed 1000) — false positives trigger ECMScreen, clusters tanks at 130-unit standoff where Red Hammer concentrates fire
+- LeadershipEpochTicks 40→20: FAILED (52% seed 1000) — constant strategy churn, Red decisive wins spike 3x, tanks never settle on targets
+- BlueEcm RetreatThreshold 35→20: FAILED (64% seed 2000) — seed 1000 within noise (78%) but seed 2000 drops -23pp; seed 2000 sensitive to BlueEcm behavior changes
+- VolleyRange 300→400: FAILED (59%/65%) — far tanks compute negative scheduled fire ticks, volley coordination breaks, shots arrive out of sync
+- Leader volley fire-tick correction: FAILED (77%/44%) — self-message already corrects leader's fire tick; the fix caused double-fire conflicts and added redundant shot
+- **Net result: No change. Guard MaxFP=3.0 config remains optimum. ~80% seed 1000, ~80% seed 2000 (variance: 63-87%).**
 
 ### Iter 4 — 6th Blue tank (BlueTrooper, reverted)
 **Date:** 2026-04-20
