@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 24 complete (MaxFP=1.0 ACCEPTED; new 5-seed avg 70.2%)
+2026-04-20 — Iteration 25 complete (MaxFP=0.5 REFUTED; MaxFP=1.0 confirmed as bullet speed floor)
 
 ## Current Iteration
-**25** — pending
+**26** — pending
 
 ## Situation
 
@@ -54,22 +54,36 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 25)
+## Next Hypothesis (Iteration 26)
 
-**MaxFP gradient: does 1.0→0.5 continue?** At MaxFP=0.5: bullet speed = 20 - 3×0.5 = 18.5 px/tick.
-Travel at PR=160: 160/18.5 = 8.6 ticks (vs 9.4t at 1.0). Damage/shot = 2 (vs 4 at 1.0, -50%).
-The energy mechanics are the same (ratio = 4), so hit rate must more than compensate for halved damage.
+**MaxFP and PR sweeps are complete. MaxFP=1.0 is the bullet speed floor.** Moving to architecture-level
+parameter tuning. Three viable options:
 
-**Top pick:** MaxFP=0.5 for Arrow/Blade/Hammer/Trooper. Ghost stays at 2.0.
-- Quick 2-seed check (seeds 1000+2000); stop early if clearly negative after seed 1000.
-- If regression: 1.0 is the floor; next hypothesis shifts to architecture (Encircle radius, RetreatThreshold).
-- If positive: continue to 5-seed and consider MaxFP=0.1 (Ghost's "sniper" configuration).
+1. **RetreatEnergyThreshold sweep:** Hammer=25, others=20. Test all tanks at 15 for more aggressive
+   fighting. Tanks currently retreat with 15-25 energy remaining; at low MaxFP=1.0, retreat may be
+   triggered too early (each shot costs only 0.5 energy, tanks can fire 30 shots on 15 energy).
+2. **Encircle radius:** ExecuteEncircle uses a fixed 180px radius while Wolfpack uses config.PreferredRange=160.
+   Changing Encircle to also use 160px may improve coherence in late-game 1v1/2v1 scenarios.
+3. **Ghost as ECM disruption:** HasEcm=false for Ghost. Ghost previously had ECM causing energy drain
+   death; re-enabling it with the corrected understanding might disrupt Blue's coordination.
 
-Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline (67.0%+); stop if clearly negative
+**Top pick:** RetreatEnergyThreshold → all tanks at 15. At MaxFP=1.0, each shot costs only 0.5 energy
+(vs 1.0 at MaxFP=2.0). A tank with 15 energy remaining can still fire 30 shots. Current retreat at
+20-25 is too conservative for the low-cost rapid-fire configuration.
+
+Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 25 — MaxFP=0.5 for Arrow/Blade/Hammer/Trooper (REFUTED -6.0pp, 1 seed)
+**Date:** 2026-04-20
+**Status:** REFUTED after 1 seed. Seed 1000: 64.0% vs 70.0% baseline (-6.0pp). Stopped early.
+- Gradient reverses at 0.5: speed improvement (17→18.5 px/tick, +8.8%) cannot offset halved damage
+- MaxFP=1.0 confirmed as the optimal floor for Arrow/Blade/Hammer/Trooper at PR=160
+- Code reverted to MaxFP=1.0. Bullet speed parameter sweep is fully exhausted.
+- See Research/iter-0025-maxfp-0.5-refuted.md for full details
 
 ### Iter 24 — MaxFP=1.0 for Arrow/Blade/Hammer/Trooper (ACCEPTED +3.0pp avg, 5-seed)
 **Date:** 2026-04-20
