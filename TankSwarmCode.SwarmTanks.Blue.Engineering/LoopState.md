@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 13
+2026-04-20 — Iteration 14
 
 ## Current Iteration
-**14** — pending
+**15** — pending
 
 ## Situation
 **DOMINATING AT NEW HIGH.** Blue 85.4% avg across 5 seeds (2 runs each). Red now has a 5th tank "Red4" (MVP, All-in). Iter 10 found 60° Wolfpack angle (+3.6pp). Iter 11 found Fallback threshold 30→20 (+1.5pp). Both committed.
@@ -36,13 +36,11 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 14)
+## Next Hypothesis (Iteration 15)
 
-**Explore BlueEcm/BlueRush slot swap**: BlueEcm (slot 4, 240°, 150px) is Red's most common first kill target (24 first-kills at seed 1000). Its exposure is due to close range (150px), not angle. Swapping slots with BlueRush puts Ecm at slot 2 (120°/150px) and Rush at slot 4 (240°/180px).
+**Try BlueRush MaxFP tuning**: With the new slot layout, BlueRush (slot 2/120°/180px) is in the front-left at 180px — closer range means lower-power shots are more effective anyway. MaxFP=2.5 was kept due to "Rush becomes primary target at 3.0" rule from iter 3. But that was old configuration (72° Wolfpack, no slot swap). With 5 other tanks around it at different angles, Rush might not be as targeted if MaxFP=3.0. HIGH RISK — tried and failed at 58% before.
 
-Effect: Ecm moves to front-left where Guard and Strike provide cover. Rush (MaxFP=2.5, slightly weaker) moves to rear-left at 180px. Both are still exposed but different geometries might reduce Ecm's first-kill rate.
-
-Alternative: try BlueEcm slot 0 swap with Strike — make BlueEcm the leader (slot 0, 0°/150px). Very close frontal approach. Ecm as Kamikaze-leader. Risk: losing BlueStrike as leader (BlueStrike "DO NOT LOWER PR").
+Safer alternative: try the `AllyStaleTicks` constant at 25 instead of 30. Allies expire faster (less leadership instability risk since pings every 15 ticks), enemy contacts expire 5 ticks sooner. This might reduce "firing at stale Ghost contacts" in late game.
 
 Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 
@@ -74,6 +72,10 @@ Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 - **DO NOT** change Wolfpack angle below 60° — 45° and 30° tested: same avg but higher seed variance
 - **DO NOT** lower BlueSharp PR below 300 (at new slot 3/180°) — PR=250 regressed -1.9pp across most seeds
 - BlueRush PR=200 is marginal (+0.8pp) with seed2000 -2.5pp — not worth the trade
+- **DO NOT** swap BlueEcm/BlueRush slots — -2.1pp regression, seed2000 -7pp
+- **DO NOT** increase energy fire factor above 0.1 — 0.12 gave -0.9pp
+- **DO NOT** target closest enemy — -0.7pp, seed2000 -5pp; lowest-energy targeting is optimal
+- BlueTrooper 6th tank at slot5/300°: seed2000 -3pp consistently, overall +0.5pp not significant — consider only with a direct seed2000 mitigation strategy
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
 - **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
 - **Seed 4000 is extremely volatile**: up to 78-96% range in same session for identical config. Require 2+ runs. "DO NOT sacrifice seed4000" rule still applies but single runs unreliable.
@@ -125,6 +127,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 14 — Slot/parameter exploration (all reverted)
+**Date:** 2026-04-20
+- Ecm/Rush slot swap (Ecm→slot2/120°, Rush→slot4/240°): FAILED — 84.6% avg (-2.1pp), seed2000 -7pp. Optimal slot order is locked.
+- Energy fire factor 0.1→0.12: FAILED — 85.8% avg (-0.9pp), seeds 1000+5000 regressed.
+- Closest-enemy targeting: FAILED — 86.0% avg (-0.7pp), seed2000 -5pp. Lowest-energy targeting optimal.
+- BlueTrooper 6th tank (slot 5/300°, PR=200, MaxFP=2.5): MARGINAL — avg 87.2% vs 86.7% (+0.5pp, not significant). Seed2000 -3pp consistently (90%→87%). Seeds 1000+3000 +2.5/+4pp. NOT COMMITTED.
+- Key insight: iter 4 failure was 72°×slot5=360°=0° collision. At 60°, slot5=300° is safe. But seed2000 regression is a real pattern.
+- **Net result: No change. 86.7% is confirmed ceiling at current config.**
 
 ### Iter 13 — PR tuning exploration (all reverted)
 **Date:** 2026-04-20
