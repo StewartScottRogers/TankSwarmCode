@@ -20,6 +20,18 @@ Two swarms of tanks fight in a randomly-generated obstacle arena. Each swarm sha
 
 ---
 
+## Where to Start
+
+| Goal | Start here |
+|------|-----------|
+| Build a custom tank AI | [Chapter 10 — Building Your Own Tank](Documentation/ch10-custom-tank.md) → [Red Engineering](TankSwarmCode.SwarmTanks.Red.Engineering/README.md) |
+| Run balance research / Karpathy Loop | [AutoResearch.md](AutoResearch.md) → [CLI Engineering](TankSwarmCode.Cli.Engineering/README.md) |
+| Understand the system architecture | [Chapter 3 — Architecture](Documentation/ch03-architecture.md) → [Chapter 5 — Tank AI Framework](Documentation/ch05-tank-ai-framework.md) |
+| Look up a specific API or flag | [Chapter 0 — Quick Reference](Documentation/ch00-quick-reference.md) |
+| Browse everything | [Documentation Index](Documentation/TOC.md) |
+
+---
+
 ## Prerequisites
 
 | Requirement | Version |
@@ -97,6 +109,7 @@ TankSwarmCode.slnx
 
 | Chapter | Topic |
 |---|---|
+| [00 — Quick Reference](Documentation/ch00-quick-reference.md) | CLI flags, insight labels, ECM modes, API cheat sheet |
 | [01 — Overview](Documentation/ch01-overview.md) | What is TankSwarmCode, core concepts |
 | [02 — Getting Started](Documentation/ch02-getting-started.md) | Build, run, GUI walkthrough |
 | [03 — Architecture](Documentation/ch03-architecture.md) | Layer diagram, data flow |

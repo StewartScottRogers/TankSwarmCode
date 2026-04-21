@@ -23,7 +23,7 @@ Slot numbers drive formation assignments (encircle angle, pincer group) and lead
 
 ## Swarm Brain Architecture
 
-All Blue tanks inherit from `SwarmTankCortexCradleBase` in `TankSwarmCode.SwarmTank`. The brain handles:
+All Blue tanks use the cortex composition pattern. Each tank is a frozen shell (`SwarmTankBase` subclass in `TankSwarmCode.SwarmTanks.Blue`) that delegates to a `BlueCortexBase` cortex loaded via `CortexFactory`. The shared brain is `SwarmCoordinator` — one instance per `SwarmId`. It handles:
 
 ### Leadership Election
 

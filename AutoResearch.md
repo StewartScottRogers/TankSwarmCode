@@ -50,8 +50,8 @@ Arena size affects ECM effectiveness:
 ```bash
 # Standard 200-match benchmark
 TankSwarmCode.Cli \
-  --bot1 ..\TankSwarmCode.SwarmTanks.Red\bin\Release\net9.0\publish\Red.dll \
-  --bot2 ..\TankSwarmCode.SwarmTanks.Blue\bin\Release\net9.0\publish\Blue.dll \
+  --bot1 TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Red.dll \
+  --bot2 TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/TankSwarmCode.SwarmTanks.Blue.dll \
   --batch 200 --parallel 8 --seed 1000 \
   --on-timeout energy \
   --format table
@@ -82,13 +82,17 @@ Read the summary table bottom-up:
 | Insight | Condition |
 |---|---|
 | ECM | `role == EcmSpecialist` |
-| MVP | highest win-survival in swarm |
+| MVP / Co-MVP | survived in the most (or near-most) decisive wins |
 | Solo carry | soloWins ≥ 3 AND ≥ 20% of swarm wins |
-| All-in | every survival is a win (zero loss-survivals) |
-| Hider | `rate < 3.0` AND non-ECM |
-| Expendable | `winRate < 33%` |
-| Fragile | survived < 10% of matches (≥20 matches) |
-| Linchpin | swarm win rate drops below 20% without this tank |
+| All-in | survives only in wins (never survives a loss), ≥ 5 survivals |
+| Survivor | survives ≥ 5 defeats |
+| Hider | non-ECM tank with combat rate < 3.0/100t |
+| Top attacker | highest energy-gain rate among non-ECM tanks |
+| Glass cannon | top attacker with win-survival rate still below 33% |
+| Expendable | present in wins but survives < 33% of them; not top attacker |
+| Fragile | survival rate < 10% across ≥ 20 matches |
+| Linchpin | swarm win rate drops > 55 pp when this tank is dead |
+| Primary target | first-killed > 1.5× swarm average, ≥ 5 incidents |
 | Balanced | ≥3 co-carriers, leader <50% of swarm wins |
 
 ---

@@ -82,7 +82,7 @@ If code was changed in step 5, update the affected documentation files now. Appl
 | `TankConfiguration` values in any tank | `ch09-builtin-tanks.md` roster table + tank section; Engineering READMEs |
 | New tank class added or removed | `ch09`, `ch01` solution layout, `ch02` Add Tanks walkthrough, Engineering README |
 | `ArenaConstants` values | `ch12-configuration.md`, `ch04-physics-engine.md`, `ch13-ecm-system.md`, `ch14-tank-energy.md` |
-| `SwarmTankCortexCradleBase` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Blue/Red Engineering READMEs |
+| `SwarmCoordinator` strategy logic | `ch09-builtin-tanks.md` Epoch Strategies table; Blue/Red Engineering READMEs |
 | CLI flags or output format | `ch15-cli.md`; Engineering READMEs |
 | `ISwarmTank` / `IArenaContext` interface | `ch05-tank-ai-framework.md`, `ch08-data-models.md` |
 | New `SwarmMessageType` enum value | `ch06-swarm-communication.md` message table |

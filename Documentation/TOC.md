@@ -4,10 +4,27 @@ A Robocode-inspired 2D tank battle simulator built with C# and .NET 10.
 
 ---
 
+## Reading Paths
+
+**Building a custom tank AI**
+→ [ch02 Getting Started](ch02-getting-started.md) → [ch05 Tank AI Framework](ch05-tank-ai-framework.md) → [ch06 Swarm Communication](ch06-swarm-communication.md) → [ch10 Custom Tank](ch10-custom-tank.md)
+
+**Running Karpathy Loop research**
+→ [ch00 Quick Reference](ch00-quick-reference.md) → [ch15 CLI Runner](ch15-cli.md) → [AutoResearch.md](../AutoResearch.md)
+
+**Understanding the system architecture**
+→ [ch01 Overview](ch01-overview.md) → [ch03 Architecture](ch03-architecture.md) → [ch04 Physics](ch04-physics-engine.md) → [ch09 Built-in Tanks](ch09-builtin-tanks.md)
+
+**Looking up a specific system**
+→ [ch00 Quick Reference](ch00-quick-reference.md) covers API, CLI flags, ECM modes, insight thresholds, and config constants on one page
+
+---
+
 ## Table of Contents
 
 | Chapter | Title | Description |
 |---------|-------|-------------|
+| [00](ch00-quick-reference.md) | [Quick Reference](ch00-quick-reference.md) | CLI flags, insight labels, ECM modes, API, config constants — all on one page |
 | [01](ch01-overview.md) | [Project Overview](ch01-overview.md) | What TankSwarmCode is, its goals, and key capabilities |
 | [02](ch02-getting-started.md) | [Getting Started](ch02-getting-started.md) | Building, running, and navigating the application |
 | [03](ch03-architecture.md) | [Architecture Overview](ch03-architecture.md) | Solution structure, project layers, and how subsystems connect |
