@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 28 complete (Ghost ECM REFUTED; 0.0pp neutral; architecture ceiling confirmed 70.2%)
+2026-04-20 — Iteration 29 complete (Hammer PR=120 REFUTED -1.25pp; uniform PR=160 confirmed)
 
 ## Current Iteration
-**29** — pending
+**30** — pending
 
 ## Situation
 
@@ -54,34 +54,31 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 29)
+## Next Hypothesis (Iteration 30)
 
-**Architecture ceiling at 70.2% confirmed.** All parameter knobs exhausted within the current
-Wolfpack/orbit framework. Novel mechanisms required for further gains.
+**Last untested parameter: Hammer RetreatEnergyThreshold 25→20.** All other knobs exhausted.
+Hammer has threshold=25 while all other tanks have 20. The Scatter condition is `allyCount==1 &&
+energy < threshold`. Lowering Hammer's threshold to 20 means Hammer fights 5 more energy-ticks
+in last-tank-alive scenarios before retreating. At MaxFP=1.0 (0.5 energy/shot), 5 energy = 10 more
+shots fired. This could convert a few late-game 1v1 losses into wins.
 
-**Options (ranked by expected impact):**
-1. **AllyStaleTicks tuning (30→20):** Stale contact cutoff in SelectStrategy. At 30 ticks, allies
-   that haven't pinged in 30 ticks are excluded from allyCount. Tightening to 20 makes the swarm
-   coordinate more responsively to recently confirmed allies. Loosening to 45 is more forgiving of
-   ping gaps but might cause slow strategy switches when allies die.
-
-2. **Mixed-PR formation:** One tank at PR=140 (close anchor) + 3 at PR=160 + Ghost at PR=160.
-   A close-range anchor tank draws fire while others orbit at 160. The anchor fires at higher accuracy
-   (closer range) but takes more damage. If the damage-trade favors Red, this could unlock new gains.
-
-3. **Hammer as dedicated anchor:** Hammer has RetreatEnergyThreshold=25 (vs 20 for others) — it's
-   already configured for a more defensive role. Test Hammer at PR=120 (close anchor, high survival
-   priority) while others stay at 160. The orbit asymmetry might create a pincer-like effect in Wolfpack.
-
-**Top pick:** AllyStaleTicks 30→20. Fastest to test (1-line change), affects coordination responsiveness.
-If allies that "just died" are incorrectly counted (stale data), reducing the window forces faster
-de-registration of dead allies → more accurate allyCount → better strategy selection.
+If this also shows no improvement, the architecture ceiling at 70.2% is fully confirmed. The loop
+should record that all accessible parameters within the Wolfpack/orbit framework are optimized.
 
 Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 29 — Hammer PR=120 Mixed Formation (REFUTED -1.25pp avg, 2 seeds)
+**Date:** 2026-04-20
+**Status:** REFUTED. Red 69.0% avg (2-seed) vs 70.25% baseline (-1.25pp — consistent negative).
+- Both seeds exactly 69.0% — signal is real, not variance
+- Mixed orbits fragment Wolfpack coherence; Hammer dies faster without close-range firing benefit
+- All PR configurations now tested: uniform 140/150/160/180 and mixed 120/160 → 160 uniform optimal
+- Code reverted to PR=160 for Hammer. One parameter remaining: Hammer RetreatThreshold 25→20.
+- See Research/iter-0029-hammer-pr120-refuted.md for full details
 
 ### Iter 28 — Ghost HasEcm=true EcmMode.Jam (REFUTED 0.0pp, perfectly neutral, 2 seeds)
 **Date:** 2026-04-20
