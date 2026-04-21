@@ -11,6 +11,8 @@ public sealed class BlueTrooper : SwarmTankBase, ITankContext
     private readonly IAiCortex _cortex;
     private readonly int _slot;
 
+    public BlueTrooper() : this(5) { }
+
     public BlueTrooper(int slot)
     {
         SwarmId = 2;
