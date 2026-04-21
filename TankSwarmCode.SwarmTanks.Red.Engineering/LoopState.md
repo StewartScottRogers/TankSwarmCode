@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 31 complete (Rush priority targeting NEUTRAL; priority targeting law confirmed)
+2026-04-21 — Iteration 32 complete (Encircle→Wolfpack REFUTED -2.0pp; Encircle confirmed correct)
 
 ## Current Iteration
-**32** — pending
+**33** — pending
 
 ## Situation
 
@@ -54,26 +54,41 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 32)
+## Next Hypothesis (Iteration 33)
 
-**Encircle → Wolfpack in cleanup scenarios.** When `allyCount ≥ enemies.Count * 2 AND allyCount ≥ 3`
-(the cleanup condition), replace `SwarmStrategy.Encircle` with `SwarmStrategy.Wolfpack`.
+**ARCHITECTURE FULLY EXHAUSTED.** No accessible parameters remain within the current framework.
+All tested dimensions: MaxFP (all tanks), PR (uniform and mixed), Encircle (radius and strategy),
+Fallback threshold, targeting (weakest-first, Sharp, Rush), ECM (Ghost Jam), Retreat thresholds,
+mixed-PR formations, and strategy routing (Encircle vs Wolfpack in cleanup).
 
-Difference from iter-26 (Encircle radius change):
-- Iter-26: Changed orbit radius from 180→160 within Encircle (same fire gate, same strategy)
-- Iter-32: Replaces Encircle entirely with Wolfpack — removes the 220px fire gate AND changes orbit
+**Novel structural options that have NOT been tested:**
+1. **Adaptive MaxFP by distance**: Fire MaxFP=0.1 when target < 80px (nearly instant at close range),
+   MaxFP=1.0 at normal range. Requires a conditional in ExecuteWolfpack. Genuinely untested mechanism.
 
-Encircle fires only when `distance < 220`. Wolfpack fires immediately (LinearPredictionFire, no gate).
-In a 4v1 or 3v1 cleanup, Wolfpack at 160px fires continuously while approaching; Encircle at 180px
-waits until within 220px before firing. The 220px gate may delay kills in cleanup scenarios.
+2. **Ghost slot reposition**: Ghost at slot 0 (0° from orbit reference, "front" of formation) vs
+   current slot 3 (216°). Slot assignment determines which side of the target Ghost occupies.
+   Ghost's burst damage at 2.0 MaxFP might be more effective at a different angular position.
 
-One-line change: `return SwarmStrategy.Encircle;` → `return SwarmStrategy.Wolfpack;`
+3. **Pincer condition loosening**: Currently `allyCount >= 3 AND enemies.Count <= 2`. The Pincer
+   strategy (two-flank approach at 200px) may be underused. Testing allyCount >= 2 OR enemies.Count
+   <= 3 could activate Pincer earlier and in more scenarios.
 
-Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
+**Top pick:** Adaptive MaxFP (option 1). This is the most novel mechanism — it uses the game's
+physics (bullet speed vs distance) optimally: slow heavy shots at distance, fast light shots close up.
+Requires reading `ctx.State.Position.DistanceTo(target.Position)` in ExecuteWolfpack. Low risk.
 
 ---
 
 ## Iteration Log
+
+### Iter 32 — Encircle→Wolfpack in Cleanup (REFUTED -2.0pp, 1 seed)
+**Date:** 2026-04-21
+**Status:** REFUTED after 1 seed. Seed 1000: 68.0% vs 70.0% (-2.0pp). Stopped early.
+- Encircle's 180px orbit avoids cluster collisions in multi-tank cleanup; 220px gate is not restrictive
+- Wider orbit (180 vs 160) is correct for cleanup scenarios — tank spacing is more important than range
+- Encircle confirmed as optimal cleanup strategy. All strategy routing combinations now tested.
+- **Architecture fully exhausted. 70.2% ceiling is the hard limit for current framework.**
+- See Research/iter-0032-encircle-to-wolfpack-refuted.md for full details
 
 ### Iter 31 — BlueRush Priority Targeting (NEUTRAL 0.0pp avg, 2 seeds)
 **Date:** 2026-04-20
