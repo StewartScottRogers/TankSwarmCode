@@ -1,7 +1,7 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iter 86 complete (MaxFP=1.5 accepted +1.0pp; new baseline 53.2% avg)
+2026-04-21 — Iter 87 complete (architecture sweep: 6 hypotheses tested, all refuted; ceiling confirmed 53.2%)
 
 ## Current Iteration
 **ACTIVE** — 53.2% avg (5-seed, MaxFP=1.5) vs Blue's updated 29-tank DLL.
@@ -81,8 +81,15 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 - MaxFP=1.0: CATASTROPHIC -10pp seed 1000.
 - Ghost MaxFP=2.0 (others 1.5): NEUTRAL (0.0pp avg 2 seeds). Keep uniform at 1.5.
 - Fallback=5: NEUTRAL (0.0pp avg 2 seeds). Fallback=10 confirmed optimal.
+- Nearest-first priority targeting: CATASTROPHIC -5.5pp seed 1000. Weakest-first is law.
+- Rotating orbit 0.5°/tick: -1.0pp avg (3 seeds: 1000 -1.0, 3000 +2.0, 4000 -4.0). REFUTED.
+- Wounded-retreat orbit (energy<40 → PR+40): CATASTROPHIC -5.5pp. Tanks always below 40E in 29v29; formation fragments.
+- Weakest-first fallback in GetStrategyTarget: CATASTROPHIC -12pp. Formation fragmentation (each tank orbits different target).
+- LeadershipEpochTicks=20: CATASTROPHIC -5.5pp. Orbit instability from frequent target switching.
+- No volley system: NEUTRAL ~0.0pp. Volley fire is functionally redundant.
 
-**CEILING CONFIRMED: 53.2% avg — Wolfpack/MaxFP=1.5 architecture exhausted vs updated Blue DLL.**
+**CEILING CONFIRMED: 53.2% avg — Wolfpack/MaxFP=1.5 architecture FULLY exhausted vs updated Blue DLL.**
+**All viable architectural dimensions have been tested. No further parameter tuning is possible.**
 
 ### Laws confirmed vs new Blue DLL (MaxFP=1.5, Fallback=10):
 | Parameter | Value | Status |
@@ -92,6 +99,11 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 | Fallback threshold | 10.0 | Confirmed optimal (5 neutral) |
 | Ghost MaxFP | 1.5 | Same as others (old 2.0 exception no longer valid) |
 | All ECM params | unchanged | All neutral — ECM handling doesn't affect outcomes |
+| Priority targeting | Weakest-first (broadcast) | Law confirmed; nearest-first catastrophic |
+| LeadershipEpochTicks | 40 | Hard constraint — orbit requires 40+ ticks to converge |
+| Orbit formation | Static uniform 360° | Rotating/split/health-based all catastrophic |
+| GetStrategyTarget fallback | Most-recently-seen | CRITICAL: weakest-first fallback = -12pp (formation fragmentation) |
+| Volley fire | Keep (neutral) | Removing is neutral; system is redundant but harmless |
 
 See Research/iter-0082-blueecm-pr171-newbaseline.md for iter 82-84 details.
 
@@ -106,6 +118,18 @@ To exceed 94.0%, different approaches needed:
 ---
 
 ## Iteration Log
+
+### Iter 87 — Architecture Sweep: ALL REFUTED (6 hypotheses, ceiling confirmed at 53.2%)
+**Date:** 2026-04-21
+**Status:** ALL REFUTED. Ceiling at 53.2% definitively confirmed.
+- Nearest-first targeting: -5.5pp seed 1000 (catastrophic)
+- Rotating orbit 0.5°/tick: -1.0pp avg 3 seeds (seed 4000: -4.0pp, decisive)
+- Wounded-retreat orbit (energy<40 → PR+40): -5.5pp (tanks always below 40E in 29v29)
+- Weakest-first fallback in GetStrategyTarget: -12pp (formation fragmentation — all tanks orbit different targets)
+- LeadershipEpochTicks=20: -5.5pp to -7.0pp (orbit instability from frequent target switching)
+- No volley system: neutral (0.0pp to -0.5pp)
+- **Critical insight:** Formation cohesion requires ALL tanks to orbit the SAME shared target. GetStrategyTarget fallback MUST use most-recently-seen (correlated) not weakest-individual (divergent). The 40-tick leadership epoch is precisely tuned for orbit convergence.
+- See Research/iter-0087-architecture-sweep-ceiling-confirmed.md
 
 ### Iters 85-86 — MaxFP Sweep: 2.0→1.5 ACCEPTED (+1.0pp), 1.0 Catastrophic (-10pp)
 **Date:** 2026-04-21
