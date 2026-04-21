@@ -87,6 +87,7 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 - Weakest-first fallback in GetStrategyTarget: CATASTROPHIC -12pp. Formation fragmentation (each tank orbits different target).
 - LeadershipEpochTicks=20: CATASTROPHIC -5.5pp. Orbit instability from frequent target switching.
 - No volley system: NEUTRAL ~0.0pp. Volley fire is functionally redundant.
+- Rank-based orbit assignment (fix slot%aliveCount collision bug): NEUTRAL -0.7pp avg 5-seed (within noise, std err ±1.66pp). Collision bug is real but has negligible practical impact.
 
 **CEILING CONFIRMED: 53.2% avg — Wolfpack/MaxFP=1.5 architecture FULLY exhausted vs updated Blue DLL.**
 **All viable architectural dimensions have been tested. No further parameter tuning is possible.**
@@ -129,6 +130,7 @@ To exceed 94.0%, different approaches needed:
 - LeadershipEpochTicks=20: -5.5pp to -7.0pp (orbit instability from frequent target switching)
 - No volley system: neutral (0.0pp to -0.5pp)
 - **Critical insight:** Formation cohesion requires ALL tanks to orbit the SAME shared target. GetStrategyTarget fallback MUST use most-recently-seen (correlated) not weakest-individual (divergent). The 40-tick leadership epoch is precisely tuned for orbit convergence.
+- Rank-based orbit (fix `slot%aliveCount` collision bug): NEUTRAL -0.7pp 5-seed avg (noise). Real bug with negligible practical effect.
 - See Research/iter-0087-architecture-sweep-ceiling-confirmed.md
 
 ### Iters 85-86 — MaxFP Sweep: 2.0→1.5 ACCEPTED (+1.0pp), 1.0 Catastrophic (-10pp)
