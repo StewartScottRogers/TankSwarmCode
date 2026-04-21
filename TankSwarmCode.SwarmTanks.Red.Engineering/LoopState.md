@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iter 89 complete (gun-tracks-radar during Scout ACCEPTED +1.9pp; 53.2% avg recovered)
+2026-04-21 — Iter 90 complete (stale-contact lead correction REFUTED -11pp seed 1000; reverted)
 
 ## Current Iteration
-**ACTIVE** — 53.2% avg (5-seed, MaxFP=1.5, gun-tracks-radar in Scout) vs Blue's updated 29-tank DLL.
+**HOLDING** — 53.2% avg (5-seed, MaxFP=1.5, gun-tracks-radar in Scout) vs Blue's updated 29-tank DLL.
 
 ## Situation
 
@@ -95,8 +95,11 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 - Rank-based orbit assignment (fix slot%aliveCount collision bug): NEUTRAL -0.7pp avg 5-seed (within noise, std err ±1.66pp). Collision bug is real but has negligible practical impact.
 - **Iter 88 — Radial breathing orbit (±20px, T=80 ticks): CATASTROPHIC -9.5pp seed 1000 (58.0% → 48.5%).** Moving orbit point desyncs `LeadershipEpochTicks=40` convergence AND mis-aligns Red's own firing (gun solution computed per-tick but bullet departs from post-movement position). Orthogonal to rotating orbit but same root failure: fire-control requires stationary shooter.
 - **Iter 89 — Gun-tracks-radar during Scout: ACCEPTED +1.9pp avg 5-seed.** Recovered 53.2% avg vs fresh 51.3% baseline. First-kill Red-victim rate dropped on 3/4 measured seeds (42→39, 32→30, 40→38). Mechanism: during Scout phase, gun rotated to match radar heading instead of sitting at body heading, saving up to 9 ticks of gun-swing latency on first-target acquisition. Seed 3000 decisive +11pp; seed 5000 mild regression -3pp within noise.
+- **Iter 90 — Stale-contact lead correction in LinearPredictionFire: CATASTROPHIC -11pp seed 1000.** Added `observationAge = tickNumber - target.Timestamp` to extrapolate current position before computing travelTime. Reason for failure: Blue's DLL turns frequently. Stale VelocityVector projected over `observationAge + travelTime` (up to 15 ticks) aims ahead of the target's actual path. The existing code's "ignore observationAge" implicitly shrinks lead, producing less error when velocity direction is stale. Reverted. **New law: extrapolation beyond travelTime is harmful when target turn rate is non-negligible.** Analogous to iter 15's velocity-led-orbit-prediction refutation.
 
 **NEW LAW: Scout must pre-aim gun via radar.** Gun turn rate (20°/tick) is less than radar turn rate (45°/tick); without pre-aim, gun lags radar by up to 9 ticks when first target appears.
+
+**NEW LAW (iter 90): LinearPredictionFire must NOT extrapolate beyond bullet travelTime.** Adding observationAge × VelocityVector is catastrophic (-11pp seed 1000) because Blue's DLL turns frequently and stale velocity points in the wrong direction. Existing "use target.Position as if fresh" behavior is implicit shrinkage and acts as a safer lead model.
 
 **CEILING: 53.2% avg — Wolfpack/MaxFP=1.5 architecture at ceiling vs updated Blue DLL, with Scout gun-pre-aim.**
 
@@ -127,6 +130,17 @@ To exceed 94.0%, different approaches needed:
 ---
 
 ## Iteration Log
+
+### Iter 90 — Stale-Contact Lead Correction (REFUTED -11pp seed 1000)
+**Date:** 2026-04-21
+**Status:** REFUTED. Red 45% (90/200) seed 1000 vs 56% baseline (-11pp decisive). Stopped after 1 seed.
+**Branch:** research/iter-90-stale-lead-correction
+- Hypothesis: `LinearPredictionFire` under-leads stale RadarShare contacts. Fix: advance target.Position by `VelocityVector × (tickNumber - target.Timestamp)` before computing travelTime lead.
+- Refuted: Blue's DLL turns frequently. Stale velocity extrapolated over `observationAge + travelTime` (up to 15 ticks) points in wrong direction when target changes heading.
+- Existing "ignore observationAge" behavior is implicit shrinkage — produces less error when velocity direction is unreliable.
+- **New law:** LinearPredictionFire must NOT extrapolate beyond travelTime. Turning targets make aggressive lead counterproductive.
+- Analogous to iter 15's velocity-led-orbit-prediction refutation (-3.7pp).
+- See Research/iter-0090-stale-lead-correction-refuted.md
 
 ### Iter 89 — Gun-Tracks-Radar During Scout (ACCEPTED +1.9pp avg, 5-seed)
 **Date:** 2026-04-21
