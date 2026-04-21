@@ -1,15 +1,24 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 21
+2026-04-20 — Iteration 22
 
 ## Current Iteration
-**22** — pending
+**23** — pending
 
 ## Situation
-**NEW HIGH: 88.3% avg.** Iter 16 found predicted orbit points (+1.6pp). Blue now uses target velocity to predict where target will be when navigating to orbit position. All 5 seeds improved consistently. Red's 5th tank "Red4" is their MVP. Previous ceiling 86.7% broken.
+**CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
 
-Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree. Seed 4000 is the most volatile (78-96% range for same config in same session).
+Red applied the same fix Blue used in iter-7: `new SwarmCoordinator()` per game instead of `ForTeam()` static registry. With proper coordination, Red's Arrow/Hammer dominate.
+
+**All "DO NOT" constraints are provisional** — they were calibrated against a Red winning only 16%. Re-test before treating as hard limits.
+
+Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree.
+
+## New Baseline (post-Red-fix, PR=150 Blue config)
+- Seed 1000: ~36%  |  Seed 2000: ~35%  |  Seed 3000: ~38%  |  Seed 5000: ~38%
+- **4-seed average: ~37%** (1 run each; requires 2+ runs for reliable estimate)
+- Prior 88.3% baseline is obsolete — was against buggy Red winning only 16%
 
 ## Active Configuration
 - BlueSharp: MaxFP=3.0, PR=300, FormationSlot=1, Retreat=20 — **DO NOT TOUCH** (MVP both seeds)
@@ -24,10 +33,10 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - BlueGuard FormationSlot=1 (was 3), BlueSharp FormationSlot=3 (was 1) — **KEEP** (Iter 12 win, +1.3pp avg)
 - **Current slot layout**: Strike(0°,250px) → Guard(60°,200px) → Rush(120°,180px) → Sharp(180°,300px) → Ecm(240°,150px)
 
-## Parallel Mode Baseline (post-Iter-16, 2×200 games each)
+## Parallel Mode Baseline (post-Iter-16, OBSOLETE — against buggy Red)
 - Seed 1000: ~86% avg  |  Seed 2000: ~90% avg  |  Seed 3000: ~90.5% avg  |  Seed 4000: ~85.5% avg  |  Seed 5000: ~89.5% avg
-- **5-seed average: ~88.3%** (avg of 2 full 5-seed sweeps)
-- Note: 10-20pp run-to-run variance. Seed 4000 showed 78-96% range in same session. Require 2+ runs to confirm changes.
+- **5-seed average: ~88.3%** — OBSOLETE. Red was winning only 16% in parallel mode (static registry bug).
+- After Red's iter-17 fix: Red wins ~64%. Blue now wins ~36%. All prior baselines discard.
 
 ## Parallel Mode Baseline (post-Iter-12, 2×200 games each)
 - Seed 1000: ~86.5% avg  |  Seed 2000: ~91% avg  |  Seed 3000: ~86% avg  |  Seed 4000: ~84% avg  |  Seed 5000: ~86% avg
@@ -41,18 +50,13 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 22)
+## Next Hypothesis (Iteration 23)
 
-**Architecture ceiling confirmed.** After thorough analysis:
-1. AllyPing position-sharing won't work: positions are 15-tick stale (max 1500px drift at speed 100). Too stale for orbit coordination.
-2. The slot-based angle system already provides each tank a unique 60° sector.
-3. All navigation, timing, and configuration parameters are empirically optimized.
+**BlueGuard MaxFP 3.0 → 4.0** — the biggest prior gain in all research was Guard MaxFP 2.0→3.0 (+15pp seed 1000, iter 2). Extending this to 4.0 is the most promising untested direction. BlueGuard is consistently top attacker (Rate/100t ~21). At PR=200, power 4.0 gives 18 energy damage/hit vs 14 at 3.0. Risk: slower bullets (8 px/tick vs 11) may reduce accuracy at 200px range. Worth testing given new lower baseline of 36%.
 
-**No new hypotheses.** Unless Red significantly improves, or a fundamentally different AI architecture (e.g., path prediction with waypoints, evasion routines, communication protocol redesign) is implemented, 88.3% is the ceiling.
+Also consider testing 5.0 in same iteration (run both quickly).
 
-**If Red improves** (changing their tanks), re-run baseline and reassess which Blue parameters remain optimal.
-
-Success criteria: 5-seed average ≥90% (2+ run confirmation required).
+Success criteria: any of seeds 1000/2000/3000/5000 ≥ 40% (baseline ~36-38%). Confirm with 2+ runs.
 
 ---
 
@@ -156,6 +160,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 22 — BlueEcm PR=171 REFUTED + Red parallel mode fix discovered
+**Date:** 2026-04-20
+- **Hypothesis:** BlueEcm PR 150→171 — test whether seed 3000 specifically has different response than the 165 failure (-2.7pp in iter 20)
+- **Result (PR=171, seed 3000):** Blue 34% vs Red 66% — approximately -4pp vs PR=150 baseline of 38%. Consistent with all ECM PR changes hurting. PR=150 confirmed optimal.
+- **CRITICAL DISCOVERY:** Red fixed their parallel mode static registry bug (their iter-17, commit d9cb5c0). Same fix as Blue's iter-7. Red's win rate jumped from 16% to 63.5% in parallel mode. Blue's entire 77%→88.3% research history was conducted against a Red winning only 16%.
+- **New 4-seed baseline (fixed Red, PR=150 Blue):** Seed 1000: 36% | Seed 2000: 35% | Seed 3000: 38% | Seed 5000: 38% — **avg ~37%**
+- **New Red insights (fixed Red):** Arrow and Hammer are co-MVP. RedBlade is Top Attacker. All 5 Red tanks now coordinate properly with Wolfpack/Pincer/Encircle strategies.
+- **BlueEcm vulnerability:** Consistently Red's #1 first-kill target across all seeds (25-30 first kills/200 games). At PR=150 (closest Blue tank), easy to target.
+- **Key asymmetry:** Blue gets first kill 54-60% of games but wins only 21-31% of those. Red gets first kill 40-46% of games and wins 47-51% of those. Post-first-kill Blue loses because Red's 4-tank swarm outfights Blue's 5-tank swarm (coordination advantage).
+- **Net result:** No code committed. PR=150 confirmed. New baseline ~37%. Need to close 27pp gap against fixed Red. All prior "DO NOT" constraints are provisional.
 
 ### Iter 21 — Architecture ceiling analysis (no code changes)
 **Date:** 2026-04-20
