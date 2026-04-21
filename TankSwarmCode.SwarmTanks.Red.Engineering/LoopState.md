@@ -53,7 +53,20 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## LOOP STATUS: ACTIVE (57.6% — continuing optimization)
+## LOOP STATUS: CEILING CONFIRMED (57.6% — Wolfpack architecture exhausted vs current Blue DLL)
+
+### What was tested and refuted (iter 48):
+- Encircle: 1.5x threshold (-1pp), disabled (-12pp), orbit 160 (-1.5pp) — all rejected
+- PR=140 (-6pp seed 1000), PR=180 (neutral) — 160 confirmed optimal with MaxFP=2.0
+- MaxFP=2.5 (-10pp), 3.0 (-13pp) — 2.0 is sharp peak
+- Red29/30th tank (-0.5pp) — 29 tanks is ceiling
+- Ghost PR=100 (+0.4pp noise) — not actionable
+- Centroid orbit (-1.5pp) — uniform 360° optimal
+- Per-tank targeting (-3pp) — coordinated weakest-first critical
+- Fallback=5 (flat vs 10) — 10 is optimal floor
+
+To exceed 57.6%: need architectural innovation or Blue DLL update.
+See Research/iter-0048-ceiling-analysis.md for full analysis.
 
 **94.0% avg (5-seed) is the ceiling for numerical superiority at 28 tanks vs Blue 12.**
 
