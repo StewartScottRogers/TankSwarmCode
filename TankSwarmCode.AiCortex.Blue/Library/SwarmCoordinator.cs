@@ -205,7 +205,7 @@ public sealed class SwarmCoordinator
         if (ctx.State.Energy < config.RetreatEnergyThreshold && allyCount == 1)
             return SwarmStrategy.Scatter;
 
-        if (sumEnergy / allyCount < 20.0)
+        if (sumEnergy / allyCount < 10.0)
             return SwarmStrategy.Fallback;
 
         if (enemies.Count == 0)

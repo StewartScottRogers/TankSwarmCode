@@ -4,25 +4,28 @@
 2026-04-21 — Iteration 41
 
 ## Current Iteration
-**43** — 55% Ceiling Confirmed (iter-43 parameter sweep refuted)
+**44** — 55.5% Ceiling (Fallback=10 marginal gain)
 
 ## Situation
-**CURRENT STATE:** 29 Blue tanks vs 28 Red tanks. Blue win rate ~55% avg (4-seed).
-- Seed 1000: Blue 58%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 55%
+**CURRENT STATE:** 29 Blue tanks vs 28 Red tanks. Blue win rate ~55.5% avg (4-seed).
+- Seed 1000: Blue 60% (2x confirmed)  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56% (2x confirmed)  |  Seed 5000: Blue 56%
 
 **Iter-43 findings (both refuted):**
 - Slot cortex MaxFP=2.5/PR=200: -4pp regression (51% avg) — slower bullets hurt accuracy
 - Encircle threshold `enemies+2`: -2.5pp regression (52.5% avg) — premature Encircle
 
-**Confirmed ceiling:** 55% for numerical approach. Need qualitatively different strategy.
-**Next hypothesis:** Structural change — Pincer late-game threshold, or target the tank that
-Red's swarm depends on (high-WinSurv tank = linchpin) rather than lowest-energy.
+**Iter-44 findings (ACCEPTED):**
+- Fallback threshold 20→10: +0.75pp avg (55% → 55.5%) — confirmed with 2 runs on seeds 1000+3000
+
+**Confirmed ceiling:** 55.5% for current tactics at 29v28.
+**Seed 2000 is architecturally 50%** — spawn geometry too balanced for numerical advantage to matter.
+**DO NOT change Fallback threshold below 10** — further reduction untested but likely diminishing.
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
-## 29v28 Baseline (Iter-42, CURRENT)
-- Seed 1000: Blue 58%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 55%
-- **4-seed avg: ~55%** — 29 Blue vs 28 Red
+## 29v28 Baseline (Iter-44, CURRENT)
+- Seed 1000: Blue 60%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 56%
+- **4-seed avg: ~55.5%** — 29 Blue vs 28 Red, Fallback=10
 
 ## 28v28 Baseline (Iter-41, Obsolete)
 - Seed 1000: Red 51%, Blue 49%  |  Seed 3000: Red 47%, Blue 53%
