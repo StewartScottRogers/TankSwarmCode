@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 21 complete (BlueSharp priority targeting REFUTED; -0.3pp, neutral)
+2026-04-20 — Iteration 22 complete (PR=140 REFUTED; -4.5pp; PR=160 confirmed optimal)
 
 ## Current Iteration
-**22** — pending
+**23** — pending
 
 ## Situation
 
@@ -50,23 +50,30 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 22)
+## Next Hypothesis (Iteration 23)
 
 **Primary options:**
-1. PR=140 for all tanks (closer orbit: faster bullet travel at 140 vs 160 → better hit rate)
-2. PR=150 for all tanks (midpoint test)
-3. Ghost PR=140 inner orbit only (Ghost at 2.0 benefits from closer range; others stay at 160)
-4. Retreat threshold tuning (Hammer=25 vs others=20; does Hammer's higher threshold help or hurt?)
+1. PR=150 (midpoint — maybe 140 too close, 160 not close enough; test 150 as midpoint)
+2. PR=180 (further orbit — less return fire, slower bullets, longer engagement range)
+3. Ghost PR=140 inner orbit only (Ghost at MaxFP=2.0 at 140 → 10.0t travel, similar to others)
+4. Retreat threshold tuning (Hammer=25 vs others=20; is aggressive retreat better/worse?)
+5. All tanks PR=170 or 180 (further out, less return fire)
 
-**Top pick:** PR=140 for all tanks. With MaxFP=1.5, bullet speed = 20 - 3×1.5 = 15.5 px/tick.
-At PR=160: 160/15.5 = 10.3 ticks travel. At PR=140: 140/15.5 = 9.0 ticks (-13% travel time).
-Faster bullet arrival = better hit rate vs mobile Blue tanks. Risk: tanks take more return fire.
+**Top pick:** PR=150 for all tanks. PR=160 is optimal and PR=140 is -4.5pp. PR=150 is the midpoint —
+fast 3-seed test to confirm 160 is truly optimal or find a slight gain.
 
-Success criteria: Red 5-seed avg increases by ≥2pp (from 67.2% to ≥69.2%)
+Success criteria: Red 3-seed avg changes by ≥2pp vs baseline; stop test if signal is clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 22 — PR=140 for All Tanks (REFUTED -4.5pp, 2 seeds)
+**Date:** 2026-04-20
+**Status:** REFUTED after 2 seeds. Seed 1000: -4.5pp, seed 2000: -4.5pp — consistent clear signal.
+- Closer orbit at 140 hurts more than bullet speed gain helps; PR=160 confirmed optimal
+- Orbit radius and MaxFP are coupled; disrupting one breaks the equilibrium
+- See Research/iter-0022-pr-140-refuted.md for full details
 
 ### Iter 21 — BlueSharp Priority Targeting (REFUTED -0.3pp avg, neutral)
 **Date:** 2026-04-20
