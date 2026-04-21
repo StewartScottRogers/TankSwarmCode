@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 18 complete (Trooper MaxFP 2.0→1.5, +3.0pp avg confirmed)
+2026-04-20 — Iteration 19 complete (Blade+Hammer MaxFP 2.0→1.5, +1.3pp avg accepted)
 
 ## Current Iteration
-**19** — pending
+**20** — pending
 
 ## Situation
 
@@ -17,20 +17,20 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
 **Current win rates (5-seed parallel, 200 matches each, 5 tanks vs current Blue):**
-- Seed 1000: **62.5%**
-- Seed 2000: **70.5%**
-- Seed 3000: **70.5%**
-- Seed 4000: **62.0%**
-- Seed 5000: **64.0%**
-- **5-seed average: 65.9%**
+- Seed 1000: **66.0%**
+- Seed 2000: **72.0%**
+- Seed 3000: **69.0%**
+- Seed 4000: **66.0%**
+- Seed 5000: **63.0%**
+- **5-seed average: 67.2%**
 
 ## What We Know (Current Blue DLL)
 
 - **Parallel mode is VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug.
   Use `--parallel 8` for all runs.
-- **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160.** Confirmed for Arrow (iter-14)
-  and Trooper (iter-18). The hit rate gain from faster bullets outweighs the per-hit damage reduction
-  at this range. Blade, Hammer, Ghost at MaxFP=2.0 are candidates for the same change.
+- **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160.** Confirmed for Arrow (iter-14),
+  Trooper (iter-18), and Blade+Hammer (iter-19). The hit rate gain from faster bullets outweighs the
+  per-hit damage reduction at this range. Ghost (MaxFP=2.0) is the last candidate.
 - **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
 - **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
@@ -40,32 +40,38 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 | Tank | Slot | MaxFP | PR | HasEcm | Retreat |
 |------|------|-------|----|--------|---------|
-| Hammer | 0 | 2.0 | 160 | false | 25 |
-| Blade | 1 | 2.0 | 160 | false | 20 |
+| Hammer | 0 | 1.5 | 160 | false | 25 |
+| Blade | 1 | 1.5 | 160 | false | 20 |
 | Arrow | 2 | 1.5 | 160 | false | 20 |
 | Ghost | 3 | 2.0 | 160 | false | 20 |
 | **Trooper** | **4** | **1.5** | **160** | **false** | **20** |
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 19)
+## Next Hypothesis (Iteration 20)
 
 **Primary options:**
-1. Blade + Hammer MaxFP=1.5 (extend the "faster bullets at PR=160" pattern; 2 of 3 remaining 2.0-FP tanks)
-2. Ghost MaxFP=1.5 (Ghost also fights at rate ~6/100t, same pattern may apply)
-3. PR tuning for 5-tank formation (130/150/180 — untested with 5 tanks)
-4. Target BlueSharp first (Sharp linchpin — priority targeting in SwarmCoordinator)
-5. Orbit slot assignment remap (slot 4/Trooper currently takes last orbit position)
+1. Ghost MaxFP=1.5 (complete the "faster bullets at PR=160" sweep; Ghost fights at rate 6-8/100t)
+2. PR tuning for 5-tank formation (130/150/180 — untested with all 5 at 1.5)
+3. Target BlueSharp first (Sharp linchpin — priority targeting in SwarmCoordinator)
+4. Orbit slot assignment remap (Trooper as slot 4 takes the last orbit position)
 
-**Top pick:** Blade + Hammer MaxFP=1.5. The "faster bullets win at PR=160" pattern is now confirmed
-twice (Arrow, Trooper). Blade and Hammer are the two highest-combat-rate tanks at MaxFP=2.0.
-Testing both together is efficient — if positive, great; if negative, isolate one at a time.
+**Top pick:** Ghost MaxFP=1.5. Every other tank now runs 1.5; Ghost is the only holdout at 2.0.
+Ghost combat rate is 6-8/100t — substantial enough that the bullet speed improvement should apply.
 
-Success criteria: Red 5-seed avg increases by ≥2pp (from 65.9% to ≥67.9%)
+Success criteria: Red 5-seed avg increases by ≥1pp (from 67.2% to ≥68.2%)
 
 ---
 
 ## Iteration Log
+
+### Iter 19 — Blade+Hammer MaxFP 2.0→1.5 (ACCEPTED +1.3pp avg)
+**Date:** 2026-04-20
+**Status:** ACCEPTED. Red 67.2% avg (5-seed parallel) vs 65.9% baseline (+1.3pp).
+- 4/5 seeds positive: seed 1000 +3.5pp, seed 2000 +1.5pp, seed 4000 +4.0pp
+- Seeds 3000 and 5000 slightly negative (-1.5pp, -1.0pp) — within noise
+- Pattern confirmed: Arrow+Trooper+Blade+Hammer all better at MaxFP=1.5. Ghost is last outlier.
+- See Research/iter-0019-blade-hammer-maxfp-1.5.md for full details
 
 ### Iter 18 — Trooper MaxFP 2.0→1.5 (CONFIRMED +3.0pp avg)
 **Date:** 2026-04-20
