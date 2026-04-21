@@ -9,8 +9,8 @@ public sealed class BlueEcmCortex : BlueCortexBase
     protected override TankConfiguration TankConfiguration { get; } = new()
     {
         FormationSlot = 4,
-        MaxFirePower = 5.0,
-        PreferredRange = 150.0,
+        MaxFirePower = 2.0,
+        PreferredRange = 160.0,
         HasEcm = true,
         OffensiveEcmMode = EcmMode.Jam,
         RetreatEnergyThreshold = 35.0
