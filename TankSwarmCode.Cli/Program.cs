@@ -127,22 +127,22 @@ return 0;
 
 static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTicks, double width, double height, string timeoutPolicy)
 {
-    var engine = new ArenaEngine(width, height, seed);
+    var arenaEngine = new ArenaEngine(width, height, seed);
 
-    LoadTanks(bot1Dll, swarmId: 1).ForEach(engine.AddTank);
-    LoadTanks(bot2Dll, swarmId: 2).ForEach(engine.AddTank);
+    LoadTanks(bot1Dll, swarmId: 1).ForEach(arenaEngine.AddTank);
+    LoadTanks(bot2Dll, swarmId: 2).ForEach(arenaEngine.AddTank);
 
-    engine.Start();
+    arenaEngine.Start();
 
     // Track net damage absorbed per tank: sum of per-tick energy losses.
     // Understates slightly when a tank simultaneously takes damage AND gains
     // energy return from a hit (those two are netted in the same tick snapshot).
-    var damageTaken  = engine.Tanks.ToDictionary(t => t.Name, _ => 0.0);
-    var energyGained = engine.Tanks.ToDictionary(t => t.Name, _ => 0.0);
-    var prevEnergy   = engine.Tanks.ToDictionary(t => t.Name, t => t.State.Energy);
-    engine.TickCompleted += (_, _) =>
+    var damageTaken  = arenaEngine.Tanks.ToDictionary(t => t.Name, _ => 0.0);
+    var energyGained = arenaEngine.Tanks.ToDictionary(t => t.Name, _ => 0.0);
+    var prevEnergy   = arenaEngine.Tanks.ToDictionary(t => t.Name, t => t.State.Energy);
+    arenaEngine.TickCompleted += (_, _) =>
     {
-        foreach (var t in engine.Tanks)
+        foreach (var t in arenaEngine.Tanks)
         {
             double delta = t.State.Energy - prevEnergy[t.Name];
             if (delta < 0) damageTaken[t.Name]  += -delta;
@@ -151,12 +151,12 @@ static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTi
         }
     };
 
-    while (engine.IsRunning && engine.TickNumber < maxTicks)
-        engine.Tick();
+    while (arenaEngine.IsRunning && arenaEngine.TickNumber < maxTicks)
+        arenaEngine.Tick();
 
-    bool timedOut = engine.IsRunning;
+    bool timedOut = arenaEngine.IsRunning;
 
-    var swarmsSurviving = engine.Tanks
+    var swarmsSurviving = arenaEngine.Tanks
         .Where(t => t.State.IsAlive)
         .Select(t => t.SwarmId)
         .Distinct()
@@ -167,7 +167,7 @@ static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTi
     // Apply timeout policy when the match hit max-ticks with multiple survivors
     if (timedOut && winnerId is null && timeoutPolicy != "draw")
     {
-        var living = engine.Tanks.Where(t => t.State.IsAlive).ToList();
+        var living = arenaEngine.Tanks.Where(t => t.State.IsAlive).ToList();
         if (timeoutPolicy == "energy")
         {
             double e1 = living.Where(t => t.SwarmId == 1).Sum(t => t.State.Energy);
@@ -182,7 +182,7 @@ static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTi
         }
     }
 
-    var tanks = engine.Tanks
+    var tanks = arenaEngine.Tanks
         .Select(t => new TankResult(t.Name, t.SwarmId, t.Role.ToString(),
                                     t.State.IsAlive, Math.Round(t.State.Energy, 2),
                                     t.State.DestroyedAtTick,
@@ -201,7 +201,7 @@ static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTi
         .Select(t => (long?)t.destroyed_at_tick)
         .Min();
 
-    return new MatchResult(winnerId, engine.TickNumber, timedOut, s1, s2, s1Energy, s2Energy, s1Names, s2Names, firstKill, tanks);
+    return new MatchResult(winnerId, arenaEngine.TickNumber, timedOut, s1, s2, s1Energy, s2Energy, s1Names, s2Names, firstKill, tanks);
 }
 
 static List<ISwarmTank> LoadTanks(string dllPath, int swarmId)

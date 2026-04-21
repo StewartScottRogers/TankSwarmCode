@@ -222,11 +222,11 @@ public sealed class ArenaEngine : IArena
 
         // 11.5. Rebuild ghost echo list for the renderer
         var ghosts = new List<(Vector2D, int)>();
-        foreach (TankRuntimeState rts in RuntimeTanks)
+        foreach (TankRuntimeState tankRuntimeState in RuntimeTanks)
         {
-            if (!rts.IsAlive || (rts.ActiveEcm != EcmMode.Spoof && rts.ActiveEcm != EcmMode.JamAndSpoof)) continue;
-            foreach ((double gx, double gy, double _, double _) in rts.GhostPositions)
-                ghosts.Add((new Vector2D(gx, gy), rts.Tank.SwarmId));
+            if (!tankRuntimeState.IsAlive || (tankRuntimeState.ActiveEcm != EcmMode.Spoof && tankRuntimeState.ActiveEcm != EcmMode.JamAndSpoof)) continue;
+            foreach ((double gx, double gy, double _, double _) in tankRuntimeState.GhostPositions)
+                ghosts.Add((new Vector2D(gx, gy), tankRuntimeState.Tank.SwarmId));
         }
         ActiveGhostEchoes = ghosts;
 

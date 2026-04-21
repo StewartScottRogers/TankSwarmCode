@@ -51,7 +51,7 @@ public partial class ArenaConfigurationUserControl : UserControl
         // (label, getter, setter) for each toggle
         (string Label, Func<ArenaUserControl, bool> Get, Action<ArenaUserControl, bool> Set)[] toggles =
         [
-            ("Anti-aliasing",       a => a.ShowAntiAliasing,     (a, v) => a.ShowAntiAliasing     = v),
+            ("Anti-aliasing",       a => a.ShowAntiAliasing,      (a, v) => a.ShowAntiAliasing     = v),
             ("Radar reflections",   a => a.ShowRadarReflections,  (a, v) => a.ShowRadarReflections  = v),
             ("Radar sweep trails",  a => a.ShowRadarSweepTrails,  (a, v) => a.ShowRadarSweepTrails  = v),
             ("Scan halos",          a => a.ShowScanHalos,         (a, v) => a.ShowScanHalos         = v),
