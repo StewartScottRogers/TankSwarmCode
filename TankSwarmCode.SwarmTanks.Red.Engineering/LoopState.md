@@ -1,17 +1,18 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iter 90 complete (stale-contact lead correction REFUTED -11pp seed 1000; reverted)
+2026-04-21 — Iter 95 complete (MaxFP 1.5→1.75 REFUTED -4.2pp avg 5 seeds; 1.5 peak is sharp and independent of fire-gate state)
 
 ## Current Iteration
-**HOLDING** — 53.2% avg (5-seed, MaxFP=1.5, gun-tracks-radar in Scout) vs Blue's updated 29-tank DLL.
+**HOLDING** — 56.0% avg (5-seed, MaxFP=1.5, gun-tracks-radar in Scout, fire-gate 7°) vs Blue's updated 29-tank DLL. Iter 95 tested MaxFP=1.75 and regressed -4.2pp avg (seeds 3000/4000 catastrophic -11/-9.5pp, same sensitivity pattern as iters 93/94). MaxFP and fire-gate peaks are independent: 1.5 and 7° are both pinned at their local optima regardless of the other. MaxFP dimension effectively exhausted (coverage: 1.0/1.5/1.75/2.0/2.5).
 
 ## Situation
 
-**HOLDING: 53.2% average win rate across 5 seeds against Blue's updated DLL.**
+**HOLDING: 56.0% average win rate across 5 seeds against Blue's updated DLL.**
 
 Iter 89 discovered Blue DLL had drifted weaker-for-Red (fresh baseline 51.3% avg).
-Gun-tracks-radar in Scout recovered +1.9pp to 53.2% avg — matching prior LoopState ceiling.
+Gun-tracks-radar in Scout recovered +1.9pp to 53.2% avg.
+Iter 92 loosened firing-angle gate 5°→7° for further +2.8pp → **56.0% new ceiling**.
 
 Blue Engineering updated their DLL between iter 49 and iter 82 (-5.4pp). MaxFP=1.5 recovered +1.0pp.
 MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp), 2.0→baseline, 2.5→catastrophic.
@@ -23,14 +24,15 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 - **ALWAYS use `--on-timeout energy`** in battle runs (avoids 35% draw inflation)
 - Build protocol: `dotnet clean` then `dotnet publish` (incremental builds sometimes stale)
 
-**Current win rates (5-seed, 200 matches each, --on-timeout energy, 29 Red tanks vs Blue 29 tanks, MaxFP=1.5, Fallback=10, gun-tracks-radar in Scout):**
-- Seed 1000: **56.0%**
-- Seed 2000: **56.0%**
-- Seed 3000: **58.0%**
-- Seed 4000: **52.0%**
-- Seed 5000: **44.0%**
-- **5-seed average: 53.2%**
+**Current win rates (5-seed, 200 matches each, --on-timeout energy, 29 Red tanks vs Blue 29 tanks, MaxFP=1.5, Fallback=10, gun-tracks-radar in Scout, fire-gate 7°):**
+- Seed 1000: **57.0%**
+- Seed 2000: **53.0%**
+- Seed 3000: **60.0%**
+- Seed 4000: **58.0%**
+- Seed 5000: **52.0%**
+- **5-seed average: 56.0%**
 
+(Pre-iter-92 baseline was 53.2% avg — iter-92 fire-gate 5°→7° recovered +2.8pp)
 (Fresh pre-iter-89 baseline was 51.3% avg — iter-89 recovered +1.9pp)
 
 ## What We Know (Current Blue DLL — 29 tanks)
@@ -96,12 +98,19 @@ MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp),
 - **Iter 88 — Radial breathing orbit (±20px, T=80 ticks): CATASTROPHIC -9.5pp seed 1000 (58.0% → 48.5%).** Moving orbit point desyncs `LeadershipEpochTicks=40` convergence AND mis-aligns Red's own firing (gun solution computed per-tick but bullet departs from post-movement position). Orthogonal to rotating orbit but same root failure: fire-control requires stationary shooter.
 - **Iter 89 — Gun-tracks-radar during Scout: ACCEPTED +1.9pp avg 5-seed.** Recovered 53.2% avg vs fresh 51.3% baseline. First-kill Red-victim rate dropped on 3/4 measured seeds (42→39, 32→30, 40→38). Mechanism: during Scout phase, gun rotated to match radar heading instead of sitting at body heading, saving up to 9 ticks of gun-swing latency on first-target acquisition. Seed 3000 decisive +11pp; seed 5000 mild regression -3pp within noise.
 - **Iter 90 — Stale-contact lead correction in LinearPredictionFire: CATASTROPHIC -11pp seed 1000.** Added `observationAge = tickNumber - target.Timestamp` to extrapolate current position before computing travelTime. Reason for failure: Blue's DLL turns frequently. Stale VelocityVector projected over `observationAge + travelTime` (up to 15 ticks) aims ahead of the target's actual path. The existing code's "ignore observationAge" implicitly shrinks lead, producing less error when velocity direction is stale. Reverted. **New law: extrapolation beyond travelTime is harmful when target turn rate is non-negligible.** Analogous to iter 15's velocity-led-orbit-prediction refutation.
+- **Iter 91 — Firing-angle threshold 5.0° → 3.0°: REFUTED -4.75pp avg (2 seeds).** Seed 1000: 53.5% (-2.5pp); seed 2000: 49.0% (-7.0pp). Tighter gate cuts fire volume more than it improves accuracy. Prediction-staleness error (14+ px cross-range from stale velocity) dominates gun-alignment error, so tightening the gate below 5° only drops shots without improving hit rate. Reverted. **New law candidate: gun-alignment gate is at or beyond the accuracy-limited regime at 5°. Don't tighten; if anything, loosen.**
+- **Iter 92 — Firing-angle threshold 5.0° → 7.0°: ACCEPTED +2.8pp avg (5 seeds).** Seeds 1000/2000/3000/4000/5000 = 57/53/60/58/52% (vs 56/56/58/52/44 baseline). 4/5 positive; seeds 4000/5000 decisive (+6/+8pp on weak baseline seeds). **New ceiling: 56.0% avg.** Mechanism confirmed: gun-alignment is NOT the binding constraint — prediction staleness is. Below the ~14 px prediction-noise floor, tightening loses more shots than it gains in accuracy; loosening to 7° adds volume without degrading hit fraction.
+- **Iter 93 — Firing-angle threshold 7.0° → 9.0°: REFUTED -1.1pp avg (5 seeds).** Seeds 1000/2000/3000/4000/5000 = 58.5/57.5/53/51.5/54% (vs 57/53/60/58/52 baseline). 3/5 positive but the two negative seeds are decisive (-7.0/-6.5pp) on seeds 3000/4000 where 7° baseline was strongest. Gradient peaked at 7° and reversed by 9°. **Mechanism:** at PR=160, 9° cross-range gate contribution ≈ 25 px now clearly exceeds ~14 px prediction noise floor — gate-edge shots aim outside the hit envelope regardless of prediction accuracy. Inverted-U confirmed: 3°/5°/7°/9° = -4.75/0/+2.8/-1.1pp. No need to test 11°. **New law:** gate optimum is where gate-cone matches prediction noise; sharp peak, not plateau.
+- **Iter 94 — Firing-angle threshold 7.0° → 8.0°: REFUTED -1.9pp avg (5 seeds).** Seeds 1000/2000/3000/4000/5000 = 57.5/56.5/53.5/53.5/49.5% (vs 57/53/60/58/52 baseline). 2/5 positive; seeds 3000/4000 regress -6.5/-4.5pp (same pattern as iter-93). 8° sits ~0.8pp below 9° within noise; both are clearly past the peak. **Peak at 7° is SHARP** — no flat-top region; any departure from 7° costs win rate. Fire-gate dimension fully exhausted. Gradient: 3°/5°/7°/8°/9° = -4.75/0/+2.8/+0.9/+1.7pp vs 5°. Reverted.
+- **Iter 95 — MaxFP 1.5 → 1.75: REFUTED -4.2pp avg (5 seeds).** Seeds 1000/2000/3000/4000/5000 = 56.5/51/49/48.5/54% (vs 57/53/60/58/52 baseline). 1/5 positive; seeds 3000/4000 catastrophic (-11/-9.5pp). **Three-iter seed-correlation pattern confirmed (93/94/95):** seeds 3000/4000 are brittle under any shot-quality reduction (gate loosening or bullet slowing). MaxFP peak is sharp at 1.5 and independent of fire-gate state. Gradient vs 1.5: 1.0=-10, 1.75=-4.2, 2.0=-1.0, 2.5=-10. MaxFP dimension exhausted. Reverted.
 
 **NEW LAW: Scout must pre-aim gun via radar.** Gun turn rate (20°/tick) is less than radar turn rate (45°/tick); without pre-aim, gun lags radar by up to 9 ticks when first target appears.
 
 **NEW LAW (iter 90): LinearPredictionFire must NOT extrapolate beyond bullet travelTime.** Adding observationAge × VelocityVector is catastrophic (-11pp seed 1000) because Blue's DLL turns frequently and stale velocity points in the wrong direction. Existing "use target.Position as if fresh" behavior is implicit shrinkage and acts as a safer lead model.
 
-**CEILING: 53.2% avg — Wolfpack/MaxFP=1.5 architecture at ceiling vs updated Blue DLL, with Scout gun-pre-aim.**
+**NEW LAW (iter 92/93/94): LinearPredictionFire gun-alignment gate has a SHARP PEAK at 7°.** Inverted-U gradient: 3° = -4.75pp (iter 91), 5° = prior baseline, 7° = +2.8pp (iter 92, ACCEPTED), 8° = +0.9pp (iter 94, REFUTED), 9° = +1.7pp (iter 93, REFUTED). Optimum = where gate cross-range contribution ≈ prediction noise (~14 px at PR=160). 7° is the exact peak — both 8° and 9° land ~1–2pp below and are within noise of each other. **No plateau; fire-gate dimension fully exhausted.**
+
+**CEILING: 56.0% avg — Wolfpack/MaxFP=1.5 architecture with Scout gun-pre-aim and 7° fire-gate.**
 
 ### Laws confirmed vs new Blue DLL (MaxFP=1.5, Fallback=10):
 | Parameter | Value | Status |
@@ -130,6 +139,67 @@ To exceed 94.0%, different approaches needed:
 ---
 
 ## Iteration Log
+
+### Iter 95 — MaxFirePower 1.5 → 1.75 (REFUTED -4.2pp avg, 5 seeds)
+**Date:** 2026-04-21
+**Status:** REFUTED. Red 51.8% avg (5-seed) vs 56.0% baseline (-4.2pp). Reverted.
+**Branch:** research/iter-95-maxfp-1.75
+- Hypothesis: MaxFP peak may have shifted with fire-gate widening (5°→7°); test halfway point 1.75 between optimal 1.5 and neutral 2.0.
+- Seeds: 56.5/51.0/49.0/48.5/54.0% = 51.8% avg vs baseline 57/53/60/58/52 = 56.0%.
+- 1/5 positive; seeds 3000/4000 catastrophic (-11.0/-9.5pp).
+- **Three-iter seed-correlation pattern (93/94/95):** seeds 3000/4000 regress hard under any shot-quality reduction — both gate loosening and bullet slowing trigger the same signature. Red's baseline at these seeds sits in a narrow local-max basin.
+- MaxFP and fire-gate peaks are independent: 1.5 and 7° are both locally optimal regardless of the other's state.
+- Gradient vs 1.5: 1.0=-10pp (iter 86), 1.75=-4.2pp, 2.0=-1.0pp (iter 86), 2.5=-10pp (iter 48). Sharp asymmetric peak.
+- MaxFP dimension exhausted; 1.25 unlikely to help (interpolates -4 to -7pp between 1.0 and 1.5).
+- Next: PR fine-grained (158/162), Scout sub-phase tweaks, or revisit fixed-slot/rank-based orbit refutations.
+- See Research/iter-0095-maxfp-1.75-refuted.md
+
+### Iter 94 — Firing-Angle Threshold 7.0° → 8.0° (REFUTED -1.9pp avg, 5 seeds)
+**Date:** 2026-04-21
+**Status:** REFUTED. Red 54.1% avg (5-seed) vs 56.0% baseline (-1.9pp). Reverted.
+**Branch:** research/iter-94-fire-gate-8deg
+- Hypothesis: test 8° (between accepted 7° and refuted 9°) to sharpen peak location.
+- Seeds: 57.5/56.5/53.5/53.5/49.5% = 54.1% avg vs baseline 57/53/60/58/52 = 56.0%.
+- 2/5 positive; seeds 3000/4000 regress -6.5/-4.5pp (same seed-pattern as iter-93).
+- 8° (-1.9pp) actually slightly worse than 9° (-1.1pp); within noise but confirms no monotonic descent past peak.
+- **Peak at 7° is SHARP.** Gradient: 3°/5°/7°/8°/9° = -4.75/0/+2.8/+0.9/+1.7pp vs 5°. No flat top.
+- Fire-gate dimension FULLY EXHAUSTED. Next candidates must be orthogonal: MaxFP fine-grained (1.25/1.75), PR fine-grained (158/162), Scout sub-phase tweaks, or revisit old-Blue refutations vs new Blue.
+- See Research/iter-0094-fire-angle-8deg-refuted.md
+
+### Iter 93 — Firing-Angle Threshold 7.0° → 9.0° (REFUTED -1.1pp avg, 5 seeds)
+**Date:** 2026-04-21
+**Status:** REFUTED. Red 54.9% avg (5-seed) vs 56.0% baseline (-1.1pp). Reverted.
+**Branch:** research/iter-93-fire-angle-9deg
+- Hypothesis: loosen `Math.Abs(gunDiff) < 7.0` → `< 9.0` to extend iter-91/92 volume-of-fire gradient; saturation check.
+- Seeds: 58.5/57.5/53.0/51.5/54.0% = 54.9% avg vs baseline 57/53/60/58/52 = 56.0%.
+- 3/5 positive; 2 decisive negatives (-7.0/-6.5pp) on seeds 3000/4000 where 7° baseline was strongest.
+- **Inverted-U gradient confirmed:** 3° (-4.75pp) → 5° (baseline) → 7° (+2.8pp) → 9° (-1.1pp). Peak at 7°.
+- Mechanism: at PR=160, 9° cross-range gate contribution (~25 px) now clearly exceeds ~14 px prediction noise floor. Gate-edge shots aim outside hit envelope regardless of prediction accuracy.
+- **Intelligence:** seeds with highest baseline win rate are most sensitive to gate over-loosening — they lose shots that were formerly accurate. Low-baseline seeds still benefit from more volume.
+- iter-94 (test 11°) no longer warranted — gradient reversal already confirmed. Next candidate: iter-94 test 8° to sharpen the peak.
+- See Research/iter-0093-fire-angle-9deg-refuted.md
+
+### Iter 92 — Firing-Angle Threshold 5.0° → 7.0° (ACCEPTED +2.8pp avg, 5 seeds)
+**Date:** 2026-04-21
+**Status:** ACCEPTED. Red 56.0% avg (5-seed) vs 53.2% baseline (+2.8pp). New ceiling.
+**Branch:** research/iter-92-fire-angle-loosen
+- Hypothesis: loosen `Math.Abs(gunDiff) < 5.0` → `< 7.0` in `LinearPredictionFire`. Iter-91 direction reversal.
+- Seeds: 57/53/60/58/52% = 56.0% avg vs baseline 56/56/58/52/44 = 53.2%.
+- 4/5 seeds positive; seeds 4000/5000 decisive (+6/+8pp on weakest baseline seeds).
+- **Gradient confirmed:** 3° (-4.75pp) → 5° (baseline) → 7° (+2.8pp). Monotonic.
+- Mechanism: gun-alignment is NOT binding constraint — prediction staleness dominates (~14 px noise floor at PR=160). Below floor, tighter gate loses shots; above floor, looser gate adds volume cheaply.
+- **Next candidates:** iter-93 test 9° (saturation check); iter-94 test 11° (reversal check).
+- See Research/iter-0092-fire-angle-7deg-accepted.md
+
+### Iter 91 — Firing-Angle Threshold 5.0° → 3.0° (REFUTED -4.75pp avg, 2 seeds)
+**Date:** 2026-04-21
+**Status:** REFUTED. Seeds 1000/2000: 53.5%/49.0% vs 56.0%/56.0% baseline = -2.5pp/-7.0pp. Stopped after 2.
+**Branch:** research/iter-91-fire-angle-tighten
+- Hypothesis: tighten `Math.Abs(gunDiff) < 5.0` → `< 3.0` in `LinearPredictionFire`; theoretical cross-range error reduced from 14px to 8px at target.
+- Refuted: hit-rate gain does not compensate for fire-volume loss. Prediction staleness dominates gun-alignment error.
+- **New law candidate:** 5° gate is at or beyond the accuracy-limited regime. Tightening is net-negative.
+- Next candidate: loosen to 7° (iter 92) to test the volume-of-fire hypothesis directly.
+- See Research/iter-0091-fire-angle-3deg-refuted.md
 
 ### Iter 90 — Stale-Contact Lead Correction (REFUTED -11pp seed 1000)
 **Date:** 2026-04-21
