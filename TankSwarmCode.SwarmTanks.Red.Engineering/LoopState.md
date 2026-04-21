@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 20 complete (Ghost MaxFP=1.5 REFUTED; Ghost stays at 2.0)
+2026-04-20 — Iteration 21 complete (BlueSharp priority targeting REFUTED; -0.3pp, neutral)
 
 ## Current Iteration
-**21** — pending
+**22** — pending
 
 ## Situation
 
@@ -34,7 +34,9 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 - **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
 - **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
-- **BlueSharp is Blue's Linchpin** (alive: 85% Blue wins, dead: 24% Blue wins).
+- **BlueSharp linchpin targeting is NOT exploitable.** Priority-targeting Sharp (iter-21) gave -0.3pp.
+  The correlation (Sharp alive → Blue wins) is observational; weakest-first targeting is confirmed
+  optimal. The linchpin stat is informational only, not an actionable targeting strategy.
 
 ## Current Configuration
 
@@ -48,31 +50,30 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 21)
+## Next Hypothesis (Iteration 22)
 
 **Primary options:**
-1. BlueSharp priority targeting (Sharp linchpin: alive=85% Blue wins, dead=24% — focus fire on Sharp)
-2. PR tuning for 5-tank formation (130/150/180 — untested with current config)
-3. Orbit slot assignment remap (Trooper as slot 4 takes the last orbit position)
-4. Ghost PR=140 inner orbit (lower PR for Ghost only, forcing closer engagement)
+1. PR=140 for all tanks (closer orbit: faster bullet travel at 140 vs 160 → better hit rate)
+2. PR=150 for all tanks (midpoint test)
+3. Ghost PR=140 inner orbit only (Ghost at 2.0 benefits from closer range; others stay at 160)
+4. Retreat threshold tuning (Hammer=25 vs others=20; does Hammer's higher threshold help or hurt?)
 
-**Top pick:** BlueSharp priority targeting. The SwarmCoordinator currently targets lowest-energy
-enemy (`OrderBy(c => c.Energy)`). When BlueSharp is visible on radar, targeting Sharp first instead
-of the weakest tank could collapse Blue's coordination earlier and end more matches quickly.
-
-Implementation: In `RunEpochLogic` (SwarmCoordinator.cs line ~149), prefer Sharp by name before
-falling back to lowest-energy:
-```csharp
-RadarContact? priorityTarget =
-    enemies.FirstOrDefault(c => c.Name == "BlueSharp") ??
-    enemies.OrderBy(c => c.Energy).FirstOrDefault();
-```
+**Top pick:** PR=140 for all tanks. With MaxFP=1.5, bullet speed = 20 - 3×1.5 = 15.5 px/tick.
+At PR=160: 160/15.5 = 10.3 ticks travel. At PR=140: 140/15.5 = 9.0 ticks (-13% travel time).
+Faster bullet arrival = better hit rate vs mobile Blue tanks. Risk: tanks take more return fire.
 
 Success criteria: Red 5-seed avg increases by ≥2pp (from 67.2% to ≥69.2%)
 
 ---
 
 ## Iteration Log
+
+### Iter 21 — BlueSharp Priority Targeting (REFUTED -0.3pp avg, neutral)
+**Date:** 2026-04-20
+**Status:** REFUTED. Targeting Sharp-first: 66.9% avg (5-seed) vs 67.2% baseline (-0.3pp, noise).
+- Sharp correlation (alive=85% Blue wins) is observational, not causally exploitable via targeting
+- Weakest-first targeting confirmed optimal; Sharp-first wastes DPS when Sharp has full energy
+- See Research/iter-0021-bluesharp-priority-targeting.md for full details
 
 ### Iter 20 — Ghost MaxFP=1.5 (REFUTED -1.5pp avg)
 **Date:** 2026-04-20
