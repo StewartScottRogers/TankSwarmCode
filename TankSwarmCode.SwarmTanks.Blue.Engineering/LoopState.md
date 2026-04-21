@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 20
+2026-04-20 — Iteration 21
 
 ## Current Iteration
-**21** — pending
+**22** — pending
 
 ## Situation
 **NEW HIGH: 88.3% avg.** Iter 16 found predicted orbit points (+1.6pp). Blue now uses target velocity to predict where target will be when navigating to orbit position. All 5 seeds improved consistently. Red's 5th tank "Red4" is their MVP. Previous ceiling 86.7% broken.
@@ -41,18 +41,16 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 21)
+## Next Hypothesis (Iteration 22)
 
-**Architecture needed**: After 20+ iterations, 88.3% is a hard ceiling. All single-parameter and algorithm changes have been exhausted. Improvements found: geometric positioning (angles, slots, prediction) all committed. Remaining losses are due to Red's inherent competitiveness and some randomness.
+**Architecture ceiling confirmed.** After thorough analysis:
+1. AllyPing position-sharing won't work: positions are 15-tick stale (max 1500px drift at speed 100). Too stale for orbit coordination.
+2. The slot-based angle system already provides each tank a unique 60° sector.
+3. All navigation, timing, and configuration parameters are empirically optimized.
 
-**Only viable path forward**: Add position data to AllyPing for dynamic formation spreading. Current `AllyPing` payload: `"{slot}:{energy}"`. Proposed: `"{slot}:{energy:F1}:{x:F0}:{y:F0}"`. With ally positions, each tank could:
-1. Detect when two tanks are targeting the same side of the enemy
-2. Dynamically shift its approach angle to the underrepresented side
-3. Potentially improve coverage in wall/corner scenarios
+**No new hypotheses.** Unless Red significantly improves, or a fundamentally different AI architecture (e.g., path prediction with waypoints, evasion routines, communication protocol redesign) is implemented, 88.3% is the ceiling.
 
-This is a significant architectural change. Estimated complexity: medium. Risk: unknown, no precedent in this codebase.
-
-Alternative: **Accept 88.3% as the session ceiling** and focus on committing the current state cleanly. The fundamental architecture has been optimized as far as single-point improvements can reach.
+**If Red improves** (changing their tanks), re-run baseline and reassess which Blue parameters remain optimal.
 
 Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 
@@ -158,6 +156,21 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 21 — Architecture ceiling analysis (no code changes)
+**Date:** 2026-04-20
+- **Analyzed AllyPing position-sharing**: Would require adding X/Y to AllyEntry and ping format. BUT: AllyPingInterval=15 ticks means positions are up to 1500px stale (100 px/tick × 15 ticks). Too stale for meaningful orbit coordination. Slot-based system already provides unique angles. Not worth implementing.
+- **Analyzed all remaining hypotheses**: No genuinely untested structural change remains that wouldn't replicate previously-failed patterns.
+- **Final session conclusion**: 88.3% is the architectural ceiling. Progress from baseline:
+  - Iter 0: 66% → Iter 2: ~80% (Guard MaxFP=3.0)
+  - Iter 7: 77% baseline (parallel mode fix)
+  - Iter 9: 80.8% (Wolfpack angle-offset)
+  - Iter 10: 84.4% (60° spread)
+  - Iter 11: 85.4% (Fallback=20)
+  - Iter 12: 86.7% (Guard/Sharp slot swap)
+  - Iter 16: 88.3% (predicted orbit)
+  - Iters 13-20: 30+ changes, all failed/neutral
+- **Net result: No change needed. 88.3% is the ceiling until Red evolves.**
 
 ### Iter 20 — Final ceiling sweep: epoch, age-gate, config tweaks (all reverted)
 **Date:** 2026-04-20
