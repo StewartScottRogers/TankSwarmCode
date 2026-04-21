@@ -43,16 +43,17 @@ matches, `Reset()` corrupts mid-game state). Those results are **invalid and dis
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 15)
+## Next Hypothesis (Iteration 16)
 
-**Potential improvements to explore:**
-1. Target selection: currently weakest-first (`OrderBy(c => c.Energy)`). Try targeting
-   the enemy closest to the current leader tank to minimize travel time to firing range.
-2. Volley fire timing: `fireAt = tick + 20`. With tanks at PR=160, bullet at MaxFP=2.0
-   (speed=14) takes 160/14=11.4t. So fireAt=tick+11 would be more synchronized?
-3. Ghost PR=150 (inner orbit point) vs current 160 — the distinct inner ring might help.
+**Remaining options (all obvious tunings have been exhausted):**
+1. Isolated target selection: choose the Blue tank furthest from its own allies (easiest to surround)
+2. Orbit angle rotation based on strategy epoch (slow drift to prevent static counter-positioning)
+3. `allyCount` source change: dead tanks stay in map up to 30 ticks — use a more responsive count
 
-Success criteria: Red win rate increases by ≥2pp at seed 1000 (from 66% to ≥68%)
+**Note:** Iter-15 tested all obvious improvements. All regressed or were within noise. The
+64.2% avg seems to be the ceiling for this configuration family.
+
+Success criteria: Red win rate increases by ≥3pp at seed 1000 (from 66% to ≥69%)
 
 ---
 
@@ -63,6 +64,17 @@ Success criteria: Red win rate increases by ≥2pp at seed 1000 (from 66% to ≥
 **Status:** True serial baseline: 38.2% avg (39/34/41.5% seeds 1000/2000/3000)
 - NOTE: All prior iters 0–13 used invalid parallel mode. Their findings are discarded.
 - Ghost MaxFP=0.1, JamAndSpoof, proactive ECM — ECM was causing continuous drain death
+
+### Iter 15 — Post-14 Tuning Exhaustion (ALL REFUTED)
+**Date:** 2026-04-20
+**Status:** All tested changes negative vs iter-14 baseline (64.2% avg).
+- Leader volley timing fix (adjust leader to match follower formula): 62.6% avg (-1.6pp). Staggered timing was actually beneficial — leader's delayed shot gives it better gun alignment time.
+- Ghost PR=150 inner orbit: 62.9% avg (-1.3pp). All-at-160 is equivalent or better.
+- Velocity-led orbit (predict target 15t ahead): 60.5% avg (-3.7pp). Prediction overshoots when targets turn.
+- Fixed-slot orbit (slot%4 * 90°): 63.3% avg (-0.9pp). Dynamic modulo is better.
+- Rank-based orbit distribution: 62.0% avg (-2.2pp). Dynamic modulo still best.
+- Orbit-based Pincer/Encircle: 59.3% avg (-4.9pp). Transition disruption. Original behavior kept.
+- **Conclusion:** 64.2% is the ceiling for this family of orbit-based improvements.
 
 ### Iter 14 — Serial Rebase + Wolfpack Orbit (CONFIRMED +26pp total)
 **Date:** 2026-04-20
