@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 5
+2026-04-20 — Iteration 6
 
 ## Current Iteration
-**6** — pending
+**7** — pending
 
 ## Situation
 **WE ARE DOMINATING.** Blue ~80-87% across seeds (seed 1000 ~80% avg, seed 2000 87%). Iter 3 explored 6 approaches — all regressed. Current config is the optimum found so far.
@@ -18,16 +18,16 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
 - BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
 
-## Next Hypothesis (Iteration 6)
+## Next Hypothesis (Iteration 7)
 
-**Target Red's highest-energy tank instead of lowest-energy.** Red Hammer is always the top attacker and accumulates energy from hits — it is typically the highest-energy Red tank. By changing `OrderBy(c => c.Energy).First()` to `OrderByDescending(c => c.Energy).First()` in `RunEpochLogic`, Blue focuses fire on Hammer. Eliminating Hammer first collapses Red's DPS, even though Hammer is harder to kill — the payoff is removing the tank most likely to kill Blue.
+**Establish true baseline variance with a 5-seed 200-batch run, then accept ceiling or try a structural change.** Every single-parameter tweak has regressed seed 2000 while seed 1000 varies ±20pp. We don't know if the true ceiling is 80% or 88%. Run seeds 1000/2000/3000/4000/5000 at 200 battles each to get a proper multi-seed baseline. If the true avg is ≥83%, declare ceiling reached. If ≤78%, there's still room — investigate what Red does in the losing games to find the structural weakness.
 
-Implementation: one-line change in `SwarmCoordinator.RunEpochLogic`, the priority target selection.
+Structural change candidates not yet tried:
+- Scout before Wolfpack: send one tank ahead to spot enemies before committing formation (reduces blind-spot exposure)
+- Target closest enemy instead of lowest-energy (better hit rate at the cost of focus-fire suboptimality)
+- Adaptive formation: tanks with lower energy back off to higher PR, creating dynamic spacing
 
-Success criteria:
-- Blue win rate ≥83% at seed 1000 (up from ~80% avg)
-- Blue win rate ≥87% at seed 2000 (maintain)
-- Red Hammer appears as first kill victim more often in Blue wins
+Success criteria: establish ≥200-game baseline per seed for confident direction decisions.
 
 ---
 
@@ -47,6 +47,7 @@ Success criteria:
 - **DO NOT** change BlueEcm RetreatThreshold from 35 — seed 2000 drops 23pp; seed 2000 is sensitive to BlueEcm behavior
 - **DO NOT** expand VolleyRange beyond 300 — far tanks compute negative fire ticks, volley coordination breaks
 - **DO NOT** add volley fire-tick correction in RunEpochLogic — self-message already corrects leader's fire tick; redundant fix causes double-fire conflicts
+- **DO NOT** target highest-energy enemy — focus-fire on lowest-energy is correct; highest-energy extends time-to-first-kill, Red deals more damage (52% seed 2000)
 
 ### ECM Dead Code (key insight)
 EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is always false. Consequences:
@@ -87,6 +88,14 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 6 — Target highest-energy enemy (reverted)
+**Date:** 2026-04-20
+- **Code change:** `RunEpochLogic` priority target: `OrderBy(Energy)` → `OrderByDescending(Energy)` — focus Red's top threat (Hammer) first
+- Seed 1000: 73% (within noise of baseline)
+- Seed 2000: 52% (severe regression, -35pp)
+- Root cause: focusing the highest-energy tank extends time-to-first-kill; Red deals more total damage during the longer fight. Classic focus-fire theory holds — kill the weakest first.
+- **REVERTED. No commit.**
 
 ### Iter 5 — Exploration of coordination/ECM knobs (all reverted)
 **Date:** 2026-04-20
