@@ -8,7 +8,7 @@ public sealed class BlueGuardCortex : BlueCortexBase
     protected override TankConfiguration TankConfiguration { get; } = new()
     {
         FormationSlot = 3,
-        MaxFirePower = 2.0,
+        MaxFirePower = 3.0,
         PreferredRange = 200.0,
         HasEcm = false,
         RetreatEnergyThreshold = 30.0
