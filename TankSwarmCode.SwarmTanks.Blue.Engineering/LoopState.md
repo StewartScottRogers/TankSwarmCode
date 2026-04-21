@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 14
+2026-04-20 — Iteration 15
 
 ## Current Iteration
-**15** — pending
+**16** — pending
 
 ## Situation
 **DOMINATING AT NEW HIGH.** Blue 85.4% avg across 5 seeds (2 runs each). Red now has a 5th tank "Red4" (MVP, All-in). Iter 10 found 60° Wolfpack angle (+3.6pp). Iter 11 found Fallback threshold 30→20 (+1.5pp). Both committed.
@@ -36,11 +36,15 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 15)
+## Next Hypothesis (Iteration 16)
 
-**Try BlueRush MaxFP tuning**: With the new slot layout, BlueRush (slot 2/120°/180px) is in the front-left at 180px — closer range means lower-power shots are more effective anyway. MaxFP=2.5 was kept due to "Rush becomes primary target at 3.0" rule from iter 3. But that was old configuration (72° Wolfpack, no slot swap). With 5 other tanks around it at different angles, Rush might not be as targeted if MaxFP=3.0. HIGH RISK — tried and failed at 58% before.
+**Try Encircle orbit radius adjustment**: `OrbitRadius = 180.0` is the constant used in `ExecuteEncircle`. It's hard-coded regardless of tank slot/firepower. Reducing to 150 (BlueEcm's PR) or raising to 200 might improve Encircle strategy effectiveness. However, Encircle only triggers at `allyCount >= enemies*2 && allyCount >= 3` — late-game when Blue already dominates.
 
-Safer alternative: try the `AllyStaleTicks` constant at 25 instead of 30. Allies expire faster (less leadership instability risk since pings every 15 ticks), enemy contacts expire 5 ticks sooner. This might reduce "firing at stale Ghost contacts" in late game.
+Safer alternative: **PreferredRange tuning for BlueStrike (slot 0/leader)**. Strike currently sits at 250px from target while Guard is at 200px and Sharp is at 300px. The leader calls volleys and broadcasts strategy from the front (0°). At 250px it may be in Red's primary fire arc. Try PR=220 cautiously — known to hurt seed4000 at old config, but that was pre-slot-swap.
+
+Actually safest: **Try Pincer groupAngle adjustment**. Current Pincer uses `groupAngle = slot<=1 ? 0° : 180°` — tanks split into two groups. This could be fine-tuned, or the 200px approach distance adjusted.
+
+Most promising unused avenue: **Wolfpack stopDistance is 0** (from approach point). This means tanks can overshoot the orbit point and oscillate. A small stopDistance of 20-30px might reduce oscillation jitter without causing the clustering that 100px caused in the rush-opening test.
 
 Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 
@@ -76,6 +80,8 @@ Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 - **DO NOT** increase energy fire factor above 0.1 — 0.12 gave -0.9pp
 - **DO NOT** target closest enemy — -0.7pp, seed2000 -5pp; lowest-energy targeting is optimal
 - BlueTrooper 6th tank at slot5/300°: seed2000 -3pp consistently, overall +0.5pp not significant — consider only with a direct seed2000 mitigation strategy
+- **DO NOT** add rush-opening branch (tick<50 charge to target): -2.5pp, seeds 2000+3000 hurt badly; aggressive early convergence lets Red concentrate fire
+- **DO NOT** reduce AllyStaleTicks below 30: tested at 25, part of -2.5pp regression; 30 ticks matches ping interval well
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
 - **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
 - **Seed 4000 is extremely volatile**: up to 78-96% range in same session for identical config. Require 2+ runs. "DO NOT sacrifice seed4000" rule still applies but single runs unreliable.
@@ -127,6 +133,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 15 — AllyStaleTicks=25 + rush opening (all reverted)
+**Date:** 2026-04-20
+- **AllyStaleTicks 30→25**: Allies expire 5 ticks sooner; enemy contacts also expire sooner. Expected to reduce late-game stale-contact firing.
+  - Result: NOT measured independently — embedded in same session as rush opening test. Combined result was 84.2% avg, clearly worse.
+- **Rush opening (tick<50 direct rush, stopDistance=100)**: All tanks charge directly at target for first 50 ticks before switching to orbit positions. Hypothesis: faster initial positioning = earlier focus fire = better first-kill.
+  - Seed 1000: 88% | Seed 2000: 80% | Seed 3000: 81% | Seed 4000: 84% | Seed 5000: 88% = **84.2% avg**
+  - vs 86.7% baseline = **-2.5pp regression**
+  - Seeds 2000 and 3000 severely hurt (-11pp and -5pp). Pattern: aggressive early convergence lets Red Hammer concentrate fire before Blue spreads out.
+- Both changes reverted. Code restored to clean baseline (stopDistance=0, no tick-based branch).
+- **Net result: No change. 86.7% confirmed ceiling.**
 
 ### Iter 14 — Slot/parameter exploration (all reverted)
 **Date:** 2026-04-20
