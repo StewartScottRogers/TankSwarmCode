@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 25 complete (MaxFP=0.5 REFUTED; MaxFP=1.0 confirmed as bullet speed floor)
+2026-04-20 — Iteration 26 complete (Encircle@160 REFUTED; +0.3pp noise; architecture ceiling near)
 
 ## Current Iteration
-**26** — pending
+**27** — pending
 
 ## Situation
 
@@ -54,28 +54,39 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 26)
+## Next Hypothesis (Iteration 27)
 
-**MaxFP and PR sweeps are complete. MaxFP=1.0 is the bullet speed floor.** Moving to architecture-level
-parameter tuning. Three viable options:
+**Parameter space is nearly exhausted within the current Wolfpack/orbit framework.** MaxFP, PR,
+Encircle radius — all tested and completed. Two remaining architecture-level options:
 
-1. **RetreatEnergyThreshold sweep:** Hammer=25, others=20. Test all tanks at 15 for more aggressive
-   fighting. Tanks currently retreat with 15-25 energy remaining; at low MaxFP=1.0, retreat may be
-   triggered too early (each shot costs only 0.5 energy, tanks can fire 30 shots on 15 energy).
-2. **Encircle radius:** ExecuteEncircle uses a fixed 180px radius while Wolfpack uses config.PreferredRange=160.
-   Changing Encircle to also use 160px may improve coherence in late-game 1v1/2v1 scenarios.
-3. **Ghost as ECM disruption:** HasEcm=false for Ghost. Ghost previously had ECM causing energy drain
-   death; re-enabling it with the corrected understanding might disrupt Blue's coordination.
+1. **Fallback threshold:** `sumEnergy / allyCount < 30.0` in SelectStrategy. At MaxFP=1.0, tanks
+   maintain higher energy (45-52% remaining per iter-24). Raising Fallback threshold to 40 might
+   cause teams to strategically retreat and regroup more often, avoiding unfavorable fights.
+   Lowering to 20 makes them more aggressive. Test threshold=40 (more defensive regrouping).
 
-**Top pick:** RetreatEnergyThreshold → all tanks at 15. At MaxFP=1.0, each shot costs only 0.5 energy
-(vs 1.0 at MaxFP=2.0). A tank with 15 energy remaining can still fire 30 shots. Current retreat at
-20-25 is too conservative for the low-cost rapid-fire configuration.
+2. **Ghost HasEcm=true:** Ghost previously had ECM causing energy-drain death (from continuous
+   jamming). The root cause was PROACTIVE ECM activation. Current Ghost code (HasEcm=false) never
+   ECMs. Re-enabling ECM (HasEcm=true) would activate ECM disruption against Blue's ECM tanks,
+   potentially jamming BlueEcm and disrupting Blue's radar coordination.
+
+**Top pick:** Fallback threshold → 40. The current value (30) was set for MaxFP=2.0 energy levels.
+At MaxFP=1.0, the team is energy-rich (each shot costs 0.5 energy, 200 shots to drain from full).
+A higher Fallback threshold causes earlier strategic regrouping rather than fighting to exhaustion.
 
 Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 26 — Encircle Orbit 180→160px (REFUTED +0.3pp avg, 5-seed, noise)
+**Date:** 2026-04-20
+**Status:** REFUTED. Red 70.5% avg (5-seed) vs 70.2% baseline (+0.3pp — noise).
+- 3/5 seeds positive, 2/5 negative; seeds 4000 and 5000 regressed (-2.0pp, -3.5pp)
+- Encircle is a low-frequency cleanup formation; orbit radius not a meaningful lever
+- Code reverted to OrbitRadius=180.0. Wolfpack at 160 unchanged.
+- Architecture parameter space within current framework is largely exhausted
+- See Research/iter-0026-encircle-orbit-160-refuted.md for full details
 
 ### Iter 25 — MaxFP=0.5 for Arrow/Blade/Hammer/Trooper (REFUTED -6.0pp, 1 seed)
 **Date:** 2026-04-20
