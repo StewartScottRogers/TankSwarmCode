@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 11
+2026-04-20 — Iteration 12
 
 ## Current Iteration
-**12** — pending
+**13** — pending
 
 ## Situation
 **DOMINATING AT NEW HIGH.** Blue 85.4% avg across 5 seeds (2 runs each). Red now has a 5th tank "Red4" (MVP, All-in). Iter 10 found 60° Wolfpack angle (+3.6pp). Iter 11 found Fallback threshold 30→20 (+1.5pp). Both committed.
@@ -20,10 +20,12 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
 - Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
 - Fallback threshold: 20.0 (was 30.0) — **KEEP** (Iter 11 win, +1.5pp avg)
+- BlueGuard FormationSlot=1 (was 3), BlueSharp FormationSlot=3 (was 1) — **KEEP** (Iter 12 win, +1.3pp avg)
+- **Current slot layout**: Strike(0°,250px) → Guard(60°,200px) → Rush(120°,180px) → Sharp(180°,300px) → Ecm(240°,150px)
 
-## Parallel Mode Baseline (post-Iter-11, 2×200 games each)
-- Seed 1000: ~84% avg  |  Seed 2000: ~89% avg  |  Seed 3000: ~86% avg  |  Seed 4000: ~80% avg (high variance)  |  Seed 5000: ~88% avg
-- **5-seed average: ~85.4%** (avg of 2 full 5-seed sweeps)
+## Parallel Mode Baseline (post-Iter-12, 2×200 games each)
+- Seed 1000: ~86.5% avg  |  Seed 2000: ~91% avg  |  Seed 3000: ~86% avg  |  Seed 4000: ~84% avg  |  Seed 5000: ~86% avg
+- **5-seed average: ~86.7%** (avg of 2 full 5-seed sweeps)
 - Note: 10-20pp run-to-run variance. Seed 4000 showed 78-96% range in same session. Require 2+ runs to confirm changes.
 
 ## Post-Iter-10 Baseline (60° Wolfpack, Fallback=30, 1 run)
@@ -34,13 +36,15 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 12)
+## Next Hypothesis (Iteration 13)
 
-**Explore BlueGuard/BlueSharp slot swap**: BlueGuard is consistently the top attacker (Rate 25+/100t) but is at slot 3 (180° approach, 200px). BlueSharp is MVP survival but at slot 1 (60° approach, 300px). Swapping their FormationSlots puts BlueGuard at 60° (200px, closer frontline) and BlueSharp at 180° (300px from behind). Hypothesis: top attacker at closer front-right position deals more damage; long-range MVP approaching from behind is harder for Red to target.
+**Explore asymmetric radius tuning**: Now that slots are reordered (Guard at 1/60°, Sharp at 3/180°), BlueSharp approaches from 180° at 300px (the furthest and most rear-facing). This is already good. What about BlueGuard at 60°/200px vs BlueRush at 120°/180px — can we tune their radii?
 
-Alternative: try adjusting the Wolfpack approach distance — currently each tank uses its own PR as orbit radius. What if we add a small per-slot radius offset (e.g., slot × -10px) so closer tanks approach even closer? This creates a layered formation: BlueStrike 250px, BlueSharp 290px, BlueRush 160px, BlueGuard 170px, BlueEcm 110px.
+Specific hypothesis: try increasing BlueRush PR from 180 to 200 (same as Guard). At 120°, BlueRush at 200px would form a tighter arc with Guard (60°/200px) and Strike (0°/250px). Previously BlueRush PR=160 was -8pp on seed4000 (Iter 8), but +1pp avg. Worth checking after slot reordering changes formation geometry.
 
-Success criteria: 5-seed average ≥87% (2+ run confirmation required).
+Alternative: try BlueSharp PR change (currently 300px from 180°). At 180°, the "behind" approach at 300px might be more effective at 250px (matching Strike's front). Risk: previous tests of distance changes on Strike (not Sharp) caused regressions.
+
+Success criteria: 5-seed average ≥88% (2+ run confirmation required).
 
 ---
 
@@ -50,6 +54,7 @@ Success criteria: 5-seed average ≥87% (2+ run confirmation required).
 - Guard MaxFP=3.0 (Iter 2): +15pp seed 1000, +4pp seed 2000 — keep it
 - Wolfpack angle 60° (Iter 10): +3.6pp avg — keep it
 - Fallback threshold 20.0 (Iter 11): +1.5pp avg (seeds 2000+5000 +5pp each) — keep it
+- Guard/Sharp slot swap (Iter 12): +1.3pp avg, Guard(slot1=60°) Sharp(slot3=180°) — keep it
 
 ### Hard limits discovered
 - **DO NOT** lower BlueStrike PR below 250 — all values (200, 230) devastate seed 2000 (-15 to -25pp)
@@ -118,6 +123,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 12 — Guard/Sharp slot swap: +1.3pp average (**COMMITTED**)
+**Date:** 2026-04-20
+- **Code change:** BlueGuardCortex.cs FormationSlot 3→1; BlueSharpCortex.cs FormationSlot 1→3
+- New formation: Strike(0°,250px) → Guard(60°,200px) → Rush(120°,180px) → Sharp(180°,300px) → Ecm(240°,150px)
+- Effect: BlueGuard (top attacker) approaches from front-right (60°) at 200px — more aggressive position. BlueSharp (long range) approaches from behind-left (180°) at 300px — harder for Red to target.
+- Run 1: 87/96/84/84/84 = 87.0%  |  Run 2: 86/86/88/84/88 = 86.4%
+- **Avg 86.7% vs 85.4% Fallback=20 baseline → +1.3pp (1.6 sigma / 2000 games)**
+- Seed 4000 (canary) improved +4pp. Seed 5000 -2pp (within variance). 4/5 seeds improved or neutral.
+- Failed during iter 12 exploration: 3-way Pincer (same avg, seed1000 -4pp), Scout-center (80.8%), Fallback=25 (82.8%), Scout radar=90° (81%)
+- **COMMITTED**
 
 ### Iter 11 — Fallback threshold 30→20: +1.5pp average (**COMMITTED**)
 **Date:** 2026-04-20

@@ -7,7 +7,7 @@ public sealed class BlueSharpCortex : BlueCortexBase
 {
     protected override TankConfiguration TankConfiguration { get; } = new()
     {
-        FormationSlot = 1,
+        FormationSlot = 3,
         MaxFirePower = 3.0,
         PreferredRange = 300.0,
         HasEcm = false,
