@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 30 complete (Hammer Retreat=20 NEUTRAL; architecture ceiling confirmed 70.2%)
+2026-04-20 — Iteration 31 complete (Rush priority targeting NEUTRAL; priority targeting law confirmed)
 
 ## Current Iteration
-**31** — pending (requires novel mechanisms; all Wolfpack parameters exhausted)
+**32** — pending
 
 ## Situation
 
@@ -54,34 +54,35 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 31)
+## Next Hypothesis (Iteration 32)
 
-**ARCHITECTURE CEILING DECLARED. All Wolfpack parameters exhausted.** Novel mechanisms required.
+**Encircle → Wolfpack in cleanup scenarios.** When `allyCount ≥ enemies.Count * 2 AND allyCount ≥ 3`
+(the cleanup condition), replace `SwarmStrategy.Encircle` with `SwarmStrategy.Wolfpack`.
 
-**Options for iter-31+ (novel approaches):**
-1. **Adaptive MaxFP**: Fire at MaxFP=1.0 normally but MaxFP=0.1 (ultra-fast) when target is at
-   very close range (<80px). At close range, ultra-fast bullets hit nearly instantly. Requires
-   modifying `ExecuteWolfpack` to conditionally set MaxFP based on distance.
+Difference from iter-26 (Encircle radius change):
+- Iter-26: Changed orbit radius from 180→160 within Encircle (same fire gate, same strategy)
+- Iter-32: Replaces Encircle entirely with Wolfpack — removes the 220px fire gate AND changes orbit
 
-2. **Counter-targeting based on Blue survivor pattern**: If BlueRush is the most common Blue
-   survivor (win_survival_rate=69% in seed 1000), prioritize Rush rather than weakest-first.
-   This flips the prior refutation (Sharp targeting) — Rush is a different tank with different
-   energy curve. Test Rush-priority targeting.
+Encircle fires only when `distance < 220`. Wolfpack fires immediately (LinearPredictionFire, no gate).
+In a 4v1 or 3v1 cleanup, Wolfpack at 160px fires continuously while approaching; Encircle at 180px
+waits until within 220px before firing. The 220px gate may delay kills in cleanup scenarios.
 
-3. **Ghost at different formation slot**: Currently Ghost=slot 3 (216° orbit position). Ghost
-   at slot 0 (0°, "point" of formation) might place Ghost where it can use its burst damage most
-   effectively as the lead attacker, letting attack tanks orbit behind.
+One-line change: `return SwarmStrategy.Encircle;` → `return SwarmStrategy.Wolfpack;`
 
-4. **Dynamic strategy override**: When `allyCount > enemies.Count * 2` AND enemies are low energy
-   (avg < 30), switch to Wolfpack instead of Encircle. The 180px Encircle is too far for killing
-   weakened enemies; Wolfpack at 160 would finish them faster.
-
-**Top pick (lowest risk):** BlueRush priority targeting. Pure targeting change, no geometry risk.
-BlueRush has 69% win_survival_rate in seed 1000 — higher than Sharp's ~40-55%. Test 2 seeds.
+Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 31 — BlueRush Priority Targeting (NEUTRAL 0.0pp avg, 2 seeds)
+**Date:** 2026-04-20
+**Status:** NEUTRAL. Red 70.25% avg (2-seed) vs 70.25% baseline (0.0pp — perfectly neutral).
+- Rush IS dying faster (avg_death_tick -20 ticks in both seeds) but win rate unchanged
+- Blue compensates with other tanks; Rush win_survival_rate is observational, not causal
+- Priority targeting law confirmed: any specific-tank priority target is neutral vs weakest-first
+- Code reverted. No more targeting experiments warranted.
+- See Research/iter-0031-bluerush-priority-targeting-neutral.md for full details
 
 ### Iter 30 — Hammer RetreatThreshold 25→20 (NEUTRAL 0.0pp avg, 2 seeds)
 **Date:** 2026-04-20
