@@ -4,19 +4,19 @@
 2026-04-21 — Iteration 41
 
 ## Current Iteration
-**42** — 29v28 Numerical Edge (~55% avg)
+**43** — 55% Ceiling Confirmed (iter-43 parameter sweep refuted)
 
 ## Situation
 **CURRENT STATE:** 29 Blue tanks vs 28 Red tanks. Blue win rate ~55% avg (4-seed).
 - Seed 1000: Blue 58%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 55%
-- 30v28 tested (Blue29) — same 55% avg, reverted (orbit crowding offsets DPS gain)
 
-**Key findings:**
-- 29v28 breaks spawn geometry symmetry: +5pp over 50% baseline
-- 30v28 = 29v28 (ceiling at 29 Blue tanks for this approach)
-- Seed 2000 persistently 50% — very balanced spawn geometry for that seed
+**Iter-43 findings (both refuted):**
+- Slot cortex MaxFP=2.5/PR=200: -4pp regression (51% avg) — slower bullets hurt accuracy
+- Encircle threshold `enemies+2`: -2.5pp regression (52.5% avg) — premature Encircle
 
-**Next hypothesis:** Upgrade slot tank configs (MaxFP, PR) to improve DPS and break above 55%.
+**Confirmed ceiling:** 55% for numerical approach. Need qualitatively different strategy.
+**Next hypothesis:** Structural change — Pincer late-game threshold, or target the tank that
+Red's swarm depends on (high-WinSurv tank = linchpin) rather than lowest-energy.
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
