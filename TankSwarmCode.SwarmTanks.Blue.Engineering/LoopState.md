@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 26
+2026-04-21 — Iteration 28
 
 ## Current Iteration
-**27** — pending
+**29** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -52,17 +52,13 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 27)
+## Next Hypothesis (Iteration 29)
 
-**Pincer balanced group assignment: parity split instead of 2+4**
+**BlueTrooper PR=160 (currently 200)**
 
-Currently Pincer uses `config.FormationSlot <= 1` → slots 0,1 attack from 0° (2 tanks) and slots 2,3,4,5 attack from 180° (4 tanks). With 6 alive tanks this piles 4 tanks at the same 200px approach point, creating a collision cluster.
+BlueTrooper is at slot 5 (300°), newly added in iter 23. Its PR has never been tested since it was only committed with 200px. At 300°, the Trooper approaches from the upper-left. At 160px, it would be more aggressive — closer to the target from that angle, giving Rush+Trooper (120°+300°) a tight two-sided squeeze with Ecm(240°) creating a 3-point triangle at ≤180px.
 
-Change to `config.FormationSlot % 2 == 0 ? 0.0 : 180.0` → interleaved 3+3 split:
-- Group A (0°): Strike(0), Rush(2), Ecm(4)
-- Group B (180°): Guard(1), Sharp(3), Trooper(5)
-
-This gives balanced flanking in 6v2, 5v2, 4v2 endgame and works correctly for 3v2 (2+1 or 1+2). Pincer is confirmed critical (DO NOT disable rule), so improving its group geometry should help.
+Unlike other PR changes, Trooper's slot 5 is uniquely positioned at 300° with NO prior calibration history. Other tanks' "DO NOT" constraints come from pre-6th-tank calibration; Trooper at slot 5 is a fresh position.
 
 Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 
@@ -109,6 +105,8 @@ Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 - **DO NOT** use formation rotation based on target velocity: seed2000 consistently -3.5pp; dynamic angle rotation breaks the stable 60° geometry
 - **DO NOT** use uniform PR×0.9 scaling: -2.7pp, 3 seeds regressed; the calibrated per-tank PRs are at their optimum
 - **DO NOT** change OrbitRadius from 180: 220 gave -1.5pp (iter 18); 150 gave seed2000 -9pp (iter 26). 180 is the calibrated optimum — both directions refuted.
+- **DO NOT** change Pincer group split from `<=1`: parity (3+3) refuted (iter 27) — seed2000 -9pp.
+- **DO NOT** add Encircle to volley condition: refuted (iter 28) — seed2000 -9pp; Encircle endgame rarely fires but code path change triggers pattern.
 - **DO NOT** change gun tolerance from 5°: 4° gave -2.7pp, 6° gave -3.7pp; 5° is the empirical optimum
 - **DO NOT** reduce wall avoidance below 80: 60 gave -1.3pp and seed1000 consistently regressed
 - **DO NOT** make Scout hunt stale target positions: -2.3pp, seed4000 -5pp; bunches tanks at outdated location
@@ -172,6 +170,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 28 — Encircle volley fire (reverted)
+**Date:** 2026-04-21
+- **Volley fire added to Encircle strategy:** REFUTED. Seed 2000 dropped from 49%→40% (-9pp). Encircle triggers when `allyCount >= enemies.Count * 2` (e.g., 6v3, 5v2, 4v2). Adding synchronized volley fire from orbiting tanks should increase burst damage in dominant endgame positions. But the same -9pp seed 2000 pattern occurred regardless — the Encircle volley condition fires rarely and any code path change triggers the pattern.
+- **Key insight:** Seed 2000's -9pp pattern now occurs across 6+ different code changes spanning navigation, timing, targeting, and strategy selection. The sensitivity is so broad it cannot be one specific geometric chain — it must be something fundamental about how the coordination state machine handles seed 2000's specific tank encounter sequence.
+- **DO NOT add Encircle to volley condition** — refuted; add to pattern log.
+
+### Iter 27 — Pincer parity group split (reverted)
+**Date:** 2026-04-21
+- **Pincer group: `FormationSlot % 2 == 0`** — REFUTED. Seed 2000 dropped from 49%→40% (-9pp). The parity split gives a balanced 3+3 flanking groups instead of the unbalanced 2+4, but the coordination state machine in seed 2000 requires the exact original `<=1` boundary.
+- **DO NOT change Pincer group split** — parity (3+3) refuted; original `<= 1` (2+4) is the calibrated state.
 
 ### Iter 26 — Wolfpack angle 50° + Encircle OrbitRadius 150 (all reverted)
 **Date:** 2026-04-21
