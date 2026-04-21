@@ -263,9 +263,13 @@ public sealed class SwarmCoordinator
         }
     }
 
-    private static void ExecuteWolfpack(ITankContext ctx, TankConfiguration config, RadarContact target, double radarSpin)
+    private void ExecuteWolfpack(ITankContext ctx, TankConfiguration config, RadarContact target, double radarSpin)
     {
-        TankNavigation.NavigateTo(ctx, target.Position, config.PreferredRange);
+        int aliveCount = GetAliveAllyCount() + 1;
+        int mySlot = config.FormationSlot % aliveCount;
+        double orbitAngleDeg = mySlot * (360.0 / aliveCount);
+        Vector2D orbitPoint = target.Position.PolarOffset(orbitAngleDeg, config.PreferredRange);
+        TankNavigation.NavigateTo(ctx, orbitPoint, 0);
         TankNavigation.MaintainRadar(ctx, target.Position, radarSpin);
         TankNavigation.LinearPredictionFire(ctx, target, config.MaxFirePower);
     }
