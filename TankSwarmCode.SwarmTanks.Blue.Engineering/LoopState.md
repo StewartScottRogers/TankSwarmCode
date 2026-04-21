@@ -1,29 +1,36 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 41
+2026-04-21 — Iteration 50
 
 ## Current Iteration
-**44** — 55.5% Ceiling (Fallback=10 marginal gain)
+**50** — 47.75% avg (slot MaxFP 1.0→1.5, +5.25pp)
 
 ## Situation
-**CURRENT STATE:** 29 Blue tanks vs 28 Red tanks. Blue win rate ~55.5% avg (4-seed).
-- Seed 1000: Blue 60% (2x confirmed)  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56% (2x confirmed)  |  Seed 5000: Blue 56%
+**CURRENT STATE:** 29 Blue tanks vs 29 Red tanks. Blue win rate ~47.75% avg (4-seed).
+- Seed 1000: Blue 50% (2x confirmed)  |  Seed 2000: Blue 44%  |  Seed 3000: Blue 48% (2x confirmed)  |  Seed 5000: Blue 49%
 
-**Iter-43 findings (both refuted):**
-- Slot cortex MaxFP=2.5/PR=200: -4pp regression (51% avg) — slower bullets hurt accuracy
-- Encircle threshold `enemies+2`: -2.5pp regression (52.5% avg) — premature Encircle
+**CONTEXT: Red Engineering (iters 45-49) matched Blue's tank count and optimized:**
+- Red added Red28 (29th tank) → Red 29 vs Blue 29 tanks
+- Red named tanks MaxFP 1.0→2.0 (+12pp for Red)
+- Red Fallback threshold 30→10 (+2pp for Red)
+- Red ceiling: 57.6% avg (5-seed, exhausted Wolfpack parameters)
+- Blue was at ~42.5% before iter-50 (Red 57.6% = Blue 42.4%)
 
-**Iter-44 findings (ACCEPTED):**
-- Fallback threshold 20→10: +0.75pp avg (55% → 55.5%) — confirmed with 2 runs on seeds 1000+3000
+**Iter-50 findings (ACCEPTED):**
+- BlueSlotCortex MaxFP 1.0→1.5: +5.25pp avg (42.5% → 47.75%)
+- MaxFP=2.0 tested first: seeds 1000+5000 +10/+9pp but seeds 2000+3000 -4/-2pp (rejected)
+- MaxFP=1.5 compromise: all seeds positive or neutral (0pp to +10pp), 2 seeds double-confirmed
 
-**Confirmed ceiling:** 55.5% for current tactics at 29v28.
-**Seed 2000 is architecturally 50%** — spawn geometry too balanced for numerical advantage to matter.
-**DO NOT change Fallback threshold below 10** — further reduction untested but likely diminishing.
+**DO NOT raise slot MaxFP above 1.5** — 2.0 gives consistent seed 2000 -4pp regression.
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
-## 29v28 Baseline (Iter-44, CURRENT)
+## 29v29 Baseline (Iter-50, CURRENT)
+- Seed 1000: Blue 50% (2x confirmed)  |  Seed 2000: Blue 44%  |  Seed 3000: Blue 48% (2x confirmed)  |  Seed 5000: Blue 49%
+- **4-seed avg: ~47.75%** — 29 Blue vs 29 Red, slot MaxFP=1.5, Fallback=10
+
+## 29v28 Baseline (Iter-44, Obsolete — Red added 29th tank)
 - Seed 1000: Blue 60%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 56%
 - **4-seed avg: ~55.5%** — 29 Blue vs 28 Red, Fallback=10
 
@@ -52,8 +59,8 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - BlueScout: MaxFP=2.5, PR=200, FormationSlot=10, Retreat=0
 - BluePhoenix: MaxFP=2.5, PR=200, FormationSlot=11, Retreat=0
 
-### Slot tanks (Iter-41/42):
-- Blue12-Blue28: MaxFP=1.0, PR=160.0, FormationSlot=12-28 (via BlueSlotCortex)
+### Slot tanks (Iter-50):
+- Blue12-Blue28: MaxFP=1.5, PR=160.0, FormationSlot=12-28 (via BlueSlotCortex)
 - Uses dynamic orbit: `slot % aliveCount * (360/aliveCount)` degrees
 
 ### Coordinator:
