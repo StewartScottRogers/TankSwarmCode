@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 25
+2026-04-21 — Iteration 26
 
 ## Current Iteration
-**26** — pending
+**27** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -52,17 +52,17 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 26)
+## Next Hypothesis (Iteration 27)
 
-**6-tank formation geometry: reduce angle spread from 60° to 45°**
+**Pincer balanced group assignment: parity split instead of 2+4**
 
-With 6 tanks at 60°, the formation perfectly covers 360°. But 360° coverage might not be optimal — concentrating fire from a narrower arc could apply more simultaneous pressure on the priority target.
+Currently Pincer uses `config.FormationSlot <= 1` → slots 0,1 attack from 0° (2 tanks) and slots 2,3,4,5 attack from 180° (4 tanks). With 6 alive tanks this piles 4 tanks at the same 200px approach point, creating a collision cluster.
 
-At 45° spread: 6 tanks at 0°, 45°, 90°, 135°, 180°, 225° → 225° arc with 135° gap. This concentrates tanks on a 225° front arc. This was never tested with 6 tanks (only tested 60° and 72° with 5 tanks).
+Change to `config.FormationSlot % 2 == 0 ? 0.0 : 180.0` → interleaved 3+3 split:
+- Group A (0°): Strike(0), Rush(2), Ecm(4)
+- Group B (180°): Guard(1), Sharp(3), Trooper(5)
 
-Alternative: try forming two attack clusters (3+3) by using alternating large/small angles. For example: slot×90° gives 0°, 90°, 180°, 270° for 4 slots, 6th tank fills gaps.
-
-Also consider: complete strategic rethink for iter 26 — the 43.25% ceiling may require a new swarm tactic rather than parameter tuning.
+This gives balanced flanking in 6v2, 5v2, 4v2 endgame and works correctly for 3v2 (2+1 or 1+2). Pincer is confirmed critical (DO NOT disable rule), so improving its group geometry should help.
 
 Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 
@@ -93,7 +93,7 @@ Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 - **DO NOT** change BlueStrike PR from 250 — seed 4000 drops 18pp at PR=220
 - **DO NOT** change BlueEcm PR from 150 — PR=200 regresses all seeds (-17pp seed4000)
 - **DO NOT** change BlueGuard Retreat from 30 — Retreat=25 gives -20pp seed4000, -10pp seed3000
-- **DO NOT** change Wolfpack angle below 60° — 45° and 30° tested: same avg but higher seed variance
+- **DO NOT** change Wolfpack angle from 60° — 45°/30° tested (iter 10, neutral/same avg); 50° tested (iter 26): seed2000 -9pp. 60° is the confirmed optimum; any deviation hurts seed 2000.
 - **DO NOT** lower BlueSharp PR below 300 (at new slot 3/180°) — PR=250 regressed -1.9pp across most seeds
 - BlueRush PR=200 is marginal (+0.8pp) with seed2000 -2.5pp — not worth the trade
 - **DO NOT** swap BlueEcm/BlueRush slots — -2.1pp regression, seed2000 -7pp
@@ -108,7 +108,7 @@ Success criteria: 4-seed avg ≥ 45% (baseline 43.25%).
 - **DO NOT** raise Encircle threshold beyond enemies×2: enemies×3 gave -1.5pp; Encircle is genuinely better than Wolfpack in overwhelming-advantage endgame
 - **DO NOT** use formation rotation based on target velocity: seed2000 consistently -3.5pp; dynamic angle rotation breaks the stable 60° geometry
 - **DO NOT** use uniform PR×0.9 scaling: -2.7pp, 3 seeds regressed; the calibrated per-tank PRs are at their optimum
-- **DO NOT** increase OrbitRadius above 180: 220 gave -1.5pp; tanks at 220px can't reliably fire (< 220 threshold)
+- **DO NOT** change OrbitRadius from 180: 220 gave -1.5pp (iter 18); 150 gave seed2000 -9pp (iter 26). 180 is the calibrated optimum — both directions refuted.
 - **DO NOT** change gun tolerance from 5°: 4° gave -2.7pp, 6° gave -3.7pp; 5° is the empirical optimum
 - **DO NOT** reduce wall avoidance below 80: 60 gave -1.3pp and seed1000 consistently regressed
 - **DO NOT** make Scout hunt stale target positions: -2.3pp, seed4000 -5pp; bunches tanks at outdated location
@@ -172,6 +172,14 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 26 — Wolfpack angle 50° + Encircle OrbitRadius 150 (all reverted)
+**Date:** 2026-04-21
+- **Wolfpack angle 60°→50°:** REFUTED. Seed 2000 dropped from 49%→40% (-9pp). The exact 60° spread is calibrated for seed 2000's arena geometry. Any deviation — including narrowing to 50° — collapses the seed 2000 formation approach.
+- **Encircle OrbitRadius 180→150:** REFUTED. Seed 2000 dropped from 49%→40% (-9pp). Orbit at 150px brings all tanks within the 220px fire threshold but overstacks the formation. The 180px orbit is the calibrated optimum for the < 220px fire gate.
+- **DO NOT change Wolfpack angle from 60°** — angle 50° is refuted (pattern consistent with prior 45°/30° tests at 5-tank config).
+- **DO NOT change OrbitRadius from 180** — 150 refuted; 220 previously refuted (iter 18). 180 is the exact optimum.
+- **Pattern confirmed:** Every single-parameter change triggers seed 2000 -9pp. 43.25% is the firm single-parameter ceiling.
 
 ### Iter 25 — Further 6-tank sweeps (all reverted)
 **Date:** 2026-04-21
