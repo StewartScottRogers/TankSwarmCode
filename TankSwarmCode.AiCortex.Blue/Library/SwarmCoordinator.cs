@@ -271,6 +271,7 @@ public sealed class SwarmCoordinator
             target.Position.Y + target.VelocityVector.Y * age);
         double approachAngle = config.FormationSlot == 6 ? 330.0
             : config.FormationSlot == 7 ? 270.0
+            : config.FormationSlot == 8 ? 30.0
             : config.FormationSlot * 60.0;
         Vector2D approachPoint = predictedPos.PolarOffset(approachAngle, config.PreferredRange);
         TankNavigation.NavigateTo(ctx, approachPoint, 0);
