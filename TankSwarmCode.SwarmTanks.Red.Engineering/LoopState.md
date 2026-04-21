@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 19 complete (Blade+Hammer MaxFP 2.0→1.5, +1.3pp avg accepted)
+2026-04-20 — Iteration 20 complete (Ghost MaxFP=1.5 REFUTED; Ghost stays at 2.0)
 
 ## Current Iteration
-**20** — pending
+**21** — pending
 
 ## Situation
 
@@ -28,9 +28,9 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 - **Parallel mode is VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug.
   Use `--parallel 8` for all runs.
-- **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160.** Confirmed for Arrow (iter-14),
-  Trooper (iter-18), and Blade+Hammer (iter-19). The hit rate gain from faster bullets outweighs the
-  per-hit damage reduction at this range. Ghost (MaxFP=2.0) is the last candidate.
+- **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160 — for 4 of 5 tanks.** Confirmed
+  for Arrow (iter-14), Trooper (iter-18), Blade+Hammer (iter-19). Ghost is the exception: Ghost
+  MaxFP=1.5 was refuted (-1.5pp). Ghost stays at 2.0. MaxFP sweep is complete.
 - **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
 - **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
@@ -43,27 +43,44 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 | Hammer | 0 | 1.5 | 160 | false | 25 |
 | Blade | 1 | 1.5 | 160 | false | 20 |
 | Arrow | 2 | 1.5 | 160 | false | 20 |
-| Ghost | 3 | 2.0 | 160 | false | 20 |
+| Ghost | 3 | **2.0** | 160 | false | 20 |
 | **Trooper** | **4** | **1.5** | **160** | **false** | **20** |
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 20)
+## Next Hypothesis (Iteration 21)
 
 **Primary options:**
-1. Ghost MaxFP=1.5 (complete the "faster bullets at PR=160" sweep; Ghost fights at rate 6-8/100t)
-2. PR tuning for 5-tank formation (130/150/180 — untested with all 5 at 1.5)
-3. Target BlueSharp first (Sharp linchpin — priority targeting in SwarmCoordinator)
-4. Orbit slot assignment remap (Trooper as slot 4 takes the last orbit position)
+1. BlueSharp priority targeting (Sharp linchpin: alive=85% Blue wins, dead=24% — focus fire on Sharp)
+2. PR tuning for 5-tank formation (130/150/180 — untested with current config)
+3. Orbit slot assignment remap (Trooper as slot 4 takes the last orbit position)
+4. Ghost PR=140 inner orbit (lower PR for Ghost only, forcing closer engagement)
 
-**Top pick:** Ghost MaxFP=1.5. Every other tank now runs 1.5; Ghost is the only holdout at 2.0.
-Ghost combat rate is 6-8/100t — substantial enough that the bullet speed improvement should apply.
+**Top pick:** BlueSharp priority targeting. The SwarmCoordinator currently targets lowest-energy
+enemy (`OrderBy(c => c.Energy)`). When BlueSharp is visible on radar, targeting Sharp first instead
+of the weakest tank could collapse Blue's coordination earlier and end more matches quickly.
 
-Success criteria: Red 5-seed avg increases by ≥1pp (from 67.2% to ≥68.2%)
+Implementation: In `RunEpochLogic` (SwarmCoordinator.cs line ~149), prefer Sharp by name before
+falling back to lowest-energy:
+```csharp
+RadarContact? priorityTarget =
+    enemies.FirstOrDefault(c => c.Name == "BlueSharp") ??
+    enemies.OrderBy(c => c.Energy).FirstOrDefault();
+```
+
+Success criteria: Red 5-seed avg increases by ≥2pp (from 67.2% to ≥69.2%)
 
 ---
 
 ## Iteration Log
+
+### Iter 20 — Ghost MaxFP=1.5 (REFUTED -1.5pp avg)
+**Date:** 2026-04-20
+**Status:** REFUTED. Ghost MaxFP=1.5 = 65.7% avg (5-seed) vs 67.2% baseline (-1.5pp).
+- 4/5 seeds negative; only seed 5000 positive (+3.5pp)
+- Ghost is the exception to "faster bullets at PR=160" — MaxFP=2.0 remains optimal for Ghost
+- MaxFP sweep complete: Arrow/Trooper/Blade/Hammer at 1.5; Ghost at 2.0 (confirmed separately)
+- See Research/iter-0020-ghost-maxfp-1.5-refuted.md for full details
 
 ### Iter 19 — Blade+Hammer MaxFP 2.0→1.5 (ACCEPTED +1.3pp avg)
 **Date:** 2026-04-20
