@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 32 complete (Encircle→Wolfpack REFUTED -2.0pp; Encircle confirmed correct)
+2026-04-21 — Iteration 33 complete (Pincer@160 NEUTRAL 0.0pp; LOOP COMPLETE — ceiling 70.2% confirmed)
 
 ## Current Iteration
-**33** — pending
+**LOOP COMPLETE** — 70.2% is the hard ceiling for current framework. Novel mechanisms required.
 
 ## Situation
 
@@ -54,32 +54,30 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 33)
+## LOOP STATUS: COMPLETE
 
-**ARCHITECTURE FULLY EXHAUSTED.** No accessible parameters remain within the current framework.
-All tested dimensions: MaxFP (all tanks), PR (uniform and mixed), Encircle (radius and strategy),
-Fallback threshold, targeting (weakest-first, Sharp, Rush), ECM (Ghost Jam), Retreat thresholds,
-mixed-PR formations, and strategy routing (Encircle vs Wolfpack in cleanup).
+**70.2% avg (5-seed) is the hard ceiling for the current Wolfpack/orbit framework.**
 
-**Novel structural options that have NOT been tested:**
-1. **Adaptive MaxFP by distance**: Fire MaxFP=0.1 when target < 80px (nearly instant at close range),
-   MaxFP=1.0 at normal range. Requires a conditional in ExecuteWolfpack. Genuinely untested mechanism.
+8 consecutive neutral/negative results (iters 26-33) confirm the ceiling. All accessible parameter
+dimensions have been tested. No single-parameter or strategy-routing change produces ≥2pp gain.
 
-2. **Ghost slot reposition**: Ghost at slot 0 (0° from orbit reference, "front" of formation) vs
-   current slot 3 (216°). Slot assignment determines which side of the target Ghost occupies.
-   Ghost's burst damage at 2.0 MaxFP might be more effective at a different angular position.
-
-3. **Pincer condition loosening**: Currently `allyCount >= 3 AND enemies.Count <= 2`. The Pincer
-   strategy (two-flank approach at 200px) may be underused. Testing allyCount >= 2 OR enemies.Count
-   <= 3 could activate Pincer earlier and in more scenarios.
-
-**Top pick:** Adaptive MaxFP (option 1). This is the most novel mechanism — it uses the game's
-physics (bullet speed vs distance) optimally: slow heavy shots at distance, fast light shots close up.
-Requires reading `ctx.State.Position.DistanceTo(target.Position)` in ExecuteWolfpack. Low risk.
+To exceed 70.2%, fundamentally new approaches are needed:
+- New formation geometry (not Wolfpack/Encircle/Pincer variants)
+- Dynamic behavior based on live match state
+- Updated Blue DLL (ceiling resets if Blue changes strategy)
+- New information sources (track individual Blue tank histories across a match)
 
 ---
 
 ## Iteration Log
+
+### Iter 33 — Pincer Approach 200px→160px (NEUTRAL 0.0pp avg, 2 seeds)
+**Date:** 2026-04-21
+**Status:** NEUTRAL. Red 70.25% avg (2-seed) vs 70.25% baseline (0.0pp — perfectly neutral).
+- Pincer fires immediately (no range gate) — approach point is navigation only, not fire enable
+- 160px approach confirmed same win rate as 200px; Pincer distance is not a lever
+- Code reverted to 200px. **LOOP COMPLETE — 70.2% ceiling confirmed after 8 consecutive neutral/neg**
+- See Research/iter-0033-pincer-160px-neutral.md for full details
 
 ### Iter 32 — Encircle→Wolfpack in Cleanup (REFUTED -2.0pp, 1 seed)
 **Date:** 2026-04-21
