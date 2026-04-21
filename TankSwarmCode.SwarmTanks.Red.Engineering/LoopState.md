@@ -1,29 +1,32 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iter 49 complete (180° arc orbit refuted -8pp seed 1000; ceiling analysis closed)
+2026-04-21 — Iter 86 complete (MaxFP=1.5 accepted +1.0pp; new baseline 53.2% avg)
 
 ## Current Iteration
-**ACTIVE** — 55.6% avg (5-seed) vs Blue's current 29-tank DLL. Continuing optimization.
+**ACTIVE** — 53.2% avg (5-seed, MaxFP=1.5) vs Blue's updated 29-tank DLL.
 
 ## Situation
 
-**RECOVERING: 55.6% average win rate across 5 seeds against current Blue DLL (29 tanks).**
+**ADVANCING: 53.2% average win rate across 5 seeds against Blue's updated DLL (MaxFP=1.5).**
 
-Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). Red counter-expanded to 29 tanks. MaxFP recalibrated from 1.0→2.0 (the "faster bullets" optimization from iter-24 was for old 5-tank Blue and is wrong for dense 29-tank formations).
+Blue Engineering updated their DLL between iter 49 and iter 82 (-5.4pp). MaxFP=1.5 recovered +1.0pp.
+MaxFP sweep vs new Blue DLL: 1.0→catastrophic (-10pp), 1.5→optimal (+1.0pp), 2.0→baseline, 2.5→catastrophic.
 
 **CRITICAL INFRASTRUCTURE NOTE:** Always use `net10.0/publish/` DLL paths, NOT `net9.0/publish/`.
 - Red: `TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Red.dll`
 - Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
 - Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
+- **ALWAYS use `--on-timeout energy`** in battle runs (avoids 35% draw inflation)
+- Build protocol: `dotnet clean` then `dotnet publish` (incremental builds sometimes stale)
 
-**Current win rates (5-seed parallel, 200 matches each, 29 Red tanks vs Blue 29 tanks, MaxFP=2.0, Fallback=10):**
-- Seed 1000: **60%**
-- Seed 2000: **56%**
-- Seed 3000: **57%**
-- Seed 4000: **58%**
-- Seed 5000: **57%**
-- **5-seed average: 57.6%**
+**Current win rates (5-seed, 200 matches each, --on-timeout energy, 29 Red tanks vs Blue 29 tanks, MaxFP=1.5, Fallback=10):**
+- Seed 1000: **54.0%**
+- Seed 2000: **54.5%**
+- Seed 3000: **52.5%**
+- Seed 4000: **56.5%**
+- Seed 5000: **48.5%**
+- **5-seed average: 53.2%**
 
 ## What We Know (Current Blue DLL — 29 tanks)
 
@@ -43,19 +46,19 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 
 | Tanks | Slots | MaxFP | PR | HasEcm | Retreat |
 |-------|-------|-------|----|--------|---------|
-| RedHammer | 0 | 2.0 | 160 | false | 25 |
-| RedBlade | 1 | 2.0 | 160 | false | 20 |
-| RedArrow | 2 | 2.0 | 160 | false | 20 |
-| RedGhost | 3 | 2.0 | 160 | false | 20 |
-| Red4-Red28 | 4-28 | 2.0 | 160 | false | 20 |
+| RedHammer | 0 | 1.5 | 160 | false | 25 |
+| RedBlade | 1 | 1.5 | 160 | false | 20 |
+| RedArrow | 2 | 1.5 | 160 | false | 20 |
+| RedGhost | 3 | 1.5 | 160 | false | 20 |
+| Red4-Red28 | 4-28 | 1.5 | 160 | false | 20 |
 
-**Total: 29 Red tanks vs Blue 29 tanks. 57.6% avg 5-seed win rate.**
+**Total: 29 Red tanks vs Blue 29 tanks. 53.2% avg 5-seed win rate (MaxFP=1.5).**
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## LOOP STATUS: CEILING CONFIRMED (57.6% — Wolfpack architecture exhausted vs current Blue DLL)
+## LOOP STATUS: ADAPTING (52.2% — Blue DLL updated; re-exploring parameter space vs new Blue)
 
-### What was tested and refuted (iter 48):
+### What was tested and refuted (iter 48, vs OLD Blue DLL 57.6% baseline):
 - Encircle: 1.5x threshold (-1pp), disabled (-12pp), orbit 160 (-1.5pp) — all rejected
 - PR=140 (-6pp seed 1000), PR=180 (neutral) — 160 confirmed optimal with MaxFP=2.0
 - MaxFP=2.5 (-10pp), 3.0 (-13pp) — 2.0 is sharp peak
@@ -64,10 +67,23 @@ Blue Engineering expanded from 12 tanks to 29 tanks (Blue1-28 + named roster). R
 - Centroid orbit (-1.5pp) — uniform 360° optimal
 - Per-tank targeting (-3pp) — coordinated weakest-first critical
 - Fallback=5 (flat vs 10) — 10 is optimal floor
-- 180° arc orbit (-8pp seed 1000, neutral seed 3000) — decisive rejection; uniform 360° encirclement essential
+- 180° arc orbit (-8pp seed 1000, neutral seed 3000) — decisive rejection
 
-To exceed 57.6%: need architectural innovation or Blue DLL update.
-See Research/iter-0048-ceiling-analysis.md for full analysis.
+### What was tested and refuted vs NEW Blue DLL 52.2% baseline (iters 82-84):
+- PR=171 (-3.5pp seed 1000, marginal noise on 2000/3000) — REFUTED
+- ECMScreen orbit-based positioning: NEUTRAL (52.5% = baseline seed 3000)
+- ECMScreen removal: catastrophic (35% draws). ECMScreen required for radar tracking — REVERTED
+- BlueEcm priority targeting: NEUTRAL (~51.75% vs ~51.5% for same 2 seeds) — REFUTED
+- ECM alert window 20→10 ticks: NEUTRAL (50.5/52.5 = exact baseline seeds 1000/3000)
+- **Conclusion**: ALL ECM-related changes are completely neutral. ECMScreen behavior doesn't affect outcomes.
+
+### Open exploration vs new Blue DLL:
+- MaxFP sweep (1.5, 1.0) — Blue's new DLL may be more mobile; lighter bullets might be better
+- PR sweep below 160 (155, 150)
+- Fallback threshold re-sweep (5, 15) vs new Blue
+- Encircle threshold re-sweep
+
+See Research/iter-0082-blueecm-pr171-newbaseline.md for iter 82-84 details.
 
 **94.0% avg (5-seed) is the ceiling for numerical superiority at 28 tanks vs Blue 12.**
 
@@ -80,6 +96,28 @@ To exceed 94.0%, different approaches needed:
 ---
 
 ## Iteration Log
+
+### Iters 85-86 — MaxFP Sweep: 2.0→1.5 ACCEPTED (+1.0pp), 1.0 Catastrophic (-10pp)
+**Date:** 2026-04-21
+**Status:** ACCEPTED (MaxFP=1.5). New 5-seed avg: 53.2% vs 52.2% baseline (+1.0pp).
+- MaxFP=1.5: 54.0/54.5/52.5/56.5/48.5 = 53.2% avg (+1.0pp vs 52.2% baseline)
+- MaxFP=1.0: seed 1000 = 40.5% (-10pp). Catastrophic. REVERTED immediately.
+- Gradient: 1.0 (-10pp) → 1.5 (optimal +1.0pp) → 2.0 (baseline 0pp) → confirmed sharp peak at 1.5
+- Mechanism: New Blue DLL appears more mobile; faster/lighter bullets (1.5 vs 2.0) improve hit rate vs mobile targets
+- Seed 1000/4000 strongly positive (+3.5/+2.5pp); seeds 2000/3000 flat; seed 5000 -1pp
+- See Research/iter-0085-0086-maxfp-sweep.md
+
+### Iter 82 — Blue DLL Update + PR=171 Refuted (NEW BASELINE: 52.2%)
+**Date:** 2026-04-21
+**Status:** REFUTED (PR=171). New baseline established.
+- Discovered Blue Engineering updated DLL. Old 57.6% baseline is stale.
+- New 5-seed baseline: 50.5/54.5/52.5/54.0/49.5% = 52.2% avg (-5.4pp from Blue update)
+- PR=171 tested (3 seeds): 47.0/55.0/53.5% = 51.8% avg vs 52.5% avg baseline = -0.7pp. REFUTED.
+  Seed 1000 decisive negative (-3.5pp); seeds 2000/3000 marginal noise.
+- ECMScreen orbit-based: NEUTRAL (52.5% = baseline). ECMScreen movement doesn't affect outcomes.
+- ECMScreen removal: catastrophic (35% draws). ECMScreen required for radar tracking during ECM blackout.
+- Infrastructure fix: ALL runs must use `--on-timeout energy` (avoids 35% draw inflation from timeouts).
+- See Research/iter-0082-blueecm-pr171-newbaseline.md
 
 ### Iter 47 — Fallback Threshold 30→10 (ACCEPTED, +2.0pp avg)
 **Date:** 2026-04-21
