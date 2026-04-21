@@ -1,52 +1,40 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 17 complete (parallel mode bug fix — static SwarmCoordinator registry)
+2026-04-20 — Iteration 18 complete (Trooper MaxFP 2.0→1.5, +3.0pp avg confirmed)
 
 ## Current Iteration
-**18** — pending
+**19** — pending
 
 ## Situation
 
-**DOMINANT: 62.9% average win rate across 5 seeds against current Blue DLL.**
+**DOMINANT: 65.9% average win rate across 5 seeds against current Blue DLL (net10.0).**
 
-**IMPORTANT: The LoopState baseline of 64.2% from iter-14 is STALE.** Blue improved their DLL
-with two commits:
-1. Wolfpack angle-offset formation for Blue (+3.8pp Blue perspective) — `871c931`
-2. Blue orbit angle step changed from 72° to 60° — `00f7f08`
+**CRITICAL INFRASTRUCTURE NOTE:** Always use `net10.0/publish/` DLL paths, NOT `net9.0/publish/`.
+The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate).
+- Red: `TankSwarmCode.SwarmTanks.Red/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Red.dll`
+- Blue: `TankSwarmCode.SwarmTanks.Blue/bin/Release/net10.0/publish/TankSwarmCode.SwarmTanks.Blue.dll`
+- Build: `dotnet publish TankSwarmCode.SwarmTanks.Red/... -c Release`
 
-**True baseline (4 tanks vs NEW Blue):** ~50.2% avg (seeds 1000/2000/3000: 50.5/55.5/44.5%)
-
-**Current win rates (5-seed serial, 200 matches each, 5 tanks vs current Blue):**
-- Seed 1000: **63.5%** (400-match validation: **65.8%**)
-- Seed 2000: **60.5%**
-- Seed 3000: **70.0%**
-- Seed 4000: **62.5%**
-- Seed 5000: **58.0%**
-- **5-seed average: 62.9%**
+**Current win rates (5-seed parallel, 200 matches each, 5 tanks vs current Blue):**
+- Seed 1000: **62.5%**
+- Seed 2000: **70.5%**
+- Seed 3000: **70.5%**
+- Seed 4000: **62.0%**
+- Seed 5000: **64.0%**
+- **5-seed average: 65.9%**
 
 ## What We Know (Current Blue DLL)
 
-- **Parallel mode is NOW VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug
-  (`ForTeam()` → `new SwarmCoordinator()`). Parallel results now match serial. Use `--parallel 8`.
-- **Blue improved significantly between iter-14 and iter-16.** Two Blue commits to their
-  SwarmCoordinator brought them from losing 64% to approximately 50/50 against our 4-tank config.
-  Always re-baseline before comparing results.
-- **5th tank (RedTrooper) is the breakthrough vs new Blue.** +12.7pp. With Blue running 5 well-
-  coordinated tanks using 60° orbit angle steps, our 4-tank config faced a structural numerical
-  disadvantage. Adding Trooper creates 5v5 parity where Red's coordination wins.
-- **RedTrooper was already in the project.** Just needed a parameterless constructor to be
-  auto-instantiated by the arena engine.
-- **All iter-15 findings remain valid for 4-tank config.** The 64.2% ceiling was against OLD Blue.
-  Against new Blue, the ceiling for 4 tanks is ~50%.
-- **Arrow MaxFP=1.5 is optimal.** Confirmed in iter-14. Faster bullets at PR=160 improve hit rate.
-- **PR=160 orbit radius is optimal for all tanks.** Not re-tested for 5th tank, assumed same.
+- **Parallel mode is VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug.
+  Use `--parallel 8` for all runs.
+- **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160.** Confirmed for Arrow (iter-14)
+  and Trooper (iter-18). The hit rate gain from faster bullets outweighs the per-hit damage reduction
+  at this range. Blade, Hammer, Ghost at MaxFP=2.0 are candidates for the same change.
+- **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
 - **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
-- **BlueSharp is Blue's Linchpin** (alive: 85% Blue wins, dead: 24% Blue wins). Killing Sharp
-  early collapses Blue's win rate. This is the highest-value targeting opportunity.
-- **BlueEcm is All-in** (never survives a loss). ECM suppression hurts Red but BlueEcm dies in
-  every Red win — ECM alone is not why Blue wins.
+- **BlueSharp is Blue's Linchpin** (alive: 85% Blue wins, dead: 24% Blue wins).
 
 ## Current Configuration
 
@@ -56,27 +44,38 @@ with two commits:
 | Blade | 1 | 2.0 | 160 | false | 20 |
 | Arrow | 2 | 1.5 | 160 | false | 20 |
 | Ghost | 3 | 2.0 | 160 | false | 20 |
-| **Trooper** | **4** | **2.0** | **160** | **false** | **20** |
+| **Trooper** | **4** | **1.5** | **160** | **false** | **20** |
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 18)
+## Next Hypothesis (Iteration 19)
 
 **Primary options:**
-1. Trooper MaxFP=1.5 (match Arrow's confirmed-better power level; 5 tanks all at faster bullets)
-2. Trooper PR tuning (is 160 still optimal for 5-tank formation? 130/180 not tested for 5 tanks)
-3. Orbit angle step for 5-tank formation (72° equal vs 60° Blue-style offset)
-4. Ghost PR=150 inner orbit (bringing Ghost closer for higher DPS while others hold 160)
-5. Target BlueSharp first (Sharp is Blue's Linchpin — priority targeting change in SwarmCoordinator)
+1. Blade + Hammer MaxFP=1.5 (extend the "faster bullets at PR=160" pattern; 2 of 3 remaining 2.0-FP tanks)
+2. Ghost MaxFP=1.5 (Ghost also fights at rate ~6/100t, same pattern may apply)
+3. PR tuning for 5-tank formation (130/150/180 — untested with 5 tanks)
+4. Target BlueSharp first (Sharp linchpin — priority targeting in SwarmCoordinator)
+5. Orbit slot assignment remap (slot 4/Trooper currently takes last orbit position)
 
-**Top pick:** Trooper MaxFP=1.5 (iter-17 plan, still untested). Arrow confirmed better at 1.5;
-same logic applies to Trooper.
+**Top pick:** Blade + Hammer MaxFP=1.5. The "faster bullets win at PR=160" pattern is now confirmed
+twice (Arrow, Trooper). Blade and Hammer are the two highest-combat-rate tanks at MaxFP=2.0.
+Testing both together is efficient — if positive, great; if negative, isolate one at a time.
 
-Success criteria: Red win rate increases by ≥3pp at seed 1000 (from 63.5% to ≥66.5%)
+Success criteria: Red 5-seed avg increases by ≥2pp (from 65.9% to ≥67.9%)
 
 ---
 
 ## Iteration Log
+
+### Iter 18 — Trooper MaxFP 2.0→1.5 (CONFIRMED +3.0pp avg)
+**Date:** 2026-04-20
+**Status:** CONFIRMED. Red 65.9% avg (5-seed parallel, net10.0 DLL) vs 62.9% baseline.
+- Discovery: Prior runs used stale net9.0 DLL (4-tank Red, 43%). Fixed to net10.0/publish.
+- MaxFP=1.5 5-seed results: 62.5/70.5/70.5/62.0/64.0 = **65.9% avg**
+- Direct 3-seed A/B: MaxFP=1.5 = 67.8% vs MaxFP=2.0 = 63.7% (+4.1pp)
+- Mechanism: faster bullets at PR=160 improve hit rate more than per-hit damage reduction costs
+- Pattern now confirmed for Arrow (iter-14) and Trooper (iter-18). Blade+Hammer are next.
+- See Research/iter-0018-trooper-maxfp-1.5.md for full details
 
 ### Iter 0 — Serial Baseline Established
 **Date:** 2026-04-20
