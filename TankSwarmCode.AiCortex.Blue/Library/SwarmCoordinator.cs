@@ -274,6 +274,7 @@ public sealed class SwarmCoordinator
             : config.FormationSlot == 8 ? 30.0
             : config.FormationSlot == 9 ? 90.0
             : config.FormationSlot == 10 ? 150.0
+            : config.FormationSlot == 11 ? 210.0
             : config.FormationSlot * 60.0;
         Vector2D approachPoint = predictedPos.PolarOffset(approachAngle, config.PreferredRange);
         TankNavigation.NavigateTo(ctx, approachPoint, 0);

@@ -17,6 +17,7 @@ public static class CortexFactory
         "BlueVanguard" => new BlueVanguardCortex(),
         "BlueLancer"   => new BlueLancerCortex(),
         "BlueScout"    => new BlueScoutCortex(),
+        "BluePhoenix"  => new BluePhoenixCortex(),
         _ => throw new ArgumentException($"Unknown tank type: {tankName}", nameof(tankName))
     };
 }

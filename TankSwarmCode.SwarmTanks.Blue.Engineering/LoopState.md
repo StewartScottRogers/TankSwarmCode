@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 36
+2026-04-21 — Iteration 37
 
 ## Current Iteration
-**37** — pending
+**38** — pending
 
 ## Situation
 **CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
@@ -15,13 +15,12 @@ Red applied the same fix Blue used in iter-7: `new SwarmCoordinator()` per game 
 
 Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree.
 
-## New Baseline (post-Iter-36, 11-tank config, 2×4-seed sweeps)
-- Seed 1000: ~84%  |  Seed 2000: ~80%  |  Seed 3000: ~82%  |  Seed 5000: ~82%
-- **4-seed average: 82%** (identical across both runs — extraordinary consistency)
+## New Baseline (post-Iter-37, 12-tank config, 2×4-seed sweeps)
+- Seed 1000: ~87%  |  Seed 2000: ~87%  |  Seed 3000: ~88%  |  Seed 5000: ~86%
+- **4-seed average: 87%** (both runs exactly 87%; seeds 86/88/86/88 swap between runs)
+- Pre-12th-tank baseline (11-tank): avg 82%
 - Pre-11th-tank baseline (10-tank): avg 77.25%
 - Pre-10th-tank baseline (9-tank): avg 72%
-- Pre-9th-tank baseline (8-tank): avg 62.75%
-- Pre-8th-tank baseline (7-tank): avg 54.5%
 - Pre-6th-tank baseline (5-tank): avg 33.25%
 
 ## Active Configuration
@@ -36,6 +35,7 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - **BlueVanguard: MaxFP=2.5, PR=200, FormationSlot=8→30°, Retreat=0 — 9th tank COMMITTED (Iter 34 win, +9.25pp avg)**
 - **BlueLancer: MaxFP=2.5, PR=200, FormationSlot=9→90°, Retreat=0 — 10th tank COMMITTED (Iter 35 win, +5.25pp avg)**
 - **BlueScout: MaxFP=2.5, PR=200, FormationSlot=10→150°, Retreat=0 — 11th tank COMMITTED (Iter 36 win, +4.75pp avg)**
+- **BluePhoenix: MaxFP=2.5, PR=200, FormationSlot=11→210°, Retreat=0 — 12th tank COMMITTED (Iter 37 win, +5pp avg)**
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
 - Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
 - Wolfpack predicted orbit: orbit point based on `target.Position + VelocityVector * contactAge` — **KEEP** (Iter 16 win, +1.6pp avg)
@@ -63,15 +63,15 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 37)
+## Next Hypothesis (Iteration 38)
 
-**BluePhoenix 12th tank at 210° (filling the last 60° gap: Sharp-Ecm)**
+**BlueWarden 13th tank at 15° (starting the 15° sub-grid)**
 
-Only one 60° gap remains: 180°→240° (Sharp-Ecm). A 12th tank at 210° gives COMPLETE 30° coverage — all 12 positions filled with 30° spacing. Slot 11 × 60° = 660° = 300° (collision with Trooper), so special case slot11→210°.
+The 30° grid is now complete (all 12 positions filled, 87% avg). The 30°→15° sub-grid would add tanks halfway between each existing pair. First position: 15° (between Strike 0° and Vanguard 30°). Slot 12 × 60° = 720° = 0° (collision), so special case slot12→15°.
 
-This would be the "maximum" formation for the current 30°-grid approach. 12v5 = Blue has 2.4× Red's numbers.
+13v5 = Blue has 2.6× Red's numbers. If pattern continues: ~89-90%.
 
-Success criteria: 4-seed avg ≥ 85% (i.e., +3pp from 82% baseline).
+Success criteria: 4-seed avg ≥ 89% (i.e., +2pp from 87% baseline).
 
 ---
 
@@ -184,6 +184,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 37 — BluePhoenix 12th tank: +5pp avg (**COMMITTED**)
+**Date:** 2026-04-21
+- **Code changes:** BluePhoenixCortex.cs (slot11→210°), BluePhoenix.cs (Name="Blue11"), CortexFactory, SwarmCoordinator slot11→210° override
+- **Rationale:** Fills the LAST 60° gap: Sharp(180°)-Ecm(240°) at midpoint 210°. Completes the 30° grid — all 12 positions filled. 12v5 advantage.
+- **Run 1+2:** 86/88/88/86 and 88/86/88/86 → **avg 87%** (both runs same avg, seeds swap)
+- **Delta: +5pp avg** (82% → 87%). Returns slightly increasing vs 11th tank (+4.75pp). 30° grid complete.
+- Progression: 33.25%(5) → ... → 77.25%(10) → 82%(11) → 87%(12)
+- **COMMITTED**
 
 ### Iter 36 — BlueScout 11th tank: +4.75pp avg (**COMMITTED**)
 **Date:** 2026-04-21
