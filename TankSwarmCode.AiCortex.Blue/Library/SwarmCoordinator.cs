@@ -269,9 +269,7 @@ public sealed class SwarmCoordinator
         Vector2D predictedPos = new(
             target.Position.X + target.VelocityVector.X * age,
             target.Position.Y + target.VelocityVector.Y * age);
-        int aliveCount = GetAliveAllyCount() + 1;
-        int mySlot = config.FormationSlot % aliveCount;
-        double approachAngle = mySlot * (360.0 / aliveCount);
+        double approachAngle = config.FormationSlot * (360.0 / 29.0);
         Vector2D approachPoint = predictedPos.PolarOffset(approachAngle, config.PreferredRange);
         TankNavigation.NavigateTo(ctx, approachPoint, 0);
         TankNavigation.MaintainRadar(ctx, target.Position, radarSpin);
