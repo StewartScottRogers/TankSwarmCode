@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 18
+2026-04-20 — Iteration 19
 
 ## Current Iteration
-**19** — pending
+**20** — pending
 
 ## Situation
 **NEW HIGH: 88.3% avg.** Iter 16 found predicted orbit points (+1.6pp). Blue now uses target velocity to predict where target will be when navigating to orbit position. All 5 seeds improved consistently. Red's 5th tank "Red4" is their MVP. Previous ceiling 86.7% broken.
@@ -41,13 +41,19 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 19)
+## Next Hypothesis (Iteration 20)
 
-**Add position data to AllyPing**: Current `AllyPing` only shares slot+energy. Tanks don't know where their allies are, so formation spreading is based on fixed slot-based angles rather than actual positions. If tanks knew ally positions, they could dynamically choose approach angles that spread better. Format change: `"{slot}:{energy:F1}:{x:F0}:{y:F0}"`. AllyEntry would need X/Y fields.
+**Critical insight from iter 19**: Age-correction helps navigation (no gate) but hurts firing (5° gate becomes a barrier). Therefore:
+- Orbit prediction (age×velocity): GOOD → already committed
+- Fire prediction (age×velocity): BAD → do NOT apply
 
-Alternative: **BlueEcm PR 150→165** — small 10% increase. PR=200 was catastrophic (-17pp seed4000). But 165 is a much smaller step. At current slot 4 (240°), Ecm approaches from back-left at close range, making it Red's #1 kill target. 165px keeps it slightly safer without the clustering that caused 200 to fail.
+The gun tolerance of 5° is a hard gate. Any change that shifts the aim point slightly MORE causes missed shots. The 5° must stay calibrated to actual contact ages.
 
-Alternative: **LeadershipEpochTicks = 45** — very small increase from 40. More time between epoch transitions, slightly less strategy churn. The "DO NOT reduce below 40" rule is from 20-tick test; a tiny increase to 45 hasn't been tested.
+**New hypothesis**: Add contact-age gate to firing — only fire when contact age ≤ 3 ticks. Currently fires on contacts up to 30 ticks old. Stale contacts (age > 3) might have drifted far enough that linear prediction is inaccurate (target turned). Saving ammo for fresh contacts could improve hit rate.
+
+Alternative: **Try `LeadershipEpochTicks = 35`** — slightly more frequent strategy updates (between 30 and 40). More frequent targeting updates = faster response to first kill, faster retargeting. At 35 ticks: 1000-tick game has 28 epochs vs 25. Small increase in coordination overhead but potentially faster kill chains.
+
+Alternative: **BlueEcm PR 150→165** — untested small step. Red's #1 kill target is BlueEcm at 150px. 165px might reduce first-kill rate.
 
 Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 
@@ -93,6 +99,10 @@ Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 - **DO NOT** change gun tolerance from 5°: 4° gave -2.7pp, 6° gave -3.7pp; 5° is the empirical optimum
 - **DO NOT** reduce wall avoidance below 80: 60 gave -1.3pp and seed1000 consistently regressed
 - **DO NOT** make Scout hunt stale target positions: -2.3pp, seed4000 -5pp; bunches tanks at outdated location
+- **DO NOT** apply age-correction to `LinearPredictionFire`: -3.5pp; the 5° gunDiff gate is a hard barrier — shifting aim point by age×velocity causes more missed shots than accuracy gains
+- **DO NOT** change NavigateTo turn-speed from 40: 50 gave -0.9pp; 40 is calibrated correctly
+- **DO NOT** lower BlueStrike Retreat from 25: 20 gave -1.4pp, seed5000 -7pp; Scatter-at-25E protects Strike in last-stand
+- **DO NOT** use late-game targeting switch: -1.5pp, seed2000 -7pp; disrupts ongoing victories at tick 4000+
 - **DO NOT** disable Pincer: -2.5pp, seed2000 -8pp, seed5000 -7pp; Pincer is critical for 3v2 endgame
 - **DO NOT** reduce AllyStaleTicks below 30: tested at 25, part of -2.5pp regression; 30 ticks matches ping interval well
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
@@ -146,6 +156,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 19 — Fire prediction, targeting, config tweaks (all reverted)
+**Date:** 2026-04-20
+- **BlueStrike Retreat 25→20**: Regression 86.9% avg (-1.4pp). Seed5000 -7pp. Scatter-at-25E was protecting Strike in last-stand scenarios; fighting longer at low energy gets Strike killed without benefit.
+- **NavigateTo turn-speed 40→50**: Regression 87.4% avg (-0.9pp). Any speed increase hurts; 40 is calibrated correctly.
+- **Late-game highest-energy targeting (tick>4000)**: Regression 86.8% avg (-1.5pp). Seed2000 -7pp. Disrupts ongoing victories at tick 4000+; the targeting switch causes Blue to break off nearly-killed targets.
+- **Age-corrected `LinearPredictionFire`**: Regression 84.8% avg (-3.5pp). KEY INSIGHT: Age correction for navigation (orbit prediction) GOOD because there's no gate. Age correction for firing BAD because the 5° gunDiff gate is a hard barrier — shifting aim point by even 10px causes missed fire opportunities. The gate magnifies any aim error into a missed shot.
+- **Net result: No change. 88.3% is confirmed ceiling. Age correction only helps navigation, not firing.**
+- Hard constraint discovered: the 5° gun tolerance gate is why firing prediction can't use the same age-correction technique as orbit navigation.
 
 ### Iter 18 — Extensive ceiling sweep (all reverted)
 **Date:** 2026-04-20
