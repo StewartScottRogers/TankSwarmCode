@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 16 complete (5th tank breakthrough vs improved Blue)
+2026-04-20 — Iteration 17 complete (parallel mode bug fix — static SwarmCoordinator registry)
 
 ## Current Iteration
-**17** — pending
+**18** — pending
 
 ## Situation
 
@@ -27,6 +27,8 @@ with two commits:
 
 ## What We Know (Current Blue DLL)
 
+- **Parallel mode is NOW VALID for Red.** Iter 17 fixed the static SwarmCoordinator registry bug
+  (`ForTeam()` → `new SwarmCoordinator()`). Parallel results now match serial. Use `--parallel 8`.
 - **Blue improved significantly between iter-14 and iter-16.** Two Blue commits to their
   SwarmCoordinator brought them from losing 64% to approximately 50/50 against our 4-tank config.
   Always re-baseline before comparing results.
@@ -41,7 +43,10 @@ with two commits:
 - **PR=160 orbit radius is optimal for all tanks.** Not re-tested for 5th tank, assumed same.
 - **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
-- **Parallel mode is INVALID.** Never use `--parallel` > 1 for measurements.
+- **BlueSharp is Blue's Linchpin** (alive: 85% Blue wins, dead: 24% Blue wins). Killing Sharp
+  early collapses Blue's win rate. This is the highest-value targeting opportunity.
+- **BlueEcm is All-in** (never survives a loss). ECM suppression hurts Red but BlueEcm dies in
+  every Red win — ECM alone is not why Blue wins.
 
 ## Current Configuration
 
@@ -55,18 +60,17 @@ with two commits:
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 17)
+## Next Hypothesis (Iteration 18)
 
 **Primary options:**
 1. Trooper MaxFP=1.5 (match Arrow's confirmed-better power level; 5 tanks all at faster bullets)
 2. Trooper PR tuning (is 160 still optimal for 5-tank formation? 130/180 not tested for 5 tanks)
 3. Orbit angle step for 5-tank formation (72° equal vs 60° Blue-style offset)
 4. Ghost PR=150 inner orbit (bringing Ghost closer for higher DPS while others hold 160)
-5. Baseline re-measurement after any Blue improvement (always check if Blue has changed)
+5. Target BlueSharp first (Sharp is Blue's Linchpin — priority targeting change in SwarmCoordinator)
 
-**Note:** 62.9% may be the new ceiling for 5-tank orbit config. But several obvious tunings
-haven't been tested yet. The biggest unknown is whether Trooper at MaxFP=1.5 extends the
-Arrow-at-1.5 advantage pattern to the 5th tank position.
+**Top pick:** Trooper MaxFP=1.5 (iter-17 plan, still untested). Arrow confirmed better at 1.5;
+same logic applies to Trooper.
 
 Success criteria: Red win rate increases by ≥3pp at seed 1000 (from 63.5% to ≥66.5%)
 
@@ -99,6 +103,17 @@ Success criteria: Red win rate increases by ≥3pp at seed 1000 (from 63.5% to �
 - Rank-based orbit distribution: 62.0% avg (-2.2pp)
 - Orbit-based Pincer/Encircle: 59.3% avg (-4.9pp)
 - **Conclusion (vs OLD Blue):** 64.2% was ceiling for old Blue config family.
+
+### Iter 17 — Fix Parallel Mode Static Registry Bug (CONFIRMED +47.5pp apparent, restored true baseline)
+**Date:** 2026-04-20
+**Status:** CONFIRMED. Red 63.5% (127/200) at seed 1000 in parallel mode. Matches serial baseline.
+- Discovery: Baseline run in parallel mode showed Red 16% — 47pp below LoopState's 63.5%.
+- Root cause: `RedCortexBase.OnStart` called `SwarmCoordinator.ForTeam(swarmId)` which uses a
+  static `ConcurrentDictionary` registry, sharing ONE coordinator across all parallel games.
+- Fix: `_swarm = new SwarmCoordinator()` (per-game, same fix Blue Engineering did in their iter 7).
+- Post-fix seed 1000: 127/200 = 63.5% — identical to serial-mode baseline. Fix confirmed.
+- BlueSharp identified as Blue's Linchpin (alive: 85%, dead: 24%) — new targeting intelligence.
+- See Research/iter-0017-fix-parallel-mode-static-registry.md for full details
 
 ### Iter 16 — 5th Tank (5v5 Parity) vs Improved Blue (CONFIRMED +12.7pp)
 **Date:** 2026-04-20
