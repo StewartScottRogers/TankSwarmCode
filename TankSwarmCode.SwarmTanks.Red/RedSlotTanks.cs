@@ -701,4 +701,3 @@ public sealed class Red28 : SwarmTankBase, ITankContext
     void ITankContext.SetEcm(EcmMode m)           => SetEcm(m);
     void ITankContext.Broadcast(SwarmMessage msg) => Broadcast(msg);
 }
-

@@ -29,6 +29,7 @@ Extensive parameter exploration reveals this is the ceiling for the current Wolf
 ### Targeting / Orbit Changes
 - **Centroid-based orbit**: -1.5pp avg (2 seeds). Orbiting centroid of Blue formation worse than orbiting priority target.
 - **Per-tank nearest-enemy targeting**: -3pp at both seeds. Coordinated weakest-first fire is critical — decentralized firing loses the kill-focus advantage.
+- **180° arc orbit** (mySlot * 180/(n-1) instead of 360/n): -8pp at seed 1000, neutral at seed 3000. Decisive rejection. Concentrating all tanks in a 180° arc creates a predictable firing line that Blue can exploit. Full 360° encirclement is essential.
 
 ### Fallback Gradient
 - **Fallback=5**: flat vs Fallback=10. No gain below threshold 10.
