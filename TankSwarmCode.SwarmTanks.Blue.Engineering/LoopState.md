@@ -4,23 +4,27 @@
 2026-04-21 — Iteration 41
 
 ## Current Iteration
-**41** — 28v28 Parity Restored (~50%)
+**42** — 29v28 Numerical Edge (~55% avg)
 
 ## Situation
-**CRITICAL RESET: Red Engineering expanded to 28 tanks (their iter 37-45), achieving 94% win rate vs Blue's 12.**
-Blue countered with Blue12-Blue27 slot tanks, restoring parity to ~50%.
+**CURRENT STATE:** 29 Blue tanks vs 28 Red tanks. Blue win rate ~55% avg (4-seed).
+- Seed 1000: Blue 58%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 55%
+- 30v28 tested (Blue29) — same 55% avg, reverted (orbit crowding offsets DPS gain)
 
-**Current state:** 28 Blue tanks (12 named + 16 slot) vs 28 Red tanks. Win rate ~50%.
-- Seed 1000: Red 51%, Blue 49%
-- Seed 3000: Red 47%, Blue 53%
+**Key findings:**
+- 29v28 breaks spawn geometry symmetry: +5pp over 50% baseline
+- 30v28 = 29v28 (ceiling at 29 Blue tanks for this approach)
+- Seed 2000 persistently 50% — very balanced spawn geometry for that seed
 
-**Key finding:** In symmetric 28v28, spawn geometry dominates. Bot1/bot2 position assignment per seed determines all outcomes. Parameter changes (MaxFP, PR, orbit radius, ECM) have zero measurable effect — the same ~116/84 per-seed split is invariant across all configs tested.
-
-**Next hypothesis:** Add Blue28 (29v28 numerical advantage) to break spawn geometry symmetry.
+**Next hypothesis:** Upgrade slot tank configs (MaxFP, PR) to improve DPS and break above 55%.
 
 Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
 
-## 28v28 Baseline (Iter-41, CURRENT)
+## 29v28 Baseline (Iter-42, CURRENT)
+- Seed 1000: Blue 58%  |  Seed 2000: Blue 50%  |  Seed 3000: Blue 56%  |  Seed 5000: Blue 55%
+- **4-seed avg: ~55%** — 29 Blue vs 28 Red
+
+## 28v28 Baseline (Iter-41, Obsolete)
 - Seed 1000: Red 51%, Blue 49%  |  Seed 3000: Red 47%, Blue 53%
 - **~50% average** — spawn geometry dominates; parameter changes produce zero effect
 - Pre-expansion Blue (12 tanks) vs Red (28 tanks): ~6%
@@ -45,8 +49,8 @@ Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` req
 - BlueScout: MaxFP=2.5, PR=200, FormationSlot=10, Retreat=0
 - BluePhoenix: MaxFP=2.5, PR=200, FormationSlot=11, Retreat=0
 
-### Slot tanks (NEW — Iter-41):
-- Blue12-Blue27: MaxFP=1.0, PR=160.0, FormationSlot=12-27 (via BlueSlotCortex)
+### Slot tanks (Iter-41/42):
+- Blue12-Blue28: MaxFP=1.0, PR=160.0, FormationSlot=12-28 (via BlueSlotCortex)
 - Uses dynamic orbit: `slot % aliveCount * (360/aliveCount)` degrees
 
 ### Coordinator:

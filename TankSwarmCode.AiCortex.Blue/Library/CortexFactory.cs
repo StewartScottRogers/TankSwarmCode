@@ -34,6 +34,7 @@ public static class CortexFactory
         "Blue25"       => new BlueSlotCortex(25),
         "Blue26"       => new BlueSlotCortex(26),
         "Blue27"       => new BlueSlotCortex(27),
+        "Blue28"       => new BlueSlotCortex(28),
         _ => throw new ArgumentException($"Unknown tank type: {tankName}", nameof(tankName))
     };
 }
