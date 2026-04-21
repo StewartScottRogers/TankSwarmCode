@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 26 complete (Encircle@160 REFUTED; +0.3pp noise; architecture ceiling near)
+2026-04-20 — Iteration 27 complete (Fallback@40 REFUTED; -0.5pp; architecture param space exhausted)
 
 ## Current Iteration
-**27** — pending
+**28** — pending
 
 ## Situation
 
@@ -54,30 +54,34 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 27)
+## Next Hypothesis (Iteration 28)
 
-**Parameter space is nearly exhausted within the current Wolfpack/orbit framework.** MaxFP, PR,
-Encircle radius — all tested and completed. Two remaining architecture-level options:
+**Ghost HasEcm=true with EcmMode.Jam (default OffensiveEcmMode).** Currently Ghost has HasEcm=false
+and never activates ECM. When Blue's ECM (BlueEcm) is detected:
+1. Red switches to ECMScreen strategy
+2. Ghost (HasEcm=true) moves to 120px from target and activates EcmMode.Jam (0.5/tick)
+3. Other 4 tanks move to 130px and fire + Burnthrough (0.3/tick)
+4. Ghost's jam corrupts 30% of BlueEcm's radar scans (vs 8% with Burnthrough)
 
-1. **Fallback threshold:** `sumEnergy / allyCount < 30.0` in SelectStrategy. At MaxFP=1.0, tanks
-   maintain higher energy (45-52% remaining per iter-24). Raising Fallback threshold to 40 might
-   cause teams to strategically retreat and regroup more often, avoiding unfavorable fights.
-   Lowering to 20 makes them more aggressive. Test threshold=40 (more defensive regrouping).
+The risk: Ghost loses firing DPS during ECMScreen. The gain: BlueEcm's targeting accuracy drops
+by 30% vs Red tanks, degrading Blue's coordination when ECM is active.
 
-2. **Ghost HasEcm=true:** Ghost previously had ECM causing energy-drain death (from continuous
-   jamming). The root cause was PROACTIVE ECM activation. Current Ghost code (HasEcm=false) never
-   ECMs. Re-enabling ECM (HasEcm=true) would activate ECM disruption against Blue's ECM tanks,
-   potentially jamming BlueEcm and disrupting Blue's radar coordination.
-
-**Top pick:** Fallback threshold → 40. The current value (30) was set for MaxFP=2.0 energy levels.
-At MaxFP=1.0, the team is energy-rich (each shot costs 0.5 energy, 200 shots to drain from full).
-A higher Fallback threshold causes earlier strategic regrouping rather than fighting to exhaustion.
+This is NOT JamAndSpoof (the original disaster): Jam keeps Ghost's own radar online and comms working.
+ECMScreen only activates when Blue ECM is detected — so Ghost jamming is reactive, not continuous.
 
 Success criteria: Red 2-seed avg changes by ≥2pp vs 70.2% baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 27 — Fallback Threshold 30→40 (REFUTED -0.5pp avg, 2 seeds)
+**Date:** 2026-04-20
+**Status:** REFUTED. Red 69.75% avg (2-seed) vs 70.25% baseline (-0.5pp — negative).
+- Higher threshold caused more retreats (avg_ticks +274 ticks longer), hurting combat pressure
+- Fallback at 30 is essentially inactive at MaxFP=1.0 energy levels — this is correct behavior
+- Code reverted to 30.0. DLL publish bug fixed: must publish shell project, not just cortex.
+- See Research/iter-0027-fallback-threshold-40-refuted.md for full details
 
 ### Iter 26 — Encircle Orbit 180→160px (REFUTED +0.3pp avg, 5-seed, noise)
 **Date:** 2026-04-20
