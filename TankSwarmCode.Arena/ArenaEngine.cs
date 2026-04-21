@@ -3,6 +3,7 @@ using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Enums;
 using TankSwarmCode.SwarmTank.Events;
 using TankSwarmCode.SwarmTank.Models;
+using TankSwarmCode.SwarmTank.Telemetry;
 
 namespace TankSwarmCode.Arena;
 
@@ -179,7 +180,7 @@ public sealed class ArenaEngine : IArena
         // 2. Flush commands (single-threaded — ordering of FlushCommand matters)
         List<(TankRuntimeState Rts, TankCommand Cmd)> commands =
             livingTanks
-                .Select(t => (t, t.Tank.FlushCommand()))
+                .Select(t => { var cmd = t.Tank.FlushCommand(); t.LastFlushedCommand = cmd; return (t, cmd); })
                 .ToList();
 
         // 3. Apply movement (sequential — wall events call back into tank; cheap per-tank)
@@ -316,6 +317,7 @@ public sealed class ArenaEngine : IArena
 
             double wallBearing = RelativeBearing(rts.Heading, rts.ToTankState().Position.BearingTo(new Vector2D(nx, ny)));
             SafeCall(() => rts.Tank.OnHitWall(new HitWallEventArgs(wallBearing)));
+            rts.TickEvents.Add(new TankEventRecord { Type = TankEventType.HitWall });
             CheckDeath(rts);
         }
 
@@ -385,6 +387,7 @@ public sealed class ArenaEngine : IArena
         if (rts.Energy < power) return; // not enough energy
 
         rts.Energy -= power;
+        rts.TickEvents.Add(new TankEventRecord { Type = TankEventType.FiredBullet, Value = power });
 
         RuntimeBullets.Add(new BulletRuntimeState(
             ownerId: rts.Tank.Name,
@@ -443,6 +446,7 @@ public sealed class ArenaEngine : IArena
                 rts.Energy -= bs.Damage;
                 double bearing = RelativeBearing(rts.Heading, new Vector2D(rts.X, rts.Y).BearingTo(new Vector2D(b.X, b.Y)));
                 SafeCall(() => rts.Tank.OnHitByBullet(new HitByBulletEventArgs(bs, bearing)));
+                rts.TickEvents.Add(new TankEventRecord { Type = TankEventType.HitByBullet, OtherName = b.OwnerId, Value = bs.Damage });
 
                 // Notify shooter
                 TankRuntimeState? shooter = RuntimeTanks.FirstOrDefault(t => t.Tank.Name == b.OwnerId);
@@ -450,6 +454,7 @@ public sealed class ArenaEngine : IArena
                 {
                     shooter.Energy += bs.EnergyReturn;
                     SafeCall(() => shooter.Tank.OnBulletHit(new BulletHitEventArgs(bs, rts.ToTankState())));
+                    shooter.TickEvents.Add(new TankEventRecord { Type = TankEventType.BulletHit, OtherName = rts.Tank.Name, Value = bs.Damage });
                 }
 
                 CheckDeath(rts);
@@ -527,6 +532,8 @@ public sealed class ArenaEngine : IArena
 
                 SafeCall(() => a.Tank.OnHitTank(new HitTankEventArgs(b.ToTankState(), bearingAtoB)));
                 SafeCall(() => b.Tank.OnHitTank(new HitTankEventArgs(a.ToTankState(), bearingBtoA)));
+                a.TickEvents.Add(new TankEventRecord { Type = TankEventType.HitTank, OtherName = b.Tank.Name });
+                b.TickEvents.Add(new TankEventRecord { Type = TankEventType.HitTank, OtherName = a.Tank.Name });
 
                 CheckDeath(a);
                 CheckDeath(b);
@@ -663,11 +670,13 @@ public sealed class ArenaEngine : IArena
             }
 
             SafeCall(() => scanner.Tank.OnScannedTank(new ScannedTankEventArgs(result)));
+            scanner.TickEvents.Add(new TankEventRecord { Type = TankEventType.ScannedTank, OtherName = result.Name, Value = distance });
 
             // Target detects the radar beam and learns the painter's position
             var paintArgs = new PaintedEventArgs(scanner.Tank.Name, scanner.Tank.SwarmId,
                                                  new Vector2D(scanner.X, scanner.Y));
             SafeCall(() => target.Tank.DeliverPaintedEvent(paintArgs));
+            target.TickEvents.Add(new TankEventRecord { Type = TankEventType.Painted, OtherName = scanner.Tank.Name });
         }
 
         // ── Building echo detection ─────────────────────────────────────────
@@ -863,6 +872,7 @@ public sealed class ArenaEngine : IArena
         rts.IsAlive = false;
         rts.DestroyedAtTick = TickNumber;
         SafeCall(() => rts.Tank.OnDeath());
+        rts.TickEvents.Add(new TankEventRecord { Type = TankEventType.Died });
     }
 
     private void CheckRoundEnd()

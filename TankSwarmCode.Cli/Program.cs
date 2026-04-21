@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using TankSwarmCode.Arena;
 using TankSwarmCode.SwarmTank;
+using TankSwarmCode.SwarmTank.Telemetry;
 
 const int DefaultMaxTicks = 5000;
 const double DefaultArenaWidth = 800;
@@ -54,6 +55,8 @@ if (cliArgs.Bot1 is null || cliArgs.Bot2 is null)
         Output options:
           --summary           Append aggregate stats after batch
           --format <fmt>      json (default) | table | csv
+          --blackbox <path>   Write tick-by-tick telemetry to NDJSON file (single match only)
+          --blackbox-swarm <N> Filter black box to swarm N only (1 or 2)
 
         Discovery:
           --list <dll>        List all ISwarmTank types in a DLL
@@ -70,6 +73,12 @@ bool tableFormat        = string.Equals(cliArgs.Format, "table", StringCompariso
 bool csvFormat          = string.Equals(cliArgs.Format, "csv",   StringComparison.OrdinalIgnoreCase);
 string timeoutPolicy    = cliArgs.OnTimeout ?? "draw";
 
+if (cliArgs.BlackBox is not null && matchCount > 1)
+{
+    Console.Error.WriteLine("--blackbox is only supported for single-match runs (omit --batch or use --batch 1).");
+    return 1;
+}
+
 // Pre-allocate results array so parallel writes are index-safe
 var resultsArr = new MatchResult[matchCount];
 
@@ -81,8 +90,11 @@ Parallel.For(0, matchCount, parallelOptions, idx =>
 {
     int matchNum = idx + 1;
     int? seed = cliArgs.Seed.HasValue ? cliArgs.Seed.Value + idx : null;
-    var result = RunMatch(cliArgs.Bot1, cliArgs.Bot2, seed, cliArgs.MaxTicks ?? DefaultMaxTicks, arenaWidth, arenaHeight, timeoutPolicy);
+    var (result, telemetry) = RunMatch(cliArgs.Bot1, cliArgs.Bot2, seed, cliArgs.MaxTicks ?? DefaultMaxTicks, arenaWidth, arenaHeight, timeoutPolicy, cliArgs.BlackBox is not null);
     resultsArr[idx] = result;
+
+    if (telemetry is not null && cliArgs.BlackBox is not null)
+        WriteBlackBox(telemetry, cliArgs.BlackBox, cliArgs.BlackBoxSwarm, jsonOptions);
 
     if (!tableFormat && !csvFormat)
     {
@@ -125,12 +137,14 @@ return 0;
 
 // ── Match runner ────────────────────────────────────────────────────────────
 
-static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTicks, double width, double height, string timeoutPolicy)
+static (MatchResult result, MatchTelemetry? telemetry) RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTicks, double width, double height, string timeoutPolicy, bool recordBlackBox = false)
 {
     var arenaEngine = new ArenaEngine(width, height, seed);
 
     LoadTanks(bot1Dll, swarmId: 1).ForEach(arenaEngine.AddTank);
     LoadTanks(bot2Dll, swarmId: 2).ForEach(arenaEngine.AddTank);
+
+    BlackBoxRecorder? recorder = recordBlackBox ? new BlackBoxRecorder(arenaEngine) : null;
 
     arenaEngine.Start();
 
@@ -201,7 +215,26 @@ static MatchResult RunMatch(string bot1Dll, string bot2Dll, int? seed, int maxTi
         .Select(t => (long?)t.destroyed_at_tick)
         .Min();
 
-    return new MatchResult(winnerId, arenaEngine.TickNumber, timedOut, s1, s2, s1Energy, s2Energy, s1Names, s2Names, firstKill, tanks);
+    var matchResult = new MatchResult(winnerId, arenaEngine.TickNumber, timedOut, s1, s2, s1Energy, s2Energy, s1Names, s2Names, firstKill, tanks);
+    return (matchResult, recorder?.Build(seed, winnerId));
+}
+
+static void WriteBlackBox(MatchTelemetry telemetry, string path, int? swarmFilter, JsonSerializerOptions opts)
+{
+    using var writer = new StreamWriter(path, append: false, encoding: System.Text.Encoding.UTF8);
+
+    // Header line
+    var header = new { type = "header", match_id = telemetry.MatchId, telemetry.Seed,
+                       total_ticks = telemetry.TotalTicks, winner_swarm_id = telemetry.WinnerSwarmId,
+                       arena_width = telemetry.ArenaWidth, arena_height = telemetry.ArenaHeight };
+    writer.WriteLine(JsonSerializer.Serialize(header, opts));
+
+    // One line per tank per tick, filtered by swarm if requested
+    foreach (var rec in telemetry.Records)
+    {
+        if (swarmFilter.HasValue && rec.SwarmId != swarmFilter.Value) continue;
+        writer.WriteLine(JsonSerializer.Serialize(rec, opts));
+    }
 }
 
 static List<ISwarmTank> LoadTanks(string dllPath, int swarmId)
@@ -835,18 +868,20 @@ record TankResult(string name, int swarm_id, string role, bool survived, double 
 
 class Args
 {
-    public string? Bot1     { get; private set; }
-    public string? Bot2     { get; private set; }
-    public int?    Seed     { get; private set; }
-    public int?    MaxTicks { get; private set; }
-    public int?    Batch    { get; private set; }
-    public double? Width    { get; private set; }
-    public double? Height   { get; private set; }
-    public bool    Summary  { get; private set; }
-    public string? Format    { get; private set; }
-    public string? List      { get; private set; }
-    public string? OnTimeout { get; private set; }
-    public int?    Parallel  { get; private set; }
+    public string? Bot1        { get; private set; }
+    public string? Bot2        { get; private set; }
+    public int?    Seed        { get; private set; }
+    public int?    MaxTicks    { get; private set; }
+    public int?    Batch       { get; private set; }
+    public double? Width       { get; private set; }
+    public double? Height      { get; private set; }
+    public bool    Summary     { get; private set; }
+    public string? Format      { get; private set; }
+    public string? List        { get; private set; }
+    public string? OnTimeout   { get; private set; }
+    public int?    Parallel    { get; private set; }
+    public string? BlackBox    { get; private set; }
+    public int?    BlackBoxSwarm { get; private set; }
 
     public static Args Parse(string[] argv)
     {
@@ -864,8 +899,10 @@ class Args
                 case "--height"    when i + 1 < argv.Length: a.Height   = double.Parse(argv[++i]); break;
                 case "--format"    when i + 1 < argv.Length: a.Format   = argv[++i]; break;
                 case "--list"       when i + 1 < argv.Length: a.List      = argv[++i]; break;
-                case "--on-timeout" when i + 1 < argv.Length: a.OnTimeout = argv[++i]; break;
-                case "--parallel"   when i + 1 < argv.Length: a.Parallel  = int.Parse(argv[++i]); break;
+                case "--on-timeout"    when i + 1 < argv.Length: a.OnTimeout    = argv[++i]; break;
+                case "--parallel"      when i + 1 < argv.Length: a.Parallel     = int.Parse(argv[++i]); break;
+                case "--blackbox"      when i + 1 < argv.Length: a.BlackBox     = argv[++i]; break;
+                case "--blackbox-swarm" when i + 1 < argv.Length: a.BlackBoxSwarm = int.Parse(argv[++i]); break;
                 case "--summary": a.Summary = true; break;
             }
         }

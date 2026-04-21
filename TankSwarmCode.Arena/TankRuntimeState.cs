@@ -1,6 +1,7 @@
 using TankSwarmCode.SwarmTank;
 using TankSwarmCode.SwarmTank.Enums;
 using TankSwarmCode.SwarmTank.Models;
+using TankSwarmCode.SwarmTank.Telemetry;
 
 namespace TankSwarmCode.Arena;
 
@@ -38,6 +39,12 @@ internal sealed class TankRuntimeState
     /// <c>null</c> means the tank AI's own <see cref="ISwarmTank.SetEcm"/> call is used.
     /// </summary>
     internal EcmMode? EcmModeOverride { get; set; }
+
+    /// <summary>The command the AI issued this tick, stored at FlushCommand time for the black box.</summary>
+    internal TankCommand LastFlushedCommand { get; set; } = new();
+
+    /// <summary>Events that occurred to this tank this tick, collected by the engine for the black box.</summary>
+    internal List<TankEventRecord> TickEvents { get; } = [];
 
     /// <summary>
     /// Ghost echo positions projected by this tank when in <see cref="EcmMode.Spoof"/> mode.
