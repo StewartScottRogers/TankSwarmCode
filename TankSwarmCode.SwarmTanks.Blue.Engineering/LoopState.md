@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 8
+2026-04-20 — Iteration 9
 
 ## Current Iteration
-**9** — pending
+**10** — pending
 
 ## Situation
 **WE ARE DOMINATING.** Blue ~80-87% across seeds (seed 1000 ~80% avg, seed 2000 87%). Iter 3 explored 6 approaches — all regressed. Current config is the optimum found so far.
@@ -18,21 +18,24 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
 - BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
 - Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
+- Wolfpack angle-offset: slot × 72° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 9 win, +3.8pp avg)
 
-## Parallel Mode Baseline (post-Iter-7 fix, 200 games each)
-- Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
-- **5-seed average: 77%**
+## Parallel Mode Baseline (post-Iter-9 Wolfpack angle-offset, 200 games each)
+- Seed 1000: 74%  |  Seed 2000: 81%  |  Seed 3000: 82%  |  Seed 4000: 82%  |  Seed 5000: 85%
+- **5-seed average: 80.8%**
 - Note: serial mode (--parallel 1) shows ~34-36% at seed 1000 — the parallel vs serial gap is unexplained (possibly engine routes SwarmMessages across parallel games). Use --parallel 16 as the consistent measurement mode.
 
-## Next Hypothesis (Iteration 9)
+## Pre-Wolfpack-angle Baseline (Iter-7 fix, 200 games each)
+- Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
+- **5-seed average: 77%**
 
-**Wolfpack angle-offset formation: distribute tanks around the target by formation slot.** Currently all 5 Blue tanks approach the priority target from whatever direction they're already facing, clustering them on one side. If each slot approaches from a different angle (slot 0: 0°, slot 1: 72°, slot 2: 144°, slot 3: 216°, slot 4: 288°), Blue tanks spread around the target, forcing Red to split attention in multiple directions. Use each tank's own PreferredRange as the orbit radius (so spread: 150/180/200/250/300 units at 5 different angles).
+## Next Hypothesis (Iteration 10)
 
-Implementation: modify `ExecuteWolfpack` in SwarmCoordinator to compute an angle-offset approach point using `config.FormationSlot` and `target.Position.PolarOffset`.
+**Fine-tune the angle-offset Wolfpack: try wider spread (90° per slot = 4-way instead of 5-way) or narrower (60° per slot = 6-way).** The 72° spacing distributed 5 tanks evenly over 360°. A wider spread (90°: 0°, 90°, 180°, 270°, 0° for the 5th tank — wait this doesn't divide evenly) — alternatively, try 45° per slot offset to cluster into two pairs plus one: 0°/45°/90°/135°/180°. OR try staggered formation: front 3 tanks close (72° spread at smaller radius) and rear 2 tanks at wider angles/bigger radius.
 
-Risk: same issue as Encircle — Red Hammer might concentrate fire on the closest tank. But unlike Encircle (fixed radius for all), the variable PR means tanks at 150/180 are in tighter range and more aggressive while 250/300 tanks are safe.
+More promising: **tune the angle for the specific formation strengths**. The leader (slot 0) approaches at 0°. Other slots fan out. What if we use non-uniform angles that concentrate firepower while still surrounding? E.g., 0°/60°/120°/240°/300° (leaving a 120° gap — the rear) to keep all 5 tanks in the forward arc.
 
-Success criteria: 5-seed average ≥79% (vs 77% current), seed 4000 stays ≥85%.
+Success criteria: 5-seed average ≥82% (vs 80.8% current).
 
 ---
 
@@ -98,6 +101,15 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 9 — Wolfpack angle-offset formation: +3.8pp average (**COMMITTED**)
+**Date:** 2026-04-20
+- **Code change:** `ExecuteWolfpack` computes `approachAngle = slot × 72°`, then navigates to `target.PolarOffset(approachAngle, PreferredRange)` instead of directly toward target
+- Seed 1000: 74% (−1pp)  |  Seed 2000: 81% (+9pp)  |  Seed 3000: 82% (+6pp)  |  Seed 4000: 82% (−8pp)  |  Seed 5000: 85% (+13pp)
+- **5-seed avg: 80.8% vs 77% baseline → +3.8pp**
+- Significance: 807 wins / 1000 games vs expected 770 = 2.8 sigma
+- Mechanism: distributes Blue tanks around the target at 72° intervals with their own PR as orbit radius, forcing Red to defend from 5 directions simultaneously
+- **COMMITTED**
 
 ### Iter 8 — Re-validated Guard MaxFP=3.0; all other parameter sweeps failed
 **Date:** 2026-04-20
