@@ -1,10 +1,10 @@
 # Red Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 22 complete (PR=140 REFUTED; -4.5pp; PR=160 confirmed optimal)
+2026-04-20 — Iteration 23 complete (PR=150 REFUTED; PR sweep done; 160 is definitive optimum)
 
 ## Current Iteration
-**23** — pending
+**24** — pending
 
 ## Situation
 
@@ -31,6 +31,8 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 - **Faster bullets (MaxFP=1.5) beat higher power (2.0) at PR=160 — for 4 of 5 tanks.** Confirmed
   for Arrow (iter-14), Trooper (iter-18), Blade+Hammer (iter-19). Ghost is the exception: Ghost
   MaxFP=1.5 was refuted (-1.5pp). Ghost stays at 2.0. MaxFP sweep is complete.
+- **PR=160 is definitively optimal.** PR=140 (-4.5pp) and PR=150 (-2.5pp) both refuted. Orbit
+  radius and MaxFP are tightly coupled; PR=160 is confirmed across all tested values (iter-22/23).
 - **5th tank (RedTrooper) is essential.** 5v5 parity where Red's coordination wins.
 - **Do NOT change Pincer/Encircle to orbit-based positioning.** Strategy transition disruption.
 - **Frequency constants (AllyPingInterval=15, VolleyIntervalTicks=30) must NOT be changed.**
@@ -50,23 +52,36 @@ The `net9.0` DLL is stale and missing Trooper (produces 4-tank Red, 43% win rate
 
 **SwarmCoordinator.ExecuteWolfpack:** orbit-based (`slot % aliveCount * 360/aliveCount`, radius = `config.PreferredRange`)
 
-## Next Hypothesis (Iteration 23)
+## Next Hypothesis (Iteration 24)
 
-**Primary options:**
-1. PR=150 (midpoint — maybe 140 too close, 160 not close enough; test 150 as midpoint)
-2. PR=180 (further orbit — less return fire, slower bullets, longer engagement range)
-3. Ghost PR=140 inner orbit only (Ghost at MaxFP=2.0 at 140 → 10.0t travel, similar to others)
-4. Retreat threshold tuning (Hammer=25 vs others=20; is aggressive retreat better/worse?)
-5. All tanks PR=170 or 180 (further out, less return fire)
+**Parameter tuning is exhausted for current architecture.** MaxFP and PR sweeps are complete.
+Remaining options require either new mechanisms or accepting the current ceiling (~67%).
 
-**Top pick:** PR=150 for all tanks. PR=160 is optimal and PR=140 is -4.5pp. PR=150 is the midpoint —
-fast 3-seed test to confirm 160 is truly optimal or find a slight gain.
+**Architecture-level options:**
+1. MaxFP=1.0 for all 4 "faster bullets" tanks (ultra-fast bullets at PR=160: 160/17=9.4t travel)
+2. Encircle orbit uses fixed 180px vs Wolfpack's config.PreferredRange=160 — change Encircle to 160
+3. Retreat threshold tuning (Hammer=25, others=20; test all=15 for more aggressive fighting)
+4. Ghost orbit position change (slot 3 → different slot if slot conflicts matter late-game)
+5. New ECM strategy — Ghost re-enabling HasEcm=true for active ECM disruption
 
-Success criteria: Red 3-seed avg changes by ≥2pp vs baseline; stop test if signal is clearly negative
+**Top pick:** MaxFP=1.0 for Arrow/Blade/Hammer/Trooper. The "faster bullets" gradient shows:
+- MaxFP=2.0 → 1.5 was +3-5pp for 4 tanks
+- MaxFP=1.5 is optimal for those tanks (Ghost exception at 2.0)
+- MaxFP=1.0 extends the curve: bullet speed 17px/tick (vs 15.5 at 1.5), at cost of 33% less damage/shot
+This tests whether the bullet speed benefit continues below 1.5, or whether 1.5 is a sweet spot.
+
+Success criteria: Red 3-seed avg changes by ≥2pp vs baseline; stop early if clearly negative
 
 ---
 
 ## Iteration Log
+
+### Iter 23 — PR=150 for All Tanks (REFUTED -2.5pp, 2 seeds)
+**Date:** 2026-04-20
+**Status:** REFUTED after 2 seeds. Seed 1000: -1pp, seed 2000: -4pp.
+- PR sweep complete: 140 (-4.5pp), 150 (-2.5pp), 160 (baseline optimal)
+- No further PR tuning needed
+- See Research/iter-0023-pr-150-refuted.md for full details
 
 ### Iter 22 — PR=140 for All Tanks (REFUTED -4.5pp, 2 seeds)
 **Date:** 2026-04-20
