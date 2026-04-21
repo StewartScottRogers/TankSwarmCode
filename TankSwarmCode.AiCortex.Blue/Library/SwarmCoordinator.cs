@@ -266,7 +266,11 @@ public sealed class SwarmCoordinator
     private static void ExecuteWolfpack(ITankContext ctx, TankConfiguration config, RadarContact target, double radarSpin)
     {
         double approachAngle = config.FormationSlot * 60.0;
-        Vector2D approachPoint = target.Position.PolarOffset(approachAngle, config.PreferredRange);
+        double age = ctx.Arena.TickNumber - target.Timestamp;
+        Vector2D predictedPos = new(
+            target.Position.X + target.VelocityVector.X * age,
+            target.Position.Y + target.VelocityVector.Y * age);
+        Vector2D approachPoint = predictedPos.PolarOffset(approachAngle, config.PreferredRange);
         TankNavigation.NavigateTo(ctx, approachPoint, 0);
         TankNavigation.MaintainRadar(ctx, target.Position, radarSpin);
         TankNavigation.LinearPredictionFire(ctx, target, config.MaxFirePower);
