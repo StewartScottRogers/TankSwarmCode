@@ -23,6 +23,9 @@ One-page reference for experienced users. For explanations see the linked chapte
 | `--format <fmt>` | `json` | `json` / `ndjson` / `table` / `csv` |
 | `--summary` | off | Append aggregate stats (JSON mode; always on in table mode) |
 | `--list <dll>` | — | List all `ISwarmTank` classes in a DLL |
+| `--blackbox-dir <dir>` | off | Write tick-by-tick telemetry directory (single match only) |
+| `--blackbox-tank <name>` | all | Record only this tank; repeatable |
+| `--blackbox-events-only` | off | Skip quiet ticks (~85% size reduction) |
 
 ### Research standard command
 ```bash

@@ -243,6 +243,8 @@ See [Chapter 13: ECM System](ch13-ecm-system.md) for full details.
 
 ## SwarmMessageType Enum
 
+
+
 | Value | Description |
 |-------|-------------|
 | `RadarShare` | Auto-sent by base class; carries enemy `RadarContact` |
@@ -259,6 +261,77 @@ See [Chapter 13: ECM System](ch13-ecm-system.md) for full details.
 | `RoleChange` | Dynamic role reassignment |
 | `EcmAlert` | Enemy ECM or ghost contacts detected; allies should activate Burnthrough |
 | `Custom` | Application-defined; inspect `CustomData` |
+
+---
+
+## Telemetry Models
+
+These types live in `TankSwarmCode.SwarmTank/Telemetry/` and are used by the Black Box recorder. See [Chapter 15: Headless CLI Runner](ch15-cli.md#black-box-telemetry) for usage.
+
+### MatchTelemetry
+
+The envelope written by `BlackBoxRecorder.Build()` after a match ends.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `MatchId` | `Guid` | Unique identifier for this recording |
+| `Seed` | `int?` | RNG seed used for the match; `null` if unseeded |
+| `TotalTicks` | `long` | Number of ticks the match ran |
+| `WinnerSwarmId` | `int?` | Winning swarm; `null` for a draw |
+| `ArenaWidth` | `double` | Arena width in pixels |
+| `ArenaHeight` | `double` | Arena height in pixels |
+| `Records` | `IReadOnlyList<TankTickRecord>` | All per-tank per-tick snapshots |
+
+### TankTickRecord
+
+One record per tank per tick. Captures full state, the AI's command, sensor data, and events.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Tick` | `long` | Tick number this record belongs to |
+| `TankName` | `string` | Tank's display name |
+| `SwarmId` | `int` | Swarm this tank belongs to |
+| `X`, `Y` | `double` | Arena position in pixels |
+| `Heading` | `double` | Body heading in degrees (0 = North, clockwise) |
+| `Velocity` | `double` | Speed in px/tick |
+| `GunHeading` | `double` | Absolute gun heading |
+| `RadarHeading` | `double` | Absolute radar heading |
+| `Energy` | `double` | Remaining energy |
+| `IsAlive` | `bool` | Whether the tank was alive this tick |
+| `ActiveEcm` | `EcmMode` | ECM mode active this tick |
+| `CmdMove` | `double` | Requested move distance |
+| `CmdBodyTurn` | `double` | Requested body turn in degrees |
+| `CmdGunTurn` | `double` | Requested gun turn in degrees |
+| `CmdRadarTurn` | `double` | Requested radar turn in degrees |
+| `CmdFirePower` | `double` | Requested fire power (`0` = did not fire) |
+| `CmdEcm` | `EcmMode` | Requested ECM mode |
+| `RadarContacts` | `IReadOnlyList<RadarContact>` | Radar picture this tank held at end of tick |
+| `Events` | `IReadOnlyList<TankEventRecord>` | Events that occurred to this tank this tick |
+
+The `Cmd*` fields capture what the AI *requested* before the engine applied physics. Combined with the subsequent tick's state fields, they form (decision, outcome) training pairs.
+
+### TankEventRecord
+
+An event that occurred to a tank within a tick.
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `Type` | `TankEventType` | Category of event (see table below) |
+| `OtherName` | `string?` | Name of the other tank involved, if any |
+| `Value` | `double?` | Numeric payload (power, damage, distance) |
+
+### TankEventType
+
+| Value | `OtherName` | `Value` | Description |
+|-------|------------|---------|-------------|
+| `FiredBullet` | — | bullet power | This tank fired |
+| `HitByBullet` | shooter name | damage received | This tank was struck |
+| `BulletHit` | victim name | damage dealt | This tank's bullet hit an enemy |
+| `HitTank` | other tank name | — | Physical collision with another tank |
+| `HitWall` | — | — | Tank hit the arena wall |
+| `ScannedTank` | scanned name | distance (px) | Radar sweep detected a tank |
+| `Painted` | painter name | — | Enemy radar swept this tank |
+| `Died` | — | — | Tank's energy reached zero |
 
 ---
 

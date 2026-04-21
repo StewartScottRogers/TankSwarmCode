@@ -61,6 +61,16 @@ dotnet publish TankSwarmCode.Cli/TankSwarmCode.Cli.csproj -c Release
 | `--format <fmt>` | `json` | Output format: `json`, `table`, or `csv` |
 | `--summary` | off | Append aggregate stats after a batch (JSON mode only; table mode always shows it) |
 
+### Black Box telemetry options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--blackbox-dir <dir>` | off | Write tick-by-tick telemetry to a directory (single match only) |
+| `--blackbox-tank <name>` | all tanks | Record only this tank; repeat the flag for multiple tanks |
+| `--blackbox-events-only` | off | Skip ticks where nothing happened (~85% size reduction) |
+
+`--blackbox-dir` is incompatible with `--batch N` when N > 1.
+
 ---
 
 ### Discovery
@@ -187,6 +197,120 @@ match,winner_swarm_id,ticks,timed_out,swarm1_survivors,swarm2_survivors,swarm1_e
 
 ---
 
+## Black Box Telemetry
+
+`--blackbox-dir` records every tank's complete state at every tick and writes the data into a directory of NDJSON files after the match. This is the primary data source for per-tank and per-swarm AI analysis.
+
+### Output directory structure
+
+```
+<dir>/
+  header.json          Match metadata (seed, winner, total ticks, arena size)
+  BlueEcm.ndjson       One file per tank — all records for that tank
+  BlueGuard.ndjson
+  ...
+  RedGhost.ndjson
+  ...
+  swarm1.ndjson        All swarm 1 records merged (written only when no --blackbox-tank filter)
+  swarm2.ndjson        All swarm 2 records merged
+```
+
+### header.json
+
+```json
+{
+  "match_id": "3f2a...",
+  "seed": 3000,
+  "total_ticks": 2347,
+  "winner_swarm_id": 1,
+  "arena_width": 800,
+  "arena_height": 600
+}
+```
+
+### Per-tank NDJSON files
+
+Each line is one `TankTickRecord` — a complete snapshot for that tank at that tick:
+
+```json
+{"tick":42,"tank_name":"BlueEcm","swarm_id":1,"x":312.4,"y":198.1,"heading":47.2,"velocity":4.0,"gun_heading":52.1,"radar_heading":18.7,"energy":84.3,"is_alive":true,"active_ecm":"Off","cmd_move":50.0,"cmd_body_turn":0.0,"cmd_gun_turn":3.5,"cmd_radar_turn":45.0,"cmd_fire_power":1.5,"cmd_ecm":"Off","radar_contacts":[...],"events":[{"type":"ScannedTank","other_name":"RedGhost","value":127.3}]}
+```
+
+**State fields** — position, heading, velocity, gun/radar headings, energy, alive status, active ECM mode.
+
+**Command fields** (`cmd_*`) — what the AI *requested* this tick, captured before the engine applied it. Useful for training: the command is the AI's decision; the subsequent state change is the outcome.
+
+**`radar_contacts`** — the full radar picture this tank held at the end of the tick. Only contains what *this tank's* sensors observed (own scans merged with ally broadcasts). Does not include the enemy's private sensor data.
+
+**`events`** — things that happened to this tank this tick:
+
+| `type` | `other_name` | `value` |
+|--------|-------------|---------|
+| `FiredBullet` | — | bullet power |
+| `HitByBullet` | shooter name | damage received |
+| `BulletHit` | victim name | damage dealt |
+| `HitTank` | other tank name | — |
+| `HitWall` | — | — |
+| `ScannedTank` | scanned tank name | distance (px) |
+| `Painted` | painter name | — |
+| `Died` | — | — |
+
+### Color separation
+
+Each per-tank file contains only what that tank knew — its own state, its own commands, and what its sensors observed. Filtering by swarm gives a complete picture of one color without leaking the other color's internal decisions. This is the intended use for training each swarm's AI independently:
+
+```bash
+# Blue perspective only
+--blackbox-dir ./match_3000/ --blackbox-events-only
+# → reads swarm1.ndjson  or individual Blue*.ndjson files
+
+# Red perspective only
+# → reads swarm2.ndjson  or individual Red*.ndjson files
+```
+
+### `--blackbox-events-only`
+
+Drops all records where `events` is empty. For a typical 5000-tick, 29-tank match this reduces output from ~145,000 lines to ~15,000–25,000 lines. A single tank's file is usually 200–800 lines — small enough to fit comfortably in an LLM context window.
+
+### Example workflows
+
+**Analyze one tank with an LLM agent:**
+
+```bash
+TankSwarmCode.Cli \
+  --bot1 Blue.dll --bot2 Red.dll --seed 3000 \
+  --blackbox-dir ./match_3000/ \
+  --blackbox-tank BlueEcm \
+  --blackbox-events-only
+# BlueEcm.ndjson + header.json written; all other files skipped
+```
+
+**Full Blue swarm analysis:**
+
+```bash
+TankSwarmCode.Cli \
+  --bot1 Blue.dll --bot2 Red.dll --seed 3000 \
+  --blackbox-dir ./match_3000/ \
+  --blackbox-events-only
+# All Blue*.ndjson + swarm1.ndjson written (Red files written too; ignore them)
+```
+
+**Two specific tanks for cross-color comparison:**
+
+```bash
+TankSwarmCode.Cli \
+  --bot1 Blue.dll --bot2 Red.dll --seed 3000 \
+  --blackbox-dir ./match_3000/ \
+  --blackbox-tank BlueEcm \
+  --blackbox-tank RedGhost \
+  --blackbox-events-only
+# BlueEcm.ndjson + RedGhost.ndjson + header.json only
+```
+
+See [Chapter 8: Data Models Reference](ch08-data-models.md#telemetry-models) for the full type definitions.
+
+---
+
 ## Tank Loading
 
 The CLI discovers tanks the same way as the GUI: it loads the DLL with `Assembly.LoadFrom`, finds all non-abstract classes that implement `ISwarmTank` **and** have a parameterless constructor, then instantiates and assigns a `SwarmId`.
@@ -237,6 +361,14 @@ TankSwarmCode.Cli \
   --bot1 Red.dll --bot2 Blue.dll \
   --batch 200 --seed 42 \
   --format csv > results.csv
+```
+
+### Capture tick-by-tick telemetry for AI analysis
+
+```bash
+TankSwarmCode.Cli \
+  --bot1 Blue.dll --bot2 Red.dll --seed 3000 \
+  --blackbox-dir ./match_3000/ --blackbox-events-only
 ```
 
 ### Discover what tanks are in a DLL

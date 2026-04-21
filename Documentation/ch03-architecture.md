@@ -91,10 +91,11 @@ Both projects expose the same types (in their respective namespaces `TankSwarmCo
 
 `ArenaEngine` owns all mutable runtime state and drives the tick loop:
 
-- `TankRuntimeState` — wraps an `ISwarmTank` with mutable position, velocity, energy, heading, ECM state, ghost positions, and pending command
+- `TankRuntimeState` — wraps an `ISwarmTank` with mutable position, velocity, energy, heading, ECM state, ghost positions, pending command, and per-tick telemetry buffers (`LastFlushedCommand`, `TickEvents`)
 - `BulletRuntimeState` — active bullet position, owner, and ricochet state
-- `ArenaEngine` — the simulation loop (detailed in [Chapter 4](ch04-physics-engine.md))
+- `ArenaEngine` — the simulation loop (detailed in [Chapter 4](ch04-physics-engine.md)); fires `TickCompleted` and `RoundEnded` events
 - `ArenaContext` — snapshot-backed implementation of `IArenaContext`
+- `BlackBoxRecorder` — optional observer; attach to any `ArenaEngine` to capture tick-by-tick telemetry for every tank; call `Build()` after the match to retrieve a `MatchTelemetry` record (see [Chapter 15](ch15-cli.md#black-box-telemetry))
 
 ### Layer 5 — Host Applications
 
