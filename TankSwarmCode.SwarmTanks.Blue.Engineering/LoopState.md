@@ -1,10 +1,10 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-20 — Iteration 16
+2026-04-20 — Iteration 17
 
 ## Current Iteration
-**17** — pending
+**18** — pending
 
 ## Situation
 **NEW HIGH: 88.3% avg.** Iter 16 found predicted orbit points (+1.6pp). Blue now uses target velocity to predict where target will be when navigating to orbit position. All 5 seeds improved consistently. Red's 5th tank "Red4" is their MVP. Previous ceiling 86.7% broken.
@@ -41,13 +41,15 @@ Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run varian
 - Seed 1000: 75%  |  Seed 2000: 72%  |  Seed 3000: 76%  |  Seed 4000: 90%  |  Seed 5000: 72%
 - **5-seed average: 77%**
 
-## Next Hypothesis (Iteration 17)
+## Next Hypothesis (Iteration 18)
 
-**Apply same position prediction to `MaintainRadar` target**. Currently `MaintainRadar` focuses on `target.Position` (last known). Same staleness problem as the orbit point. Change to use predicted position: `target.Position + target.VelocityVector * age`. This would keep radar tracking where the target is moving rather than where it was last seen, improving scan lock.
+**Try energy-proportional approach range**: Instead of `config.PreferredRange`, use `config.PreferredRange * (ctx.State.Energy / 100.0).Clamp(0.7, 1.0)`. Tanks at full energy orbit at full range; tanks below 70E orbit 30% closer. This keeps damaged tanks closer to the fight rather than sitting at full PR while low on energy.
 
-Alternative: **Apply position prediction in `ExecuteEncircle`** as well. Same fix, different strategy execution path. Encircle uses `target.Position` for orbit calculation — same staleness issue.
+Alternative: **Try gun tolerance tightening to 4°** — more accurate fire at cost of slightly lower fire rate.
 
-Alternative: **Try Encircle orbit using `config.PreferredRange` instead of hardcoded 180**. This would have Sharp orbit at 300px (firing range) rather than 180px (too close for its preferred sniper role). But the fire check `< 220` would need updating for Sharp to fire.
+Alternative: **Try targeting priority target by highest energy** in the fallback `GetStrategyTarget` path (not in RunEpochLogic). Keep RunEpochLogic's lowest-energy primary targeting; only change the fallback scan.
+
+Alternative: **Try a `Pursue` mode** — when enemies.Count == 1 and allyCount >= 3, navigate directly to predicted enemy position (not orbit offset). Finishes 1-vs-many faster, prevents timeout losses.
 
 Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 
@@ -85,6 +87,10 @@ Success criteria: 5-seed average ≥90% (2+ run confirmation required).
 - **DO NOT** target closest enemy — -0.7pp, seed2000 -5pp; lowest-energy targeting is optimal
 - BlueTrooper 6th tank at slot5/300°: seed2000 -3pp consistently, overall +0.5pp not significant — consider only with a direct seed2000 mitigation strategy
 - **DO NOT** add rush-opening branch (tick<50 charge to target): -2.5pp, seeds 2000+3000 hurt badly; aggressive early convergence lets Red concentrate fire
+- **DO NOT** increase NavigateTo max speed above 100: 120 gave -1.7pp, seed2000 -6pp; overshooting orbit points destabilizes formation
+- **DO NOT** raise Encircle threshold beyond enemies×2: enemies×3 gave -1.5pp; Encircle is genuinely better than Wolfpack in overwhelming-advantage endgame
+- **DO NOT** use formation rotation based on target velocity: seed2000 consistently -3.5pp; dynamic angle rotation breaks the stable 60° geometry
+- **DO NOT** use uniform PR×0.9 scaling: -2.7pp, 3 seeds regressed; the calibrated per-tank PRs are at their optimum
 - **DO NOT** reduce AllyStaleTicks below 30: tested at 25, part of -2.5pp regression; 30 ticks matches ping interval well
 - **DO NOT** use center-seeking Scout — Blue clusters at center, Red exploits predictability (-3.6pp)
 - **DO NOT** increase Scout radar spin above 45° — 90° tested: -3.4pp avg
@@ -137,6 +143,17 @@ EcmAlert SwarmMessage is never sent by Blue AI. Therefore IsEnemyEcmActive() is 
 - BlueStrike PR 250→230: FAILED (62% seed 2000, regression)
 - Encircle threshold lowered: FAILED (68% seed 1000, Red Hammer concentrates fire)
 - **Net result: No change. Guard MaxFP=3.0 config is the current optimum.**
+
+### Iter 17 — All-strategies prediction + strategy tuning (all reverted)
+**Date:** 2026-04-20
+- **Extend prediction to Encircle/Pincer/ECMScreen + radar tracking**: Run 1+2 avg 88.3% = baseline. Neutral — other strategies trigger rarely, radar prediction doesn't help (radar is fast enough to track without it).
+- **Formation rotation (velocity-based base angle)**: Run 1+2 avg 88.2% = baseline. Seed2000 consistently -3.5pp (86.5% vs 90%). Mechanism: dynamic angle rotation destabilizes approach geometry when target velocity changes rapidly. Seed2000 is sensitive to geometry disruption.
+- **NavigateTo max speed 100→120**: Clear regression 86.6% avg (-1.7pp). Seed2000 -6pp. Overshooting orbit points at higher speed.
+- **Encircle threshold enemies×2→×3**: Regression 86.8% avg (-1.5pp). Wolfpack is NOT better than Encircle in overwhelming-advantage endgame; Encircle's all-sides attack at 180px kills faster.
+- **Orbit radius PR×0.9**: Regression 85.6% avg (-2.7pp). Seeds 1000/3000/4000 all dropped.
+- **Orbit point arena clamping (margin=80px)**: Run 1: 89.2%, Run 2: 86.0% → avg 87.6% (-0.7pp). High variance, not real improvement. Clamping changes too many orbit positions.
+- Key insight: Navigation changes all hurt (speed, distance, clamping). 88.3% is a confirmed ceiling at current architecture. The Wolfpack prediction (iter 16) was the last pure geometric gain.
+- **Net result: No change. 88.3% confirmed ceiling.**
 
 ### Iter 16 — Wolfpack predicted orbit point: +1.6pp average (**COMMITTED**)
 **Date:** 2026-04-20
