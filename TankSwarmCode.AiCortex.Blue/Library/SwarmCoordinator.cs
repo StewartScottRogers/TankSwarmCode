@@ -263,19 +263,15 @@ public sealed class SwarmCoordinator
         }
     }
 
-    private static void ExecuteWolfpack(ITankContext ctx, TankConfiguration config, RadarContact target, double radarSpin)
+    private void ExecuteWolfpack(ITankContext ctx, TankConfiguration config, RadarContact target, double radarSpin)
     {
         double age = ctx.Arena.TickNumber - target.Timestamp;
         Vector2D predictedPos = new(
             target.Position.X + target.VelocityVector.X * age,
             target.Position.Y + target.VelocityVector.Y * age);
-        double approachAngle = config.FormationSlot == 6 ? 330.0
-            : config.FormationSlot == 7 ? 270.0
-            : config.FormationSlot == 8 ? 30.0
-            : config.FormationSlot == 9 ? 90.0
-            : config.FormationSlot == 10 ? 150.0
-            : config.FormationSlot == 11 ? 210.0
-            : config.FormationSlot * 60.0;
+        int aliveCount = GetAliveAllyCount() + 1;
+        int mySlot = config.FormationSlot % aliveCount;
+        double approachAngle = mySlot * (360.0 / aliveCount);
         Vector2D approachPoint = predictedPos.PolarOffset(approachAngle, config.PreferredRange);
         TankNavigation.NavigateTo(ctx, approachPoint, 0);
         TankNavigation.MaintainRadar(ctx, target.Position, radarSpin);

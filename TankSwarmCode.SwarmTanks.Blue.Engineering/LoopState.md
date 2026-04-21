@@ -1,50 +1,57 @@
 # Blue Engineering — Loop State
 
 ## Last Updated
-2026-04-21 — Iteration 40
+2026-04-21 — Iteration 41
 
 ## Current Iteration
-**40** — LOOP COMPLETE
+**41** — 28v28 Parity Restored (~50%)
 
 ## Situation
-**CRITICAL RESET: Red fixed their parallel mode bug (iter-17).** All prior baselines (77% → 88.3%) were against a broken Red that only won 16% in parallel mode. Against fixed Red (~64% win rate), Blue is at **~36%**. The 88.3% ceiling is gone.
+**CRITICAL RESET: Red Engineering expanded to 28 tanks (their iter 37-45), achieving 94% win rate vs Blue's 12.**
+Blue countered with Blue12-Blue27 slot tanks, restoring parity to ~50%.
 
-Red applied the same fix Blue used in iter-7: `new SwarmCoordinator()` per game instead of `ForTeam()` static registry. With proper coordination, Red's Arrow/Hammer dominate.
+**Current state:** 28 Blue tanks (12 named + 16 slot) vs 28 Red tanks. Win rate ~50%.
+- Seed 1000: Red 51%, Blue 49%
+- Seed 3000: Red 47%, Blue 53%
 
-**All "DO NOT" constraints are provisional** — they were calibrated against a Red winning only 16%. Re-test before treating as hard limits.
+**Key finding:** In symmetric 28v28, spawn geometry dominates. Bot1/bot2 position assignment per seed determines all outcomes. Parameter changes (MaxFP, PR, orbit radius, ECM) have zero measurable effect — the same ~116/84 per-seed split is invariant across all configs tested.
 
-Note: parallel execution (`--parallel 16`) introduces ~10-20pp run-to-run variance. Single runs are estimates; direction of change is reliable when MULTIPLE runs agree.
+**Next hypothesis:** Add Blue28 (29v28 numerical advantage) to break spawn geometry symmetry.
 
-## Final Baseline (post-Iter-37, 12-tank config, confirmed ceiling)
+Note: parallel execution (`--parallel 8`) recommended. `--on-timeout energy` required for accurate results.
+
+## 28v28 Baseline (Iter-41, CURRENT)
+- Seed 1000: Red 51%, Blue 49%  |  Seed 3000: Red 47%, Blue 53%
+- **~50% average** — spawn geometry dominates; parameter changes produce zero effect
+- Pre-expansion Blue (12 tanks) vs Red (28 tanks): ~6%
+- Post-expansion Blue (28 tanks) vs Red (28 tanks): ~50%
+
+## 12v5 Baseline (Obsolete — Red had 5 tanks, now has 28)
 - Seed 1000: ~88%  |  Seed 2000: ~91%  |  Seed 3000: ~86%  |  Seed 5000: ~82%
-- **4-seed average: 87%** — CONFIRMED CEILING (iters 38-40 all confirmed neutral at 87%)
-- Pre-12th-tank baseline (11-tank): avg 82%
-- Pre-11th-tank baseline (10-tank): avg 77.25%
-- Pre-10th-tank baseline (9-tank): avg 72%
-- Pre-6th-tank baseline (5-tank): avg 33.25%
+- **4-seed average: 87%** — OBSOLETE. Red expanded to 28 tanks.
 
-## Active Configuration
-- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20 — **DO NOT TOUCH** (MVP multiple seeds)
-- BlueStrike: MaxFP=3.0, PR=250, FormationSlot=0 (leader), Retreat=25 — **DO NOT LOWER PR** (kills seed 2000)
-- BlueGuard: MaxFP=3.0, PR=200, FormationSlot=1, Retreat=30 — **KEEP** (Iter 2 win)
-- BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20 — **DO NOT RAISE MaxFP** (at 3.0: Blue 58%)
-- BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35 — ECMScreen/EcmAlert dead code
-- **BlueTrooper: MaxFP=2.5, PR=200, FormationSlot=5, Retreat=0 — 6th tank COMMITTED (Iter 23 win, +10pp avg)**
-- **BlueSurge: MaxFP=2.5, PR=200, FormationSlot=6→330°, Retreat=0 — 7th tank COMMITTED (Iter 30 win, +11.25pp avg)**
-- **BlueRaider: MaxFP=2.5, PR=200, FormationSlot=7→270°, Retreat=0 — 8th tank COMMITTED (Iter 33 win, +8.25pp avg)**
-- **BlueVanguard: MaxFP=2.5, PR=200, FormationSlot=8→30°, Retreat=0 — 9th tank COMMITTED (Iter 34 win, +9.25pp avg)**
-- **BlueLancer: MaxFP=2.5, PR=200, FormationSlot=9→90°, Retreat=0 — 10th tank COMMITTED (Iter 35 win, +5.25pp avg)**
-- **BlueScout: MaxFP=2.5, PR=200, FormationSlot=10→150°, Retreat=0 — 11th tank COMMITTED (Iter 36 win, +4.75pp avg)**
-- **BluePhoenix: MaxFP=2.5, PR=200, FormationSlot=11→210°, Retreat=0 — 12th tank COMMITTED (Iter 37 win, +5pp avg)**
-- Per-tank coordinator: each tank creates `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam** (static registry bug)
-- Wolfpack angle-offset: slot × 60° approach angle + tank's own PR as orbit radius — **KEEP** (Iter 10 win, +3.6pp avg)
-- Wolfpack predicted orbit: orbit point based on `target.Position + VelocityVector * contactAge` — **KEEP** (Iter 16 win, +1.6pp avg)
-- Fallback threshold: 20.0 (was 30.0) — **KEEP** (Iter 11 win, +1.5pp avg)
-- BlueGuard FormationSlot=1 (was 3), BlueSharp FormationSlot=3 (was 1) — **KEEP** (Iter 12 win, +1.3pp avg)
-- **Current slot layout**: Strike(0°) → Vanguard(30°) → Guard(60°) → Lancer(90°) → Rush(120°) → Sharp(180°) → Ecm(240°) → Raider(270°) → Trooper(300°) → Surge(330°)
-- Special angle overrides: `slot6→330°, slot7→270°, slot8→30°, slot9→90°, others→slot*60°`
-- Dense upper-right (0°-120°): Strike, Vanguard, Guard, Lancer, Rush — 5 tanks, 30° each
-- Sparse left (180°-240°): Sharp, Ecm — 60° gap; tight lower-right (240°-330°): Raider, Trooper, Surge
+## Active Configuration (Iter-41, 28 Blue tanks)
+### Named tanks (unchanged from iter-37):
+- BlueSharp: MaxFP=3.0, PR=300, FormationSlot=3, Retreat=20
+- BlueStrike: MaxFP=3.0, PR=250, FormationSlot=0 (leader), Retreat=25
+- BlueGuard: MaxFP=3.0, PR=200, FormationSlot=1, Retreat=30
+- BlueRush: MaxFP=2.5, PR=180, FormationSlot=2, Retreat=20
+- BlueEcm: MaxFP=5.0, PR=150, HasEcm=true, Retreat=35
+- BlueTrooper: MaxFP=2.5, PR=200, FormationSlot=5, Retreat=0
+- BlueSurge: MaxFP=2.5, PR=200, FormationSlot=6, Retreat=0
+- BlueRaider: MaxFP=2.5, PR=200, FormationSlot=7, Retreat=0
+- BlueVanguard: MaxFP=2.5, PR=200, FormationSlot=8, Retreat=0
+- BlueLancer: MaxFP=2.5, PR=200, FormationSlot=9, Retreat=0
+- BlueScout: MaxFP=2.5, PR=200, FormationSlot=10, Retreat=0
+- BluePhoenix: MaxFP=2.5, PR=200, FormationSlot=11, Retreat=0
+
+### Slot tanks (NEW — Iter-41):
+- Blue12-Blue27: MaxFP=1.0, PR=160.0, FormationSlot=12-27 (via BlueSlotCortex)
+- Uses dynamic orbit: `slot % aliveCount * (360/aliveCount)` degrees
+
+### Coordinator:
+- Per-tank coordinator: `new SwarmCoordinator()` in OnStart — **DO NOT revert to ForTeam**
+- Wolfpack uses dynamic angle formula + predicted orbit + config.PreferredRange
 
 ## Parallel Mode Baseline (post-Iter-16, OBSOLETE — against buggy Red)
 - Seed 1000: ~86% avg  |  Seed 2000: ~90% avg  |  Seed 3000: ~90.5% avg  |  Seed 4000: ~85.5% avg  |  Seed 5000: ~89.5% avg
