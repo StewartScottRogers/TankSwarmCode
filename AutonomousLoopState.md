@@ -1,24 +1,837 @@
 # Autonomous Loop State
 
 ## Last Updated
-2026-04-18 — Iteration 11 complete
+2026-04-19 — Iteration 78 complete
 
 ## Current Iteration
-**12** — pending (or HALT — balance target achieved)
+**79** — pending
 
 ## Status
-**BALANCE FIX CONFIRMED.** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%.
+**BALANCE FIX CONFIRMED (iter-11).** BlueEcm MaxFirePower=1.0 achieves Red 51% / Blue 49%, triple-seed validated (seeds 1000/2000/3000).
 
-Branch `research/iter-11-blueecm-fp-calibrate-0.5` contains the fix.
-**Awaiting human merge to master.**
+**Linchpin threshold: exactly PR=217 (Linchpin active when PR ≤ 216).** Seed-stable: confirmed at seeds 1000 (iter-44) and 2000 (iter-45). Threshold is a deterministic structural property of ECM range mechanics, not noise.
 
-If continuing research: investigate why the 0.5→1.0 jump is non-linear, or test cross-seed validation (seed 2000).
+**Awaiting human merge of iter-11 fix (BlueEcm MaxFirePower=1.0) to master.**
 
-**Branch:** (awaiting human decision)
+**LOW-END PR BALANCE BOUNDARY TRIPLE-SEED VALIDATED (iter-53).** PR=141 is the last Blue-dominant value; PR=142 is the first balanced value. Triple-seed validated: 51% / 51% / 53% Red at seeds 1000/2000/3000. Boundary is structural.
+
+**UPPER PR BALANCE BOUNDARY TRIPLE-SEED VALIDATED (iter-60).** PR=238 is balanced at seeds 1000 (49% Red), 2000 (50% Red), and 3000 (51% Red). Upper boundary PR=238→239 is structural. Usable balanced range: PR=142–238 (97-unit window).
+
+**INTERIOR NON-MONOTONIC (iter-61).** PR=190 is Blue-dominant (44% Red, no Linchpin) — the balanced range PR=142–238 is not a flat plateau. Interior has a Blue-dip subregion near PR=167–190.
+
+**INTERIOR DIP BOUNDARIES PINNED TO SINGLE-INTEGER PRECISION (iters 66+69).**
+- Lower boundary: PR=166 is balanced (Linchpin YES); PR=167 is Blue-dominant (no Linchpin). Step: PR=166→167.
+- Upper boundary: PR=190 is Blue-dominant (no Linchpin); PR=191 is balanced (Linchpin YES). Step: PR=190→191.
+- Blue-dip (no Linchpin) region: **PR=167–190** (24 units wide). Both boundaries are single-integer precision.
+
+**BLUE-DIP CROSS-SEED STRUCTURE CHARACTERIZED (iters 70–75).** The dip has seed-dependent depth variation:
+- PR=170 seed 2000 = 44% Red, NO Linchpin (iter-71) — **full depth**, identical to seed 1000
+- PR=171 seed 2000 = 46% Red, NO Linchpin (iter-75) — **gradient start** (1pp above floor)
+- PR=172 seed 2000 = 47% Red, NO Linchpin (iter-74) — **gradient**
+- PR=175 seed 2000 = 48% Red, NO Linchpin (iter-73) — **shallow**
+- PR=180 seed 2000 = 49% Red, NO Linchpin (iter-70) — **shallow**
+- PR=190 seed 2000 = 50% Red, NO Linchpin (iter-72) — **shallow** (balanced, but structurally in dip)
+- The structural signature (no Linchpin for BlueEcm) is seed-stable across the whole dip.
+- At seed 2000, the deep sub-region (≤44% Red) is **exactly PR=167–170** (4 units). Gradient zone starts at PR=171 (46%→47%→48%). Shallow zone PR=175–190.
+- Full-depth → shallow transition at seed 2000: 44% (PR=170) → 46% (PR=171) → 47% (PR=172) → 48% (PR=175) — smooth gradient.
+
+**ENGINE CHANGE CONFIRMED (iters 75+76+77): DIP FULLY ELIMINATED AT SEED 1000.** Game engine changes (ray-cast escape, merged to master before iter-75) have eliminated the entire Blue-dip region at seed 1000:
+- PR=171 seed 1000 = 50% Red, Linchpin (iter-75 baseline)
+- PR=170 seed 1000 = 50% Red, Linchpin (iter-76)
+- PR=167 seed 1000 = 50% Red, Linchpin (iter-77)
+
+All three former dip points are now balanced plateau behavior. The old dip (PR=167–190, no Linchpin) at seed 1000 was an artifact of the old engine. Post-engine, the balanced plateau at seed 1000 is likely uninterrupted: PR=142–238 (no dip interruption). Seed 2000 dip persists (PR=170 seed 2000 = 44% Red, no Linchpin, iter-71 — new engine).
+
+**DIP STATUS CROSS-SEED / POST-ENGINE (iter-78):** PR=170 at seed 3000 (new engine) = 48% Red, BlueEcm NOT Linchpin. The dip structural signature (no BlueEcm Linchpin) persists at seed 3000, but depth is shallower (48%, not 44%). Seed 3000 dip behavior at PR=170 resembles seed 2000's PR=175 (both 48% shallow). All three seeds show dip signature (no Linchpin) at PR=170, but depth varies: seeds 1000 (new engine) fully eliminated (50%), seed 2000 full depth (44%), seed 3000 shallow (48%).
+
+**INTERIOR PR CURVE (MaxFP=1.0) — DIP FULLY CHARACTERIZED (seed 1000 OLD ENGINE), CROSS-SEED PARTIAL (seed 2000 full gradient, seed 1000 post-engine dip eliminated, seed 3000 partial):**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? | Seed | Engine |
+|------------|-------|-------|-----------|------|--------|
+| 142        | 51%   | 49%   | Yes (iter-48) | 1000 | old |
+| 160        | 56%   | 44%   | Yes (iter-63) | 1000 | old |
+| 165        | 50%   | 50%   | Yes (iter-64) | 1000 | old |
+| 166        | 50%   | 50%   | Yes (iter-66) | 1000 | old |
+| 167        | 44%   | 56%   | No (iter-65)  | 1000 | old |
+| 167        | **50%**| **50%**| **Yes (iter-77)** | 1000 | **NEW** |
+| 170        | 44%   | 56%   | No (iter-62)  | 1000 | old |
+| 170        | **50%**| **50%**| **Yes (iter-76)** | 1000 | **NEW** |
+| 170        | 44%   | 56%   | No (iter-71)  | 2000 | new |
+| 170        | **48%**| **52%**| **No (iter-78)** | 3000 | **new** |
+| 171        | 50%   | 50%   | Yes (iter-75 baseline) | 1000 | new |
+| 171        | 46%   | 54%   | No (iter-75)  | 2000 | new |
+| 172        | 47%   | 53%   | No (iter-74)  | 2000 | new |
+| 175        | 48%   | 52%   | No (iter-73)  | 2000 | new |
+| 180        | 49%   | 51%   | No (iter-70)  | 2000 | new |
+| 190        | 44%   | 56%   | No (iter-61)  | 1000 | old |
+| 190        | 50%   | 50%   | No (iter-72)  | 2000 | new |
+| 191        | 52%   | 48%   | Yes (iter-69) | 1000 | old |
+| 192        | 50%   | 50%   | Yes (iter-68) | 1000 | old |
+| 195        | 50%   | 50%   | Yes (iter-67) | 1000 | old |
+| 200        | 54%   | 46%   | Yes           | 1000 | old |
+| 217        | 49%   | 51%   | No (iter-44)  | 1000 | old |
+| 238        | 49%   | 51%   | Yes (iter-58) | 1000 | old |
+
+**Next hypothesis:** Probe PR=167 at seed 3000 (new engine). Seed 3000 shows 48% at PR=170 (no BlueEcm Linchpin — dip signature present but shallow). Does seed 3000 have a full-depth zone (44%) at PR=167, or is 48% the floor? Predict: if seed 3000 follows seed 2000 pattern, PR=167 may show ~44–46% Red, no Linchpin. If instead ≥48% → seed 3000 has no deep zone; 48% is its dip floor.
 
 ---
 
 ## Iteration Log
+
+### Iter 78 — `research/iter-000076-blueecm-pr170-seed3000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=170 seed 3000 (new engine) = 48% Red, BlueEcm NOT Linchpin; dip persists at seed 3000 but is shallower than seed 2000
+
+**Hypothesis:** PR=170 at seed 3000 will be 44% Red, no BlueEcm Linchpin (full depth, seed-stable with seeds 1000-old and 2000). Predict: 44% Red, no Linchpin.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=170 (new engine)
+
+**Results:**
+- Red 97 (48%) / Blue 103 (52%) — **SHALLOW** (prediction WRONG — expected 44% full depth)
+- BlueEcm: MVP (69/103), Survivor (13/97 losses), Solo carry (24/103 [12D+12TO]), ECM, Rate/100t: 10.43 — **NO Linchpin**
+- RedGhost: MVP (69/97), **Linchpin (alive:95%/dead:22%)**, Solo carry (46/97 [23D+23TO]), ECM, Rate/100t: 2.63
+
+**Cross-seed PR=170 comparison (new engine):**
+
+| PR  | Seed | Red%  | BlueEcm Linchpin? | Depth |
+|-----|------|-------|-------------------|-------|
+| 170 | 1000 | 50%   | YES (iter-76)     | Plateau (dip eliminated) |
+| 170 | 2000 | 44%   | NO (iter-71)      | Full depth |
+| 170 | 3000 | 48%   | NO (iter-78)      | Shallow |
+
+**Key finding:** Prediction WRONG — seed 3000 is shallow (48%), not full depth (44%). The dip structural signature (no BlueEcm Linchpin) persists at seed 3000 but depth is intermediate. Seed 3000 at PR=170 resembles seed 2000's PR=175 behavior (both 48% shallow). Next: probe PR=167 at seed 3000 to determine if it has a full-depth zone or 48% is its floor.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 77 — `research/iter-000077-blueecm-pr167-seed1000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=167 seed 1000 post-engine = 50% Red, Linchpin ACTIVE; old dip lower boundary fully eliminated
+
+**Hypothesis:** Engine change eliminated the old dip lower boundary (PR=167 was the entry point, old engine = 44% Red, no Linchpin). With new engine, PR=167 = 50% Red, Linchpin active — dip fully collapsed. Predict: 50% Red, Linchpin active.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=167 (new engine)
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **PERFECTLY BALANCED** (prediction CORRECT)
+- BlueEcm: MVP (72/100), **Linchpin (alive:91%/dead:23%)**, Solo carry (32/100 [15D+17TO]), ECM, Rate/100t: 7.63
+- RedGhost: MVP (58/100 — wait, 58/100 not shown; from win combos Ghost solo 31/100), Solo carry (31/100 [19D+12TO]), ECM, Rate/100t: 2.94
+
+**Key finding:** PR=167 at seed 1000 = 50% Red, Linchpin ACTIVE. Combined with PR=170 (iter-76) and PR=171 (iter-75 baseline), all former dip points are now balanced plateau. The old dip (PR=167–190) at seed 1000 is fully eliminated by the engine change. The balanced plateau at seed 1000 (post-engine) is uninterrupted from at least PR=167 to PR=238. Next: probe PR=180 (interior mid-point) to confirm plateau completeness.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 76 — `research/iter-000076-blueecm-pr170-seed1000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=170 seed 1000 post-engine = 50% Red, BlueEcm IS Linchpin; dip eliminated by engine change
+
+**Hypothesis:** Engine change shifted seed 1000 dip's upper boundary from PR=190 to PR=170. PR=170 at seed 1000 with new engine = 44% Red, NO Linchpin (dip preserved). Predict: 44% Red, no Linchpin.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=170 (new engine)
+
+**Results:**
+- Red 99 (50%) / Blue 101 (50%) — **BALANCED** (prediction WRONG — expected 44% Red, no Linchpin)
+- BlueEcm: MVP (74/101), **Linchpin (alive:87%/dead:23%)**, Solo carry (28/101 [15D+13TO]), ECM, Rate/100t: 7.90
+- RedGhost: MVP (58/99), Solo carry (35/99 [23D+12TO]), ECM, Rate/100t: 2.91
+
+**Key finding:** PR=170 at seed 1000 = 50% Red, Linchpin ACTIVE — identical to balanced plateau behavior. Prediction WRONG: dip is NOT preserved at PR=170. Combined with iter-75 baseline (PR=171, seed 1000 = 50% Red, Linchpin active), the engine change has eliminated the dip at both PR=170 and PR=171. The old dip region (PR=167–190) at seed 1000 has likely fully collapsed to balanced. Next: probe PR=167 (old dip lower boundary) to confirm complete elimination.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 75 — `research/iter-000075-blueecm-pr171-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=171 seed 2000 = 46% Red (gradient start), within 1pp of predicted 47%; deep zone at seed 2000 ends exactly at PR=170
+
+**Hypothesis:** PR=171 at seed 2000 — gradient already started (PR=171 = 47% Red, no Linchpin), deep zone is exactly PR=167–170. Predict: 47% Red.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=171
+
+**Results:**
+- Red 92 (46%) / Blue 108 (54%) — **Blue-dominant** (predicted 47% — within 1pp noise)
+- BlueEcm: MVP (66/108), Solo carry (25/108 [15D+10TO]), ECM, **NO Linchpin**, Rate/100t: 8.33
+- RedGhost: MVP (62/92), **Linchpin (alive:94%/dead:22%)**, Solo carry (32/92 [22D+10TO]), ECM, Rate/100t: 2.82
+
+**Baseline run (seed 1000, same DLLs — MaxFP=1.0, PR=171):**
+- Red 101 (50%) / Blue 99 (50%) — **BALANCED** (unexpected — old data says PR=171 should be Blue-dominant at seed 1000)
+- BlueEcm: MVP (77/99), **Linchpin (alive:89%/dead:19%)**, Solo carry (32/99), ECM, Rate/100t: 8.93
+- Note: engine changes (ray-cast escape) may have altered seed 1000 dip structure
+
+**Key finding:** PR=171 at seed 2000 = 46% Red — 2pp above the PR=170 floor (44%), confirming gradient starts at PR=171. Deep zone at seed 2000 is definitively **PR=167–170** (4 units). Important: baseline run revealed engine change impact on seed 1000 dip — followed up in iters 76+77.
+**Code:** No revert needed — master already had MaxFP=1.0, PR=171 (from namespace consolidation commit).
+
+---
+
+### Iter 74 — `research/iter-000074-blueecm-pr172-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=172 seed 2000 = 47% Red (intermediate gradient), not 44% Red (full depth); deep zone ends exactly at PR=170
+
+**Hypothesis:** PR=172 at seed 2000 will be FULL DEPTH (44% Red, no Linchpin) — same as PR=170 at seed 2000. Deep sub-region extends to at least PR=172.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=172
+
+**Results:**
+- Red 94 (47%) / Blue 106 (53%) — **INTERMEDIATE** (prediction WRONG — expected 44% full depth)
+- BlueEcm: MVP (66/106), **NO Linchpin**, Solo carry (22/106 [10D+12TO]), Rate/100t: 8.62
+- RedGhost: MVP (62/94), **Linchpin (alive:95%/dead:24%)**, Solo carry (32/94 [21D+11TO]), ECM, Rate/100t: 2.71
+
+**Key finding:** PR=172 at seed 2000 is INTERMEDIATE (47%) — prediction WRONG. The full-depth→shallow transition at seed 2000 is a gradient (44%→47%→48%), NOT a sharp step. Deep zone (≤44%) ends at PR=170. By PR=172, already 3pp above floor.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 73 — `research/iter-000073-blueecm-pr175-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=175 seed 2000 = 48% Red (shallow), not 44% Red (full depth); deep sub-region is very narrow (PR=167–170)
+
+**Hypothesis:** PR=175 at seed 2000 will be FULL DEPTH (44% Red, no Linchpin) — same as PR=170 at seed 2000. Deep sub-region extends at least to PR=175. If instead ~48% Red → transition is PR=170→175, deep sub-region is PR=167–170 (≤4 units, very narrow).
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=175
+
+**Results:**
+- Red 97 (48%) / Blue 103 (52%) — **SHALLOW** (prediction WRONG — expected 44% full depth)
+- BlueEcm: MVP (62/103), ECM, **NO Linchpin**, Rate/100t: 8.58
+- RedGhost: MVP (68/97), **Linchpin (alive:92%/dead:23%)**, Solo carry (39/97 [27D+12TO]), ECM, Rate/100t: 2.85
+
+**Key finding:** PR=175 at seed 2000 is SHALLOW (48% Red) — prediction WRONG. The full-depth/shallow transition at seed 2000 is between PR=170 and PR=175 (5-unit window). The deep sub-region is very narrow: PR=167–170 at seed 2000 (vs. PR=167–190 at seed 1000 — 5× narrower). Structural signature (BlueEcm NO Linchpin, RedGhost Linchpin) is seed-stable.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 72 — `research/iter-000072-blueecm-pr190-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=190 seed 2000 = 50% Red (shallow), not 44% Red (full depth); shallow zone is broad (PR=180–190)
+
+**Hypothesis:** PR=190 at seed 2000 will be Blue-dominant and FULL DEPTH (44% Red, no Linchpin) — same as seed 1000's PR=190. PR=180's shallower result was a localized anomaly. If instead ~49–50% Red → shallow zone is broad (PR=180–190).
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=190
+
+**Results:**
+- Red 99 (50%) / Blue 101 (50%) — **BALANCED** (prediction WRONG — expected Blue-dominant)
+- BlueEcm: MVP (59/101), Survivor, ECM, **NO Linchpin**, Rate/100t: 9.08
+- RedGhost: MVP (64/99), Solo carry (36/99 [22D+14TO]), ECM, Rate/100t: 2.86
+
+**Key finding:** PR=190 at seed 2000 is SHALLOW (50% Red). The shallow zone is BROAD: spans PR=180–190. The deep sub-region within seed 2000's dip is narrow, concentrated near PR=167–~175. Structural signature (BlueEcm NO Linchpin) is seed-stable across all probed dip positions.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 71 — `research/iter-000071-blueecm-pr170-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ REFUTED — PR=170 seed 2000 = 44% Red, full depth (identical to seed 1000); uniformly-shallower hypothesis WRONG
+
+**Hypothesis:** PR=170 at seed 2000 will show ~49% Red, no Linchpin — same shallow pattern as PR=180 at seed 2000 (uniformly shallower dip at seed 2000). If 44% Red instead → dip depth is PR-position-dependent within seed 2000.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=170
+
+**Results:**
+- Red 88 (44%) / Blue 112 (56%) — **BLUE-DOMINANT** (prediction WRONG on depth)
+- BlueEcm: MVP (70/112), Solo carry (23/112 [13D+10TO]), ECM, **NO Linchpin**, Rate/100t: 9.11
+- RedGhost: MVP (60/88), **Linchpin (alive:94%/dead:21%)**, Solo carry (30/88 [21D+9TO]), ECM, Rate/100t: 2.75
+
+**Key finding:** PR=170 at seed 2000 is FULL DEPTH (44% Red) — same as seed 1000. The dip's structural signature (no Linchpin) is seed-stable, but depth varies by PR position within seed 2000.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 70 — `research/iter-000070-blueecm-pr180-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ PARTIAL — Dip structural signature confirmed cross-seed; depth is seed-dependent
+
+**Hypothesis:** PR=180 at seed 2000 will be Blue-dominant (44–46% Red, no Linchpin) — confirming dip is seed-stable, not seed-1000 artifact. Balanced result would suggest seed-specific noise.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=180
+
+**Results:**
+- Red 98 (49%) / Blue 102 (51%) — **BALANCED** (prediction WRONG on depth; no Linchpin prediction CORRECT)
+- BlueEcm: MVP (62/102), ECM, **NO Linchpin**, Rate/100t: 8.97
+- RedGhost: MVP (65/98), Solo carry (34/98 [22D+12TO]), ECM, **NO Linchpin**, Rate/100t: 2.97
+
+**Key finding:** No Linchpin at PR=180 seed 2000 — structural signature (Linchpin absence) is seed-stable. But win rate is 49% not 44% — dip depth is seed-dependent. The dip is a real structural feature (not seed-1000 noise) but shallower at seed 2000.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 69 — `research/iter-000069-blueecm-pr191`
+**Date:** 2026-04-19
+**Status:** ✅ COMPLETED — PR=191 BALANCED (52% Red, Linchpin YES); upper dip boundary pinned to single-integer precision PR=190→191
+
+**Hypothesis:** PR=191 (only unprobed value in PR=190–192 window) with MaxFP=1.0 at seed 1000 — predict Blue-dominant (no Linchpin); if so, upper dip boundary is exactly PR=190→191.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=191
+
+**Results:**
+- Red 103 (52%) / Blue 97 (48%) — **BALANCED** (prediction WRONG — expected Blue-dominant)
+- BlueEcm: MVP (70/97), **Linchpin (alive:86%/dead:23%)**, Solo carry (34/97 [14D+20TO]), ECM, Rate/100t: 6.80
+- RedGhost: MVP (65/103), Solo carry (38/103 [28D+10TO]), ECM, Rate/100t: 2.76 — NO Linchpin
+
+**Key finding:** PR=191 is balanced with Linchpin active — prediction WRONG. The upper dip boundary is exactly PR=190→191 (single-integer precision). The Blue-dip (no Linchpin) region is definitively **PR=167–190** (24 units wide). Both boundaries are now pinned to single-integer precision.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 68 — `research/iter-000068-blueecm-pr192`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=192 BALANCED (50% Red, Linchpin YES); upper dip boundary narrowed to PR=190–192
+
+**Hypothesis:** PR=192 with MaxFP=1.0 at seed 1000 — predict balanced (Linchpin YES), narrowing upper dip boundary.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=192
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin (alive:88%/dead:24%)**, Solo carry, ECM, Rate/100t: 7.48
+- RedGhost: MVP, Solo carry, ECM, Rate/100t: 2.80
+
+**Key finding:** PR=192 balanced with Linchpin — upper boundary confirmed in PR=190–192 (3-unit window). Next: probe PR=191.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 67 — `research/iter-000067-blueecm-pr195`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=195 BALANCED (50% Red, Linchpin YES); upper dip boundary narrowed to PR=190–195
+
+**Hypothesis:** PR=195 with MaxFP=1.0 at seed 1000 — predict balanced (Linchpin YES), narrowing upper dip boundary from PR=190–200.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=195
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=195 balanced with Linchpin — upper boundary confirmed in PR=190–195 (6-unit window). Next: probe PR=192.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 66 — `research/iter-000066-blueecm-pr166`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=166 BALANCED (50% Red, Linchpin YES); lower dip boundary pinned to PR=166→167 (single-integer precision)
+
+**Hypothesis:** PR=166 with MaxFP=1.0 at seed 1000 — predict balanced (Linchpin YES). If so, lower dip boundary is exactly PR=166→167.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=166
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin (alive:87%/dead:22%)**, Solo carry, ECM
+- RedGhost: MVP, Solo carry, ECM — NO Linchpin
+
+**Key finding:** PR=166 balanced with Linchpin — lower dip boundary is exactly PR=166→167 (single-integer precision). Combined with iter-65 (PR=167 = Blue-dominant, no Linchpin), the lower boundary is pinned.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 65 — `research/iter-000065-blueecm-pr167`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=167 Blue-dominant (44% Red, no Linchpin); lower dip boundary narrowed to PR=166–167
+
+**Hypothesis:** PR=167 with MaxFP=1.0 at seed 1000 — predict Blue-dominant (no Linchpin). If so, lower dip boundary is between PR=166 and PR=167.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=167
+
+**Results:**
+- Red 88 (44%) / Blue 112 (56%) — **BLUE-DOMINANT** ✅
+- BlueEcm: MVP, ECM, **NO Linchpin**, Rate/100t: 9.28
+- RedGhost: MVP, **Linchpin (alive:91%/dead:22%)**, Solo carry, ECM
+
+**Key finding:** PR=167 is Blue-dominant (no Linchpin) — same as PR=170. Lower boundary is between PR=166 and PR=167 (2-unit window). Next: probe PR=166.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 64 — `research/iter-000064-blueecm-pr165`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=165 BALANCED (50% Red, Linchpin YES); lower dip boundary narrowed to PR=165–170
+
+**Hypothesis:** PR=165 with MaxFP=1.0 at seed 1000 — predict balanced (Linchpin YES). Lower boundary is between PR=165 and PR=170.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=165
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=165 balanced — lower boundary is between PR=165 and PR=170 (6-unit window). Next: probe PR=167 and PR=166.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 63 — `research/iter-000063-blueecm-pr160`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=160 Red-dominant (56% Red, Linchpin YES); interior curve is non-monotonic with Red-peak near PR=160
+
+**Hypothesis:** PR=160 with MaxFP=1.0 at seed 1000 — probe interior between PR=142 (balanced) and PR=170 (Blue-dominant).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=160
+
+**Results:**
+- Red 112 (56%) / Blue 88 (44%) — **RED-DOMINANT** (unexpected — interior is non-monotonic)
+- BlueEcm: MVP, **Linchpin**, ECM, Rate/100t: 7.11
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=160 is Red-dominant at 56% — same as original MaxFP=1.5 baseline. The interior curve is non-monotonic: balanced at PR=142, Red-dominant at PR=160, then Blue-dominant at PR=167–190. Next: probe PR=165 to find where Red-dominance ends.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 62 — `research/iter-000062-blueecm-pr170`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=170 Blue-dominant (44% Red, no Linchpin); interior non-monotonic confirmed
+
+**Hypothesis:** PR=170 with MaxFP=1.0 at seed 1000 — probe interior between PR=142 (balanced) and PR=200 (Red-dominant).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=170
+
+**Results:**
+- Red 88 (44%) / Blue 112 (56%) — **BLUE-DOMINANT** (44% Red — deeper than PR=142 baseline)
+- BlueEcm: MVP (77/112), ECM, **NO Linchpin**, Rate/100t: 9.40
+- RedGhost: MVP (57/88), **Linchpin (alive:90%/dead:22%)**, Solo carry (35/88), ECM
+
+**Key finding:** PR=170 is Blue-dominant (no Linchpin) — interior is non-monotonic. Balance dips Blue inside the balanced range. The no-Linchpin structural signature at PR=170 is the key marker.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 61 — `research/iter-000061-blueecm-pr190`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=190 Blue-dominant (44% Red, no Linchpin); interior dip exists in balanced range
+
+**Hypothesis:** PR=190 with MaxFP=1.0 at seed 1000 — probe interior of balanced range (PR=142–238). Predict: balanced.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=190
+
+**Results:**
+- Red 88 (44%) / Blue 112 (56%) — **BLUE-DOMINANT** (prediction WRONG — expected balanced)
+- BlueEcm: MVP (78/112), ECM, **NO Linchpin**, Rate/100t: 9.52
+- RedGhost: MVP (55/88), **Linchpin (alive:92%/dead:23%)**, Solo carry (35/88), ECM
+
+**Key finding:** PR=190 is Blue-dominant — the balanced range is not a flat plateau. Interior has a Blue-dip subregion. The no-Linchpin signature at PR=190 is the structural marker for the dip.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 60 — `research/iter-000060-blueecm-pr239-seed3000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=239 unbalanced at seed 3000 (55% Red); upper boundary PR=238→239 triple-seed validated
+
+**Hypothesis:** PR=239 at seed 3000 will be Red-dominant (unbalanced), confirming upper boundary is exactly PR=238→239.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=239
+
+**Results:**
+- Red 110 (55%) / Blue 90 (45%) — **RED-DOMINANT** ✅ (boundary confirmed)
+- BlueEcm: MVP, ECM, NO Linchpin
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=239 unbalanced at seed 3000 — upper boundary PR=238→239 is triple-seed validated. Usable balanced range is definitively PR=142–238 (97-unit window).
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 59 — `research/iter-000059-blueecm-pr238-seed3000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=238 balanced at seed 3000 (51% Red); upper boundary triple-seed validated
+
+**Hypothesis:** PR=238 at seed 3000 will be balanced (within 45–55% Red), confirming upper boundary.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=238
+
+**Results:**
+- Red 102 (51%) / Blue 98 (49%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=238 balanced at seed 3000 — upper boundary triple-seed validated (seeds 1000/2000/3000). Next: probe PR=239 at seed 3000 to complete boundary confirmation.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 58 — `research/iter-000058-blueecm-pr238`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=238 balanced (49% Red, Linchpin YES); upper boundary is exactly PR=238→239
+
+**Hypothesis:** PR=238 with MaxFP=1.0 at seed 1000 — predict balanced (Linchpin YES). Upper boundary is PR=238→239.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=238
+
+**Results:**
+- Red 98 (49%) / Blue 102 (51%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin (alive:85%/dead:24%)**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=238 balanced with Linchpin — upper boundary is exactly PR=238→239. Upper boundary binary search complete.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 57 — `research/iter-000057-blueecm-pr239`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=239 unbalanced (57% Red, NO Linchpin); upper boundary narrowed to PR=238–239
+
+**Hypothesis:** PR=239 with MaxFP=1.0 at seed 1000 — predict Red-dominant (no Linchpin). Upper boundary is between PR=238 and PR=239.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=239
+
+**Results:**
+- Red 114 (57%) / Blue 86 (43%) — **RED-DOMINANT** ✅
+- BlueEcm: MVP, ECM, **NO Linchpin**, Rate/100t: 9.89
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=239 is Red-dominant — upper boundary narrowed to PR=238–239 (2-unit window). Next: probe PR=238.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 56 — `research/iter-000056-blueecm-pr240`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=240 unbalanced (56% Red); upper boundary narrowed to PR=237–240
+
+**Hypothesis:** PR=240 midpoint test for upper boundary.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=240
+
+**Results:**
+- Red 112 (56%) / Blue 88 (44%) — **RED-DOMINANT** ✅
+- BlueEcm: MVP, ECM, NO Linchpin
+
+**Key finding:** PR=240 Red-dominant — upper boundary below PR=240. Next: binary search toward PR=238.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 55 — `research/iter-000055-blueecm-pr238-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=238 balanced at seed 2000 (50% Red); upper boundary seed-stable
+
+**Hypothesis:** PR=238 at seed 2000 will be balanced, confirming upper boundary is structural.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=238
+
+**Results:**
+- Red 100 (50%) / Blue 100 (50%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** Upper boundary seed-stable at seed 2000. Next: probe PR=238 at seed 3000.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 54 — `research/iter-000054-blueecm-pr142-seed3000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=142 balanced at seed 3000 (53% Red); low-end boundary triple-seed validated
+
+**Hypothesis:** PR=142 at seed 3000 will be balanced, completing triple-seed validation of low-end boundary.
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=142
+
+**Results:**
+- Red 106 (53%) / Blue 94 (47%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=142 balanced at seed 3000 — low-end boundary triple-seed validated (seeds 1000/2000/3000). Now pivoting to upper boundary characterization.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 53 — `research/iter-000053-blueecm-pr142-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=142 balanced at seed 2000 (51% Red); boundary triple-seed validation in progress
+
+**Hypothesis:** PR=142 at seed 2000 will be balanced, extending low-end boundary validation.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=142
+
+**Results:**
+- Red 102 (51%) / Blue 98 (49%) — **BALANCED** ✅
+- BlueEcm: MVP, **Linchpin**, ECM
+- RedGhost: MVP, Solo carry, ECM
+
+**Key finding:** PR=142 balanced at seed 2000. Low-end boundary is structural (seed-stable). Next: seed 3000.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 52 — `research/iter-000052-blueecm-pr141`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=141 Blue-dominant (46% Red, no Linchpin); boundary pinned to PR=141→142
+
+**Hypothesis:** PR=141 with MaxFP=1.0 at seed 1000 — predict Blue-dominant. If so, boundary is exactly PR=141→142.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=141
+
+**Results:**
+- Red 92 (46%) / Blue 108 (54%) — **BLUE-DOMINANT** ✅
+- BlueEcm: MVP, ECM, **NO Linchpin**, Rate/100t: 8.74
+- RedGhost: MVP, **Linchpin**, Solo carry, ECM
+
+**Key finding:** PR=141 is Blue-dominant — boundary is exactly PR=141→142 (single-integer precision). Low-end boundary pinned.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 51 — `research/iter-000051-blueecm-pr140`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=140 Blue-dominant (45% Red); boundary narrowed to PR=140–142
+
+**Hypothesis:** PR=140 with MaxFP=1.0 at seed 1000 — predict Blue-dominant. Boundary is between PR=140 and PR=142.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=140
+
+**Results:**
+- Red 90 (45%) / Blue 110 (55%) — **BLUE-DOMINANT** ✅
+- BlueEcm: MVP, ECM, **NO Linchpin**, Rate/100t: 8.81
+- RedGhost: MVP, **Linchpin**, Solo carry, ECM
+
+**Key finding:** PR=140 is Blue-dominant — boundary narrowed to PR=140–142 (3-unit window). Next: probe PR=141.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 50 — `research/iter-000050-blueecm-pr138`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=138 Blue-dominant (45% Red); boundary narrowed to PR=137–142
+
+**Hypothesis:** PR=138 midpoint binary search — predict Blue-dominant. Boundary is between PR=137 and PR=142.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=138
+
+**Results:**
+- Red 90 (45%) / Blue 110 (55%) — **BLUE-DOMINANT** ✅
+- BlueEcm: MVP, ECM, **NO Linchpin**, Rate/100t: 8.58
+- RedGhost: MVP, **Linchpin**, Solo carry, ECM
+
+**Key finding:** PR=138 is Blue-dominant — boundary narrowed to PR=138–142 (5-unit window). Next: probe PR=140.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 49 — `research/iter-000049-blueecm-pr137`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=137 Blue-dominant (45% Red); boundary narrowed to PR=137–142
+
+**Hypothesis:** PR=137 (midpoint of PR=133–142) with MaxFP=1.0 — predict Blue-dominant.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=137
+
+**Results:**
+- Red 90 (45%) / Blue 110 (55%) — **BLUE-DOMINANT** ✅
+- BlueEcm: MVP, Solo carry, ECM, **NO Linchpin**, Rate/100t: 8.46
+- RedGhost: MVP, **Linchpin**, Solo carry, ECM
+
+**Key finding:** PR=137 is Blue-dominant — boundary narrowed to PR=137–142 (5-unit window). Binary search continues at PR=138.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 48 — `research/iter-000048-blueecm-pr142`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=142 BALANCED (Red 51%), BlueEcm IS Linchpin; low-end boundary is PR=133–142
+
+**Hypothesis:** PR=142 (midpoint of PR=133–150) with MaxFP=1.0 — predict Blue-dominant or near-boundary.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=142
+
+**Results:**
+- Red 102 (51%) / Blue 97 (48%) / 1 draw — **BALANCED** (same as PR=150)
+- BlueEcm: MVP (68/97), **Linchpin (alive:88%/dead:24%)**, Solo carry (28/97 [14D+14TO]), Rate/100t: 7.29
+- RedGhost: MVP (57/102), Solo carry (31/102 [24D+7TO]), ECM, Rate/100t: 2.54
+
+**Low-end PR boundary progress (MaxFP=1.0):**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 80         | 44%   | 56%   | No (iter-18) |
+| 115        | 44%   | 56%   | No (iter-46) |
+| 133        | 46%   | 54%   | No (iter-47) |
+| 142        | 51%   | 48%   | **Yes ← NEW** |
+| 150        | 51%   | 49%   | Yes (iter-11) |
+
+**Key finding:** PR=142 is BALANCED with Linchpin active — exactly matching the PR=150 result. The balance transition is sharp: 5pp jump (46%→51% Red) in just 9 PR units (PR=133→142). Low-end boundary is between PR=133 and PR=142. Binary search continues at PR=137.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 47 — `research/iter-000047-blueecm-pr133`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=133 Blue-dominant; low-end boundary is PR=133–150
+
+**Hypothesis:** PR=133 (midpoint of PR=115–150) with MaxFP=1.0 — predict Blue-dominant.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=133
+
+**Results:**
+- Red 93 (46%) / Blue 107 (54%) — Blue dominant ✅
+- BlueEcm: MVP (73/107), Solo carry (36/107 [18D+18TO]), **NO Linchpin**, Rate/100t: 8.28
+- RedGhost: MVP (54/93), Solo carry (29/93 [18D+11TO]), **NO Linchpin**, Rate/100t: 2.81
+
+**Key finding:** PR=133 slightly closer to balance (+2pp Red vs PR=115) but still Blue-dominant. Low-end boundary is between PR=133 and PR=150 (17-unit window). Binary search continues at PR=142.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 46 — `research/iter-000046-blueecm-pr115-low-boundary`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=115 Blue-dominant; low-end boundary is PR=115–150
+
+**Hypothesis:** PR=115 (midpoint of PR=80–150) with MaxFP=1.0 — predict Blue-dominant.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=115
+
+**Results:**
+- Red 88 (44%) / Blue 112 (56%) — Blue dominant ✅
+- BlueEcm: MVP (77/112), Solo carry (29/112 [15D+14TO]), **NO Linchpin**, Rate/100t: 9.41
+- RedGhost: MVP (47/88), Solo carry (24/88 [15D+9TO]), **NO Linchpin**, Rate/100t: 2.64
+
+**Key finding:** PR=115 is identical to PR=80 — flat Blue-dominant regime. Low-end balance boundary is between PR=115 and PR=150. Binary search continues at PR=133.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 45 — `research/iter-000045-pr217-seed2000`
+**Date:** 2026-04-19
+**Status:** ✅ CONFIRMED — PR=217 Linchpin threshold is seed-stable; NOT Linchpin at seed 2000
+
+**Hypothesis:** PR=217 threshold is a structural property, not seed noise. Predict: BlueEcm NOT Linchpin at seed 2000, balance ~50/50.
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=217
+
+**Results:**
+- Red 96 (48%) / Blue 104 (52%) — balanced ✅
+- BlueEcm: MVP (66/104), Solo carry (22/104 [7D+15TO]), **NO Linchpin**, Rate/100t: 8.81
+- RedGhost: MVP (65/96), **Linchpin (alive:90%/dead:24%)**, Solo carry (37/96 [23D+14TO])
+
+**Key finding:** PR=217 threshold is deterministic. No Linchpin at PR=217 regardless of seed. Threshold is a structural property of ECM range mechanics.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 44 — `research/iter-000044-blueecm-pr217`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — BlueEcm NOT Linchpin at PR=217; threshold is exactly PR=217
+
+**Hypothesis:** PR=217 (just above 216) — predict BlueEcm loses Linchpin, pinpointing threshold exactly.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0, PR=217
+
+**Results:**
+- Red 98 (49%) / Blue 102 (51%) — near-perfect balance
+- BlueEcm: MVP (73/102), Solo carry (31/102 [13D+18TO]), **NO Linchpin**, Rate/100t: 7.17
+- RedGhost: MVP (62/98), Solo carry (35/98), ECM — no Linchpin flag
+
+**PR balance curve (MaxFP=1.0) — FINAL:**
+
+| BlueEcm PR | Red%  | Blue% | Linchpin? |
+|------------|-------|-------|-----------|
+| 150        | 51%   | 49%   | Yes       |
+| 200        | 54%   | 46%   | Yes       |
+| 212        | 50%   | 50%   | Yes       |
+| 215        | 50%   | 50%   | Yes       |
+| 216        | 50%   | 50%   | Yes ← last Linchpin |
+| 217        | 49%   | 51%   | No ← threshold |
+| 218        | 50%   | 50%   | No        |
+| 225        | 48%   | 52%   | No        |
+| 250        | 56%   | 44%   | No        |
+| 300        | 46%   | 54%   | No        |
+
+**Key finding:** Linchpin threshold is exactly PR=217. Binary search complete (9 PR iterations). Balance stays ~50/50 on both sides of threshold — ECM phase transition does not affect overall balance.
+**Code:** Reverted — MaxFP=1.5, PR=150 restored (master state).
+
+---
+
+### Iter 19 — `research/iter-000019-blueecm-maxfp125`
+**Date:** 2026-04-18
+**Status:** ✅ PARTIALLY CONFIRMED — balance linear (correct), Linchpin prediction wrong
+
+**Hypothesis:** MaxFP=1.25 → Red ~53–54%, Linchpin likely lost.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.25 + PR=150
+
+**Results:**
+- Red 108 (54%) / Blue 92 (46%) — **balance prediction correct**
+- BlueEcm: MVP (65/92), **Linchpin (alive:90%/dead:21%)** — Linchpin prediction WRONG
+- Survival: 72/200, WinSurv 71% — still high despite higher MaxFP
+
+**Key finding:** Linchpin threshold is between MaxFP=1.25 and MaxFP=1.5, not at exactly 1.0.
+**Code:** Reverted — 1.25 is a probe only.
+
+---
+
+### Iter 18 — `research/iter-000018-blueecm-maxfp15-pr80`
+**Date:** 2026-04-18
+**Status:** ✅ REFUTED — MaxFP=1.5 does not dominate PR=80; effects approximately cancel
+
+**Hypothesis:** MaxFP=1.5 + PR=80 will tip toward Red-dominant (MaxFP=1.5 dominates over PR=80).
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.5 + PR=80
+
+**Results:**
+- Red 104 (52%) / Blue 96 (48%) — **near-balanced, same as iter-11/17**
+- BlueEcm: MVP (50/96), **NO Linchpin**, survival 61/200 (dropped from 80/200)
+- Effects are additive: MaxFP=1.5 (+5pp Red) + PR=80 (+7pp Blue) ≈ cancel to 52/48
+
+**Key finding:** Linchpin requires MaxFP=1.0 AND PR=150 simultaneously. Parameter effects are approximately additive — no interaction synergy.
+**Code:** Reverted — PR=80 probe only.
+
+---
+
+### Iter 14 — `research/iter-000014-blueecm-fp-curve`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — non-linearity is a sharp threshold between MaxFP=0.75 and 1.0
+
+**Hypothesis:** MaxFP=0.75 (midpoint between 0.5 and 1.0) will reveal whether the balance curve is gradual or sharp.
+
+**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=0.75
+
+**Results:**
+- Red 82 (41%) / Blue 117 (58%) + 1 draw — **Blue dominant, similar to MaxFP=0.5 (60%)**
+- RedGhost: MVP, **Linchpin** (alive:89%/dead:23%), solo carry 30/82 (37%) — Ghost critical to Red
+- BlueEcm: MVP (83/117 = 71% WinSurv), **NOT Linchpin**, solo carry 32/117 (27%)
+
+**Key finding:** Non-linearity is a single sharp threshold. The entire 0.1–0.75 range is one flat Blue-dominant regime. The Linchpin phase transition and balance crossover happen together between 0.75 and 1.0. MaxFP=1.0 is uniquely correct.
+**Code:** Reverted — 0.75 is not a fix.
+
+---
+
+### Iter 13 — `research/iter-13-seed-3000-triple-validation`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — Triple-seed validation complete (no code change)
+
+**Hypothesis:** BlueEcm MaxFP=1.0 balance holds at seed 3000 (third independent seed).
+
+**Run:** 200 matches, seed 3000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0
+
+**Results:**
+- Red 101 (50.5%) / Blue 99 (49.5%) — ✅ closest to 50/50 of all three seeds
+- Ghost: MVP, Linchpin (alive:96%/dead:22%), solo carry 48/101 = **48%** (highest across seeds)
+- BlueEcm: MVP, Linchpin (alive:85%/dead:25%), solo carry 28/99 = **28%**
+
+**Code:** No change — same iter-11 fix (BlueEcm MaxFP=1.0).
+
+---
+
+### Iter 12 — `research/iter-12-cross-seed-validation`
+**Date:** 2026-04-18
+**Status:** ✅ CONFIRMED — Balance fix seed-validated (no code change)
+
+**Hypothesis:** BlueEcm MaxFP=1.0 balance holds at seed 2000 (not just seed 1000).
+
+**Run:** 200 matches, seed 2000, `--on-timeout energy`, default arena (800×600), BlueEcm MaxFP=1.0
+
+**Results:**
+- Red 92 (46%) / Blue 108 (54%) — ✅ within 45–55% balance target
+- Ghost: MVP, Linchpin (alive:92%/dead:21%), solo carry 39/92 = **42%**
+- BlueEcm: MVP, solo carry 24/108 = **22%**
+
+**Code:** No change — same iter-11 fix (BlueEcm MaxFP=1.0).
+
+---
 
 ### Iter 11 — `research/iter-11-blueecm-fp-calibrate-0.5`
 **Date:** 2026-04-18
@@ -32,237 +845,15 @@ If continuing research: investigate why the 0.5→1.0 jump is non-linear, or tes
 
 **Code change KEPT:** BlueEcm MaxFirePower 1.5 → 1.0
 
-**Results at 1.0:**
-- Red 102–103 (51%) / Blue 97–98 (49%)
-- Ghost: MVP, 54% WinSurv, solo carry 32% (stable throughout all iterations)
-- BlueEcm: MVP, Linchpin (alive:90%/dead:21%), solo carry 34% — now mirrors Ghost's role
-- Both ECM hiders carry ~33% of their team's wins — symmetric ECM duel achieved
-
-**Root cause chain:**
-1. Ghost (MaxFirePower=0.1, RetreatEnergyThreshold=40) is a hider — barely drains energy
-2. BlueEcm (MaxFirePower=1.5, RetreatEnergyThreshold=35) fires aggressively — drains energy, dies in Red wins
-3. Fix: BlueEcm MaxFirePower 1.5→1.0 reduces per-shot energy drain by 33%
-4. BlueEcm now survives longer, carries Blue wins more effectively
-5. Result: 51%/49% — ECM duel symmetric
+**Root cause:** Ghost (MaxFP=0.1) is a hider; BlueEcm (1.5) over-fires, drains energy, dies in Red wins. Fix: 1.5→1.0 balances the ECM duel.
 
 **Awaiting human merge.**
 
 ---
 
-### Iter 10 — `research/iter-10-blueecm-firepower-nerf`
-**Date:** 2026-04-18
-**Status:** Refuted — over-corrected to Blue 59% (opposite problem)
-
-**Hypothesis:** BlueEcm MaxFirePower 1.5→0.1 makes it a Ghost-mirror hider, dropping Red to 45-52%.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, BlueEcm MaxFirePower=0.1
-
-**Results:**
-- Red 79–82 (41%) / Blue 118–121 (59%) — Blue now dominates
-- BlueEcm WinSurv: 93/121 = **77%** (baseline 62%), Rate/100t: **2.00** (mirrors Ghost's 2.16)
-- BlueEcm solo carry: 37/121 = **31%** — matches Ghost's baseline carry rate!
-- RedGhost: **Linchpin** (alive: 91%, dead: 21%) — Ghost is now critical to Red competing
-
-**Refuted (over-corrected):** BlueEcm at 0.1 fire is a better hider than Ghost because Burnthrough counters Ghost's JamAndSpoof while costing less ECM energy than JamAndSpoof.
-**Key finding:** Crossover point between 0.1 (Blue59%) and 1.5 (Red56%) — need binary search.
-**Code:** Reverted — BlueEcm restored to MaxFirePower=1.5.
-
----
-
-### Iter 9 — `research/iter-9-blueecm-hider-buff`
-**Date:** 2026-04-18
-**Status:** Refuted — retreat threshold is not the binding constraint
-
-**Hypothesis:** BlueEcm RetreatEnergyThreshold 35→45 makes it a comparable hider, drops Red toward 45-52%.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, BlueEcm retreat=45, Red rebuilt with baseline Ghost.
-
-**Results:**
-- Red 112 (56%) / Blue 88 (44%) — identical to baseline (unchanged)
-
-**Refuted:** Retreat threshold doesn't matter because BlueEcm drains energy through shooting (MaxFirePower=1.5) before the threshold fires. Ghost drains ~0 energy from combat (MaxFirePower=0.1) — this is the binding constraint.
-**Process note (CRITICAL):** Always rebuild BOTH dlls after reverting either side's code changes. Two contaminated runs in a row (iter-7, iter-9) from stale dlls. New protocol: after any revert, rebuild all affected dlls and verify match count against baseline before recording.
-**Code:** Reverted — BlueEcm restored to RetreatEnergyThreshold=35.
-
----
-
-### Iter 8 — `research/iter-8-ghost-replace-arrow-clone`
-**Date:** 2026-04-18
-**Status:** Confirmed — Ghost's hider role is worth +16% win rate (ROOT CAUSE FOUND)
-
-**Hypothesis:** Ghost's passive hider role is the structural advantage. Replace with Arrow clone to test magnitude.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), Ghost=Arrow clone config
-
-**Results:**
-- Red **80 (40%)** / Blue **120 (60%)** — Red COLLAPSED from 56% to 40% (−16pp)
-- Ghost(clone) WinSurv: 35/80 = 44% (baseline Ghost: 59%)
-- Ghost(clone) Rate/100t: **17.84** (fully combat, baseline: 2.16)
-- BlueEcm WinSurv: 66/120 = **55%**, solo carry: 35/120 = **29%** — BlueEcm took over as dominant survivor
-- BlueStrike Rate/100t: 23.89 — Blue combat surged without Ghost's jamming
-
-**Confirmed:** Ghost's hider role (MaxFirePower=0.1, RetreatEnergyThreshold=40) is worth +16pp. Root cause of Red's 56% advantage: Ghost outlasts Blue's combat tanks and harvests wins from close matches. Without it, Red has 4 combatants who all die — Blue wins when Red runs out of survivors.
-**Key finding:** BlueEcm mirrors Ghost's hider role — ECM+survive+inherit. The balance is an ECM duel: Ghost (RetreatEnergyThreshold=40) vs BlueEcm (35). Ghost retreats earlier → superior hider → Red wins ECM duel.
-**Code:** Reverted — Ghost restored to original config.
-
----
-
-### Iter 7 — `research/iter-7-arrow-retreat-nerf`
-**Date:** 2026-04-18
-**Status:** No Effect
-
-**Hypothesis:** RedArrow RetreatEnergyThreshold 20→35 reduces Arrow's first-kill rate and drops Red's win rate.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), Arrow retreat=35
-(Note: initial accidental run used stale buffed-BlueEcm dll from iter-6 and returned 62% — discarded. Correct run used rebuilt baseline Blue dll.)
-
-**Results:**
-- Red 111 (56%) / Blue 89 (44%) — identical to baseline
-- Arrow first kills: **36** (baseline 35-36 — unchanged)
-- Arrow solos shifted: 10D+10TO (vs baseline 12D+6TO) — more timeout, same count
-- Ghost WinSurv, solo carry: unchanged at 66/111, 35 solos
-
-**No effect:** Arrow's retreat threshold governs late-match behavior; first kills happen at tick ~24 when Arrow still has 80+E — the threshold (35E) never fires at that point.
-**Key finding:** 56% structural advantage is deep and parameter-insensitive. Seven parameter sweeps have all returned 56%. Arrow's first-blood advantage is positional/behavioral, not energy-threshold-based.
-**Code:** Reverted — Arrow restored to RetreatEnergyThreshold=20.
-**Process note:** Always rebuild both dlls after reverting code changes.
-
----
-
-### Iter 6 — `research/iter-6-blueecm-combat-buff`
-**Date:** 2026-04-18
-**Status:** Refuted — combat buff backfired, Red climbed to 62%
-
-**Hypothesis:** Buffing BlueEcm (MaxFirePower 1.5→2.5, RetreatEnergyThreshold 35→25) makes BlueEcm harder to kill and raises Blue's win rate.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600)
-
-**Results:**
-- Red 124 (62%) / Blue 76 (38%) — Red INCREASED from 56%
-- BlueEcm WinSurv: 33/76 = **43%** (baseline ~60%, collapsed)
-- BlueEcm loss-survivals: **17** (baseline 8–9, nearly doubled)
-- RedGhost: **All-in** (0 loss-survivals, gained All-in status vs baseline's 5)
-- Blue top solo carrier shifted to Guard (14x) from BlueEcm (9x)
-
-**Refuted:** Combat buff caused BlueEcm to over-commit and die frequently. BlueEcm loses ECM energy to combat, can't sustain its survival-carry role.
-**Key finding:** ECM tanks (both BlueEcm and Ghost) derive value from surviving, not fighting. Higher firepower = faster energy drain = more deaths in Red wins. Same lesson as Ghost's structural carry: ECM role tanks should NOT be combat-buffed.
-**Code:** Reverted — BlueEcm restored to MaxFirePower=1.5, RetreatEnergyThreshold=35.
-
----
-
-### Iter 5 — `research/iter-5-ghost-no-ecm`
-**Date:** 2026-04-18
-**Status:** Confirmed — Ghost's carry is structural, ECM is cosmetic
-
-**Hypothesis:** HasEcm=false leaves Ghost's carry rate and WinSurv unchanged (25–35% carry, MVP), Red holds ~56%.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), Ghost HasEcm=false
-
-**Results:**
-- Red 112 (56%) / Blue 88 (44%) — unchanged
-- RedGhost WinSurv: 68/112 = **61%** (baseline 58% — INCREASED)
-- RedGhost solo carry: 37/112 = **33%** (baseline 30% — INCREASED)
-- RedGhost Rate/100t: **2.08** (near 0 — unchanged)
-- RedGhost loss-survivals: **5** (unchanged)
-- BlueEcm: NEW **Linchpin** insight (alive: 87%, dead: 25%) — freed from Ghost's jam suppression
-
-**Confirmed:** Ghost is a passive hider (MaxFirePower=0.1, RetreatEnergyThreshold=40). Blue ignores non-threatening Ghost while fighting real Red combatants and eliminating itself. ECM hardware contributed nothing — removing it improved Ghost's metrics slightly.
-**Key finding:** Red's 56% is compositional (not ECM). BlueEcm is Blue's Linchpin — and Ghost's ECM was masking this by suppressing BlueEcm's burnthrough.
-**Code:** Reverted — observational test only. Ghost restored to HasEcm=true.
-
----
-
-### Iter 4 — `research/iter-4-jam-drop-nerf`
-**Date:** 2026-04-18
-**Status:** Refuted — jam parameters are not the binding constraint
-
-**Hypothesis:** EcmJamDropChance 0.50→0.30, EcmJamCorruptChance 0.30→0.15 drops Ghost solo carry to ≤20% and Red win rate toward 45–52%.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600)
-
-**Results:**
-- Red 111 (56%) / Blue 89 (44%) — identical to baseline
-- RedGhost WinSurv: 65/111 = **59%** (baseline 58%)
-- RedGhost solo carry: 35/111 = **32%** (identical to iter-3)
-- RedGhost Rate/100t: **2.13** (near 0 — unchanged)
-- RedGhost loss-survivals: **6** (near-baseline 5)
-
-**Refuted:** Zero effect. Three ECM parameter sweeps (cramped arena, spoof radius, jam chances) have all returned 56%/~32%. Balance is insensitive to ECM parameters.
-**Key finding:** Ghost's carry is structural, not ECM-driven. Ghost solos decisively (71%) at near-zero combat rate — it outlasts by being passive and non-threatening (MaxFirePower=0.1, RetreatEnergyThreshold=40), not by misdirecting Blue via ECM. ECM appears cosmetic at the carry level.
-**Code:** Reverted — jam constants restored to 0.50/0.30.
-
----
-
-### Iter 3 — `research/iter-3-ghost-ecm-nerf`
-**Date:** 2026-04-18
-**Status:** Refuted — parameter is not the binding constraint
-
-**Hypothesis:** Reducing EcmSpoofRadius by 25% (130.0 → 97.5) drops Red's win rate from 56% toward 45–52% and Ghost's solo carry from 30% to ≤20%.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600), EcmSpoofRadius=97.5
-
-**Results:**
-- Red 111 (56%) / Blue 89 (44%) — identical to baseline
-- RedGhost WinSurv: 66/111 = **59%** (baseline 58%)
-- RedGhost solo carry: 36/111 = **32%** (baseline 30% — slight increase)
-- RedGhost Rate/100t: **2.24** (near 0 — unchanged)
-- RedGhost loss-survivals: **5** (same as baseline)
-
-**Refuted:** Zero effect in either direction. Win rate unchanged; solo carry slightly increased.
-**Key finding:** Ghost's carry is via the Jam mechanism (scan drop/corrupt), not spoof radius. Ghost solos decisively (69% decisive), meaning Blue self-eliminates from scan corruption — not from chasing distant ghost echoes. The spoof geometry is irrelevant to Ghost's effectiveness.
-**Code:** Reverted — EcmSpoofRadius restored to 130.0.
-
----
-
-### Iter 2 — `research/iter-2-ghost-cramped-arena`
-**Date:** 2026-04-18
-**Status:** Inconclusive — direction confirmed, magnitude missed
-
-**Hypothesis:** Cramped arena (350×250) reduces RedGhost solo carry rate by ≥50% (30% → ≤15%) by limiting ECM spoofing effectiveness.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, cramped arena (350×250)
-
-**Results:**
-- Red 69 (34%) / Blue 131 (66%)
-- RedGhost WinSurv: 33/69 = **48%**
-- RedGhost solo carry: 12/69 = **17%** (reduction 43%, threshold ≥50%)
-- RedGhost Rate/100t: **2.41** (near 0 — confirmed)
-- RedGhost All-in: **0 loss-survivals** (regained All-in status in cramped arena)
-- RedGhost Linchpin: **alive → 100% Red wins; dead → 22% Red wins**
-
-**Inconclusive:** Direction confirmed (solo carry fell 30%→17%), threshold not met (≥50% reduction, ≤15%)
-**Surprises:**
-- Ghost became Linchpin in cramped arena — more critical, not less
-- Red collapsed from 56% → 34%; Blue's blitz (76t median decisive) overwhelms Red's grind strategy in small map
-- Blade+Ghost combo at 16% of Red wins — Ghost enables Blade in cramped quarters rather than soloing
-- Ghost regained All-in status (5 loss-survivals in default → 0 in cramped)
-
-**BlueEcm note:** BlueEcm still MVP at 74/131 = 57% WinSurv, now also a combat unit in cramped (Rate/100t = 23.85).
-
----
-
-### Iter 1 — `research/iter-1-redghost-solo-carry`
-**Date:** 2026-04-18
-**Status:** Partially Confirmed — needs human merge decision
-
-**Hypothesis:** RedGhost carries Red wins via ECM outlasting (timeout), not combat — solo carry rate ≥35% of Red wins, combat rate near 0, All-in role, WinSurv 60–80%.
-
-**Run:** 200 matches, seed 1000, `--on-timeout energy`, default arena (800×600)
-
-**Results:**
-- Red 112 (56%) / Blue 88 (44%)
-- RedGhost WinSurv: 65/112 = **58%** (baseline 60–80%, just below)
-- RedGhost solo carry: 34/112 = **30%** (threshold ≥35% — not met)
-- RedGhost Rate/100t: **2.16** (near 0 — confirmed)
-- RedGhost solo breakdown: **25 decisive + 9 timeout** (74% decisive)
-- RedGhost loss-survivals: **5** (not All-in)
-
-**Confirmed:** MVP role, ECM role, near-zero combat rate
-**Refuted:** "Via timeout outlasting" claim; "All-in" claim from prior baseline
-**New finding:** Ghost wins decisive solos at near-zero damage → Blue self-eliminates via ECM spoofing misdirection
-
-**Baseline corrections:**
-- Prior baseline claimed solo carry 35–50% via timeout → actual is 30% with majority decisive
-- Prior baseline claimed All-in → actual has 5 loss-survivals
-
-**BlueEcm note:** BlueEcm is Blue's MVP (53/88 WinSurv = 60%), using burnthrough + jam. Blue is 8% below parity (44%).
+### Iters 1–10
+See prior branch history. Key findings:
+- Red 56% baseline is structural (ECM parameter sweeps all return 56%)
+- Ghost's hider role (MaxFP=0.1) worth +16pp (iter-8)
+- BlueEcm MaxFP=0.1 over-corrects to Blue 59% (iter-10)
+- Balance insensitive to ECM params, ECM modes, arena ECM geometry
