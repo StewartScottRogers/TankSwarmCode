@@ -1,0 +1,57 @@
+name: Generate Gource Video
+
+on:
+  schedule:
+    - cron: '0 0 * * 0' # Every Sunday at midnight UTC
+  workflow_dispatch:
+
+# Required so the bot can push the rendered assets back to the branch.
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches full history for Gource
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gource ffmpeg xvfb
+
+      - name: Render Video
+        run: |
+          xvfb-run -s "-screen 0 1280x720x24" gource \
+            -1280x720 \
+            --title "TankSwarmCode" \
+            --max-files 0 \
+            --seconds-per-day 1 \
+            --auto-skip-seconds 1 \
+            --hide mouse,progress \
+            --output-ppm-stream - \
+            --output-framerate 30 | \
+            ffmpeg -y -r 30 -f image2pipe -vcodec ppm -i - -vcodec libx264 -pix_fmt yuv420p -crf 23 gource-history.mp4
+
+      - name: Render GIF
+        # GitHub's README sanitizer drops <video> tags, so the landing page embeds
+        # a GIF. Two-pass palette encoding keeps it legible at a sane file size.
+        run: |
+          ffmpeg -y -i gource-history.mp4 \
+            -vf "fps=12,scale=800:-1:flags=lanczos,palettegen=stats_mode=diff" \
+            -update 1 palette.png
+          ffmpeg -y -i gource-history.mp4 -i palette.png \
+            -lavfi "fps=12,scale=800:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=3" \
+            -loop 0 gource-history.gif
+          rm palette.png
+          ls -lh gource-history.mp4 gource-history.gif
+
+      - name: Commit Video Asset
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add gource-history.mp4 gource-history.gif
+          git commit -m "chore: update gource project history visualization [skip ci]" || echo "No changes to commit"
+          git push

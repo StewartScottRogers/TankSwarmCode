@@ -4,6 +4,12 @@ A real-time 2D tank battle simulator for game AI research, swarm robotics, and c
 
 ![The Karpathy Loop](TheKarpathyLoop.png)
 
+<p align="center">
+  <img src="gource-history.gif" width="100%" alt="Gource visualization of the TankSwarmCode commit history">
+  <br>
+  <sub>Commit history, rendered weekly by <a href=".github/workflows/gource-visualization.yml">Gource</a> &middot; <a href="gource-history.mp4">full-quality MP4</a></sub>
+</p>
+
 ---
 
 ## What It Is
